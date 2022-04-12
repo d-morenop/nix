@@ -2,42 +2,39 @@
 
 Thermomechanically-coupled flowline model.
 
-// Our flow line model uses netcdf and Eigen libraries. Make sure both are installed.
-// Eigen: https://eigen.tuxfamily.org.
-// Directory where eigen is installed: $ dpkg -L libeigen3-devcd
-// Directory of netcdf libraries: $ nc-config --libdir
+Our flow line model uses netcdf and Eigen libraries. Make sure both are installed.
+Eigen: https://eigen.tuxfamily.org.
+Directory where eigen is installed: $ dpkg -L libeigen3-devcd
+Directory of netcdf libraries: $ nc-config --libdir
 
-// LOCAL: 
-// (old: g++ -I /usr/include/eigen3/ test.cpp -o test.o)
-// g++ -I /usr/include/eigen3/ -o rungeKutta_adv_nc_t_N_array.o rungeKutta_adv_nc_t_N_array.cpp -lnetcdf
+LOCAL: 
+(old: g++ -I /usr/include/eigen3/ test.cpp -o test.o)
+$ g++ -I /usr/include/eigen3/ -o rungeKutta_adv_nc_t_N_array.o rungeKutta_adv_nc_t_N_array.cpp -lnetcdf
 
-// ICEBERG COMPUTER:
-// g++ -std=c++11 -I /usr/include/eigen3/ -o rungeKutta_adv_nc_t_N.o rungeKutta_adv_nc_t_N.cpp -lnetcdf
-// /home/dmoren07/c++/eigen3
+ICEBERG COMPUTER:
+$ g++ -std=c++11 -I /usr/include/eigen3/ -o rungeKutta_adv_nc_t_N.o rungeKutta_adv_nc_t_N.cpp -lnetcdf
+/home/dmoren07/c++/eigen3
 
-// BRIGIT:
-// Modules required (module load <modulename>): nectcdf for c++ and gnu compiler
-// module load gnu8
-// If intel compiler is loaded:
-// module swap intel gnu8/8.3.0
+BRIGIT:
+Modules required (module load <modulename>): nectcdf for c++ and gnu compiler
+$ module load gnu8
+If intel compiler is loaded:
+$ module swap intel gnu8/8.3.0
 
-/* g++ -std=c++11 -I/opt/ohpc/pub/libs/gnu8/impi/netcdf/4.6.3/include/ -I/usr/include/eigen3/ -L/opt/ohpc/pub/libs/gnu8/impi/netcdf/4.6.3/lib/ 
--lnetcdf -o rungeKutta_adv_nc_t_N_optim.o rungeKutta_adv_nc_t_N_optim.cpp */
+$ g++ -std=c++11 -I/opt/ohpc/pub/libs/gnu8/impi/netcdf/4.6.3/include/ -I/usr/include/eigen3/ -L/opt/ohpc/pub/libs/gnu8/impi/netcdf/4.6.3/lib/ 
+-lnetcdf -o rungeKutta_adv_nc_t_N_optim.o rungeKutta_adv_nc_t_N_optim.cpp 
 
-// To run program: 
-// ./flow_line.o
+To run program: 
+$ ./flow_line.o
 
-// Eigen fixed and dynamic sizes:
-// Use fixed sizes for very small sizes where you can, and use dynamic sizes for larger 
-// sizes or where you have to. For small sizes, especially for sizes smaller than
-// (roughly) 16, using fixed sizes is hugely beneficial to performance, as it allows Eigen 
-// to avoid dynamic memory allocation and to unroll loops.
+Eigen fixed and dynamic sizes:
+Use fixed sizes for very small sizes where you can, and use dynamic sizes for larger sizes or where you have to. For small sizes, especially for sizes smaller than (roughly) 16, using fixed sizes is hugely beneficial to performance, as it allows Eigen to avoid dynamic memory allocation and to unroll loops.
 
-// Float can contain up to seven digits in total, not just following the decimal point.
+Note: float type can contain up to seven digits in total, not just following the decimal point.
 
 
 
-// FLOWLINE MODEL STRUCTURE. LIST OF FUNCTIONS AND TOOLS.
+FLOWLINE MODEL STRUCTURE. LIST OF FUNCTIONS AND TOOLS.
 
 TOOLS.
 gauss_filter --->  Returns a gaussian smooth by using Weierstrass transform.
