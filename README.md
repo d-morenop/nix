@@ -3,28 +3,38 @@
 Thermomechanically-coupled flowline model.
 
 Our flow line model uses netcdf and Eigen libraries. Make sure both are installed.
+
 Eigen: https://eigen.tuxfamily.org.
+
 Directory where eigen is installed: $ dpkg -L libeigen3-devcd
+
 Directory of netcdf libraries: $ nc-config --libdir
 
 LOCAL: 
 (old: g++ -I /usr/include/eigen3/ test.cpp -o test.o)
+
 $ g++ -I /usr/include/eigen3/ -o rungeKutta_adv_nc_t_N_array.o rungeKutta_adv_nc_t_N_array.cpp -lnetcdf
 
 ICEBERG COMPUTER:
+
 $ g++ -std=c++11 -I /usr/include/eigen3/ -o rungeKutta_adv_nc_t_N.o rungeKutta_adv_nc_t_N.cpp -lnetcdf
 /home/dmoren07/c++/eigen3
 
 BRIGIT:
+
 Modules required (module load <modulename>): nectcdf for c++ and gnu compiler
+
 $ module load gnu8
+
 If intel compiler is loaded:
+
 $ module swap intel gnu8/8.3.0
 
 $ g++ -std=c++11 -I/opt/ohpc/pub/libs/gnu8/impi/netcdf/4.6.3/include/ -I/usr/include/eigen3/ -L/opt/ohpc/pub/libs/gnu8/impi/netcdf/4.6.3/lib/ 
 -lnetcdf -o rungeKutta_adv_nc_t_N_optim.o rungeKutta_adv_nc_t_N_optim.cpp 
 
 To run program: 
+
 $ ./flow_line.o
 
 Eigen fixed and dynamic sizes:
@@ -60,5 +70,8 @@ f_du_ds      --->  Derivatives in the system of two 1st-order differential eqs.
                    Vectorial magnitude: f_du_dz(0) = du1/ds and f_du_ds(1) = du2/ds.
 rungeKutta   --->  4th-order Runge-Kutta integration scheme for the SSA stress 
                    balance. Spatial resolution is ds to ensure consistency with 
-                   derivatives. 
+                   derivatives. ç
+vel_solver   --->  Implicit finite differences scheme. To avoid the velocity non-linearity in
+                   tau_b, we use the Runge-Kutta solution as an initial guess and thence proceed
+                   with a Picard iteration until velocity convergence is ensured.
 
