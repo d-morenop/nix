@@ -12,7 +12,7 @@ using namespace std;
 
 #include "write_nc.cpp"
 
-// COMMIT TEST 1. 13/04/2022.
+// COMMIT TEST 2. 13/04/2022.
 // Our flow line model uses netcdf and Eigen libraries. Make sure both are installed.
 // Eigen: https://eigen.tuxfamily.org.
 // Directory where eigen is installed: $ dpkg -L libeigen3-devcd
