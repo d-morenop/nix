@@ -12,7 +12,6 @@ using namespace std;
 
 #include "write_nc.cpp"
 
-// COMMIT TEST 2. 13/04/2022.
 // Our flow line model uses netcdf and Eigen libraries. Make sure both are installed.
 // Eigen: https://eigen.tuxfamily.org.
 // Directory where eigen is installed: $ dpkg -L libeigen3-devcd
@@ -84,8 +83,6 @@ rungeKutta   --->  4th-order Runge-Kutta integration scheme for the SSA stress
 
 // GENERAL PARAMETERS.
 float const sec_year = 3.154e7;              // Seconds in a year.
-float const sec_mnth = 2.628e6;              // Seconds in a month.
-float const sec_day  = 8.64e4;               // Seconds in a day. 
 //float const gam      = 0.2;                // Robert-Asselin filter parameter. 0.3
 float const u_min    = 0.0;
 float const u_max    = 800.0 / sec_year;
@@ -115,27 +112,35 @@ float const n_exp = (1.0 - n_gln) / (2.0 * n_gln);    // Yelmo
 // A ~ 10^-24: 1.0e-14. A ~ 10^-25; 1.0e-16.
 float const eps  = 1.0e-14;                            // Final: 1.0e-14. Current 1.0e-7. Yelmo: 1.0e-6. 2.5e-9 good GL but bad H.
 
+// BASAL FRICTION.
+float const tau_b_min = 30.0e3;
+
+// REPEAT LONG SIMULATION TO SEE BEHAVIOUR!!
+
 // DOMAIN DEFINITION.
 float L     = 702.3e3;                    // Grounding line position [m] (1.2e6)
 float L_old = 702.3e3;
 float L_new;
 float const t0    = 0.0;                // Starting time [s].
-float const tf    = 75.0e3 * sec_year;  // 15000.0. 5.0e3. 80.0. Ending time [yr] * [s/yr]
+// SIMULATIONS STOP BEFORE REACHING ENDING TIME!!
+float const tf    = 100.0e3 * sec_year;  // 75.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
+//float tf    = 75.0e3 * sec_year; 
 float t     = t0;                       // Time initialization [s].
 float t_plot;
 float dt;                               // Time step [s].
 float dt_CFL;                           // Courant-Friedrichs-Lewis condition
-float const dt_max = sec_year;          // Maximum time step = 1 year [s].
+float const dt_max = 5.0 * sec_year;    // Maximum time step = 10 years [s].
 float const t_eq = 5.0 * sec_year;     // 20.0. Length of explicit scheme. try 50?
 float const t_bc = 10.0 * sec_year;    // 1.0e3. Implicit scheme spin-up. End of u2_bc equilibration.
+float dt_plot;
 
-int const t_n = 30;                     // Number of output frames.
+int const t_n = 30;                     // Number of output frames. 30.
 
 ArrayXf a = ArrayXf::LinSpaced(t_n, t0, tf);      // Time steps in which the solution is saved. 
 
 
 // COORDINATES.
-int const n = 2000;                     // Number of horizontal points. 200, 500, 2000
+int const n = 1000;                     // Number of horizontal points. 200, 500, 2000
 float const ds = 1.0 / n;               // Normalized spatial resolution.
 float const ds_inv = n;
 
@@ -159,7 +164,7 @@ float const theta_max = 273.15;   // Max temperature of ice [K].
 // CALVING
 float D;                               // Depth below the sea level [m].
 float u2_bc;                           // Boundary condition on u2 = du1/dx.
-float u2_dif;
+float u2_dif;                          // Difference between analytical and numerical.
 
 // Runge-Kutta boundary conditions.
 float u1_0 = 0.0;                      // Velocity in x0 (i.e., u(x0)).
@@ -170,8 +175,11 @@ int const mismip = 1;
 float A, B;
 
 // PICARD ITERATION
-float error; // Norm of the velocity difference between iterations.
-//float alpha, alpha_1, alpha_2, mu;
+float error;                           // Norm of the velocity difference between iterations.
+float const picard_tol = 1.0e-4;       // 1.0e-5. Convergence tolerance within Picard iteration.
+int const n_picard = 5;                // Max number iter. Good results: 1 is enough for convergence! (10, 15)
+int c_picard;
+float alpha, omega; //alpha_1, alpha_2, mu;
 
 
 // PREPARE VARIABLES.
@@ -191,12 +199,12 @@ ArrayXf u2_plot(n);                  // Saved ice velocity derivative [1/yr]
 ArrayXf tau_b(n);                    // Basal friction [Pa]
 ArrayXf tau_d(n);                    // Driving stress [Pa]
 ArrayXf filt(n);                     // 
-ArrayXf u1_old_1(n); 
-ArrayXf u1_old_2(n); 
-ArrayXf u2_old(n); 
+ArrayXf u1_old(n);  
+ArrayXf u2_old(n);  
 ArrayXf u2_0_vec(n);                 // Ranged sampled of u2_0 for a certain iteration.
 ArrayXf u2_dif_vec(n);               // Difference with analytical BC.
 VectorXf dif_iter(n);                 // Velocity difference between two consequtive iterations [m/s].
+VectorXf u2_vec(n); 
 VectorXf c_s_1(n);                   // Correction vector Picard relaxed iteration.
 VectorXf c_s_2(n);
 //VectorXf u2_vec(n);
@@ -343,22 +351,11 @@ ArrayXf tridiagonal_solver(ArrayXf A, ArrayXf B, ArrayXf C, \
     ////////////////////////////////////////
     // SOLVE THIS!!!!!!!!!!!!!
     // From notes: u(n-1) = Q(n-1).
-    //u(n-1) = Q(n-1);
-    //u(n-1) = max(Q(n-1), u_min);    // Ensure positive value.
-    
     // Boundary condition at the GL on u2.
     u(n-1) = u2_bc;             
 
 
     // Smooth transition to u2_bc (since explicit scheme doesn't account for this).
-    //u(n-1) = u2_RK + ( u2_bc - u2_RK ) * (t - t_eq) / (t_bc - t_eq);
-    //u(n-1) = u2_RK + ( 0.05 * u2_bc - u2_RK ) * (t - t_eq) / (t_bc - t_eq);
-
-    // This option gives reasonable results:
-    //u(n-1) = 0.01 * u2_bc;
-
-    //u(n-1) = 0.005 * u2_bc;
-    
     /*if (t <= t_bc)
     {
         u(n-1) = u2_RK + ( u2_bc - u2_RK ) * (t - t_eq) / (t_bc - t_eq);
@@ -376,10 +373,10 @@ ArrayXf tridiagonal_solver(ArrayXf A, ArrayXf B, ArrayXf C, \
     {
         j = n - i;
         u(j) = P(j) * u(j+1) + Q(j);
-        
-        // If solving for u1: only positive vel admissible.
-        //u(j) = max(u(j), u_min);
     }
+
+    // Do we need this to ensure stability?
+    //u(n-2) = u2_bc;
 
     return u;
 }
@@ -450,7 +447,7 @@ ArrayXf f_H_flux(ArrayXf u, ArrayXf H, ArrayXf S, ArrayXf sigma, \
                     float rho, float rho_w)
 {
     ArrayXf H_now(n), sigma_L(n), q(n);
-    float L_inv, H_gl, H_float, delta_L;
+    float L_inv, H_gl, H_float, delta_L, delta_L_tilde;
 
     q       = u * H;
     L_inv   = 1.0 / L;
@@ -458,8 +455,9 @@ ArrayXf f_H_flux(ArrayXf u, ArrayXf H, ArrayXf S, ArrayXf sigma, \
 
     // Grounding line position change.
     delta_L = L_new - L_old;
+    //delta_L_tilde = L - L_old;
 
-    // Advection equation.
+    // Advection equation. Centred dH in the sigma_L term.
     for (int i=1; i<n-1; i++)
     {
         H_now(i) = H(i) + sigma_L(i) * 0.5 * delta_L * \
@@ -470,19 +468,27 @@ ArrayXf f_H_flux(ArrayXf u, ArrayXf H, ArrayXf S, ArrayXf sigma, \
     // Ice thickness BC at sigma = 0. dH = 0.
     H_now(0) = H_now(1); 
 
-    // Flux in the last grid point. Centred dH in the sigma_L term.
+    // Flux in the last grid point. .
     H_gl = H(n-1) + sigma_L(n-1) * 0.5 * delta_L * \
                          ( H(n-1) - H(n-2) ) * ds_inv + \
                         - dt * ( q(n-1) - q(n-2) ) * L_inv * ds_inv + S(n-1) * dt;
 
-    
-    
+
     // Terminus thickness given by flotation condition.
-    H_float    = ( rho_w / rho ) * D;
+    //H_float    = ( rho_w / rho ) * D;
+    // New. This gives nearly zero velocities:
     //H_now(n-1) = H_float;
     
     // Flotation condition as the lower bound.
-    H_now(n-1) = max(H_gl, H_float);
+    // Original:
+    //H_now(n-1) = max(H_gl, H_float);
+
+    // According to Bassis et al. (2017?)
+    //H_now(n-1) = min(H_gl, H_float);
+
+    // Appendix A1 in Schoof (2007) remarks a possible drift \
+    from flotation condition. Then:
+    H_now(n-1) = H_gl;
 
 	return H_now; 
 }
@@ -513,7 +519,7 @@ ArrayXf f_visc(ArrayXf u2, float B, float n_exp, \
     u2_L      = pow( (abs(u2) / L) + eps, 2);
     visc      = 0.5 * B * pow(u2_L, n_exp);
 
-    // Constant viscosity experiment.
+    // Constant viscosity experiment:
     // ArrayXf visc = ArrayXf::Constant(n, 0.5e17); // 1.0e15, 0.5e17
     
 	return visc;
@@ -606,8 +612,6 @@ Array2f du2_ds(float u_1, float u_2, float dh_dx, float visc,\
     // Notation: du2 = du2/dx and u2 = du1/dx
     tau_b = C_bed * pow(u_1, m);
 
-    //cout << " \n tau_b = " << tau_b * pow(L, 2);
-
     // 1D SSA stress balance. L correction accounts for sigma derivatives.
     // We change sign to H and bed derivative so that negative values \
     contribute to positive change in du/dx. With d_visc_H this is a problem! \
@@ -642,7 +646,7 @@ MatrixXf rungeKutta(float u1_0, float u2_0, float u_min, float u_max, float u_0,
     // Define for convenience.
     visc_dot_H = 4.0 * visc * H;
     c1         = 1.0 / visc_dot_H;      
-	c2         = rho * g * H;
+    c2         = rho * g * H;
 	pre        = 1.0 / 6.0;
     h          = bed + H;           // Ice surface elevation.
     
@@ -668,8 +672,10 @@ MatrixXf rungeKutta(float u1_0, float u2_0, float u_min, float u_max, float u_0,
     D = abs( min(u_min, bed(n-1)) );      // u_min is just float32 0.0.
 
     // Equivalent (Greve and Blatter 6.64).
-    //u2_bc = 0.5 * c1(n-1) * g * L * pow(H(n-1), 2) * rho * ( rho_w - rho ) / rho_w;
-    u2_bc = 0.125 * g * H(n-1) * L * rho * ( rho_w - rho ) / ( rho_w * visc(n-1) );
+    // Original:
+    //u2_bc = 0.125 * g * H(n-1) * L * rho * ( rho_w - rho ) / ( rho_w * visc(n-1) );
+    // New:
+    u2_bc = 0.5 * c1(n-1) * g * L * ( rho * pow(H(n-1),2) - rho_w * pow(D,2) );
 
 
     // We include a shooting method. Let now u2(x0) be a degree of freedom 
@@ -785,7 +791,7 @@ MatrixXf vel_solver(ArrayXf H, float ds, float ds_inv, int n, ArrayXf visc, \
 
     MatrixXf dff(n,1), out(5,n);
 
-    float D, u2_bc, d_vis_H, tau_b_min;
+    float D, u2_bc, d_vis_H;
 
     // Defined for convenience.
     visc_dot_H = 4.0 * visc * H;
@@ -836,6 +842,7 @@ MatrixXf vel_solver(ArrayXf H, float ds, float ds_inv, int n, ArrayXf visc, \
     dhds = 0.5 * dhds * ds_inv;
 
     // mi amor, no te preocupes. qué lo vas a hacer genial.
+
     // Stress balance: driving - friction.
     F = c2 * dhds + tau_b * L;
 
@@ -844,8 +851,12 @@ MatrixXf vel_solver(ArrayXf H, float ds, float ds_inv, int n, ArrayXf visc, \
     // Grounding line sigma = 1 (x = L). u_min is just float32 0.0.
     D = abs( min(u_min, bed(n-1)) );   
 
+    // HERE IS THE ISSUE WITH THE EQUILIBIRUM STATE.
+    // DIFFERENT EQUILIBIRUM PROFILES ARE FOUND FOR EACH BC!!!
     // Equivalent (Greve and Blatter Eq. 6.64).
-    u2_bc = 0.125 * g * H(n-1) * L * rho * ( rho_w - rho ) / ( rho_w * visc(n-1) );
+    //u2_bc = 0.125 * g * H(n-1) * L * rho * ( rho_w - rho ) / ( rho_w * visc(n-1) );
+    // New:
+    u2_bc = 0.5 * c1(n-1) * g * L * ( rho * pow(H(n-1),2) - rho_w * pow(D,2) );
 
     // TRIDIAGONAL SOLVER.
     u2 = tridiagonal_solver(A, B, C, F, n, u2_bc, t, u2_RK);
@@ -854,21 +865,25 @@ MatrixXf vel_solver(ArrayXf H, float ds, float ds_inv, int n, ArrayXf visc, \
     // Ice divide in sigma = 0.
     u1(0) = 0.0;
 
-    // Direct explicit integration to obtain u1 from u2.
-    for (int i=0; i<n-1; i++)
+    // Direct explicit integration to obtain u1 from u2. Forward integration.
+    /*for (int i=0; i<n-1; i++)
     {
         // Modified Runge-Kutta order 2. \
         This way we consider BC imposed in u2.
-        u1(i+1) = u1(i) + ds * 0.5 * ( u2(i) + u2(i+1) );
+        // Old (this is wrong):
+        //u1(i+1) = u1(i) + ds * 0.5 * ( u2(i) + u2(i+1) );
+        // New: no numerical oscillations?
+        u1(i+1) = u1(i) + ds * u2(i);
         u1(i+1) = max(u_min, u1(i+1));
+    }*/
 
-        // Smooth out u2?
-        /*if (i > 0 & 2*i < n-1)
-        {
-            u2(2*i) = 0.5 * ( u2(2*i-1) + u2(2*i+1) );
-        }
-        u2(0) = u2(1);*/
+    // New: centred scheme.
+    for (int i=1; i<n-1; i++)
+    {
+        u1(i+1) = u1(i-1) + ds * 2.0 * u2(i);
+        u1(i+1) = max(u_min, u1(i+1));
     }
+    u1(1) = u1(0) + ds * u2(0);
 
     // Allocate solutions.
     out.row(0) = u1;
@@ -888,6 +903,7 @@ int main()
 {
     cout << " \n h = " << ds;
     cout << " \n n = " << n;
+    cout << " \n tf = " << tf / sec_year;
 
     // Call nc write function.
     f_nc(n, n_z);
@@ -906,8 +922,8 @@ int main()
         //S(i)    = 0.30 * pow(sigma(i), 2) ;      // 0.31 * pow(sigma(i), 2)
 
         // MISMIP EXPERIMENTS.
-        H(i) = 10.0; //10.0
-        S(i) = 0.3; 
+        H(i) = 10.0;             // Initial ice thickness [m].
+        S(i) = 0.3;              // Snow accumulation [m/s].
     }
     
     // Units consistency.
@@ -925,7 +941,8 @@ int main()
     ArrayXf C_bed = ArrayXf::Constant(n, 7.624e6); //7.624e6, 4.624e6
 
     // Viscosity from constant A value. u2 = 0 initialization.
-    A    = 1.0e-24;               // 4.6416e-24, 2.1544e-24
+    // AS WE DECREASE A, THE ICE SHEET LOSES MASS EARLIER.
+    A    = 4.6416e-24;               // 4.6416e-24, 2.1544e-24
     B    = pow(A, ( -1 / n_gln ) );
     u2   = pow(eps, 2);
     visc = 0.5 * B * pow(u2, n_exp);
@@ -971,16 +988,16 @@ int main()
             // ensure convergence. Picard iteration.
             // n_picard = 10 and error > 0.5e-6 seems reasonable with tau_b_min = 2.5e2.
             
-            int n_picard = 1; // Good results: 1 is enough for convergence! (10, 15)
-            int c_picard = 0;
-
-            // NOW VELOCITIES ARE ALWAYS ZERO EVEN THOUGH TAU_D SEEMS CORRECT.
+            c_picard = 0;
 
             error = 1.0;
-            while (error > 1.0e-4 & c_picard < n_picard) // 1.0e-5, 0.5e-7
+            while (error > picard_tol & c_picard < n_picard)
             {
-                //cout << " \n Picard iter \n ";
-                u1_old_1 = u1;
+                // Save previous iteration solution.
+                u1_old = u1;
+                u2_old = u2;
+
+                // Call implicit solver.
                 u = vel_solver(H, ds, ds_inv, n, visc, \
                                bed, rho, g, L, C_bed, tau_b, t, u2_bc);
 
@@ -992,30 +1009,39 @@ int main()
                 D     = u(4,0);
                 //u2_bc = u(4,1);
 
-                // Relaxation within Picard iteration.
-                /*u2 = 0.25 * u2_old + 0.75 * u2;
-                u1 = 0.25 * u1_old_1 + 0.75 * u1;*/
+                // Relaxation within Picard iteration. This may cause instabilities?
+                /*u2 = 0.3 * u2_old + 0.7 * u2;
+                u1 = 0.3 * u1_old + 0.7 * u1;*/
+
+                u2 = 0.5 * u2_old + 0.5 * u2;
+                u1 = 0.5 * u1_old + 0.5 * u1;
 
                 // Update viscosity.
-                //cout << "\n u2(0) = " << u2(0) * sec_year;
                 visc = f_visc(u2, B, n_exp, eps, L, n);
 
                 // Current error (vector class required to compute norm). 
                 // Eq. 12 De-Smedt et al. (2010).
                 //dif_iter = u1 - u1_old;
                 dif_iter = u2 - u2_old;
-                error    = dif_iter.norm();
-                //cout << "\n error = " << error;
+                //error    = dif_iter.norm();
 
-                // Implement relaxed Picard iteration 
-                // De Smedt et al. (2010) Eq. 10.
+                u2_vec = u2;
+                error  = dif_iter.norm() / u2_vec.norm();
+                
+
+                // New relaxed Picard iteration. Pattyn  (2003). 
                 /*if (c_picard > 0)
                 {
                     c_s_1 = u1 - u1_old_1;
                     c_s_2 = u1_old_1 - u1_old_2;
-                    alpha = acos( c_s_1.dot(c_s_2) / \
-                                 (c_s_1.norm() * c_s_2.norm()) );
+                    c_s_dif = c_s_1 - c_s_2;
 
+                    alpha = c_s_2.norm() / c_s_dif.norm();
+                    
+                    omega = acos( c_s_1.dot(c_s_2) / \
+                                 ( c_s_1.norm() * c_s_2.norm() ) );
+
+                    // De Smedt et al. (2010) Eq. 10.
                     alpha_1 = 0.125 * M_PI;
                     alpha_2 = (19.0 / 20.0) * M_PI;
 
@@ -1032,19 +1058,23 @@ int main()
                         mu = 0.5;
                     }
 
-                    // New guess. Ensure positive values.
-                    u1 = u1_old_1 + mu * c_s_1.array();
-                    for (int i=0; i<n; i++)
-                    {
-                        u1(i) = max(u_min, u1(i));
-                    }
+                    // New guess based on updated alpha.
+                    u2 = ( 1.0 - alpha ) * u2_old + alpha * u2;
+                    u1 = ( 1.0 - alpha ) * u1_old + alpha * u1;
                 }*/
 
-                // Basal friction from previous step velocity u1.
+                // Update basal friction with current step velocity u1.
                 tau_b = C_bed * pow(u1, m);
 
-                // Store solution at t-2dt.
-                //u1_old_2 = u1_old_1;
+                // Min tau_b to avoid losing ice at equilibirum?
+                /*for (int i=0; i<n-1; i++)
+                {
+                    tau_b(i) = max(tau_b_min, tau_b(i));
+                }*/
+
+                // Update multistep variables.
+                //u1_old_2 = u1_old;
+                //u2_old_2 = u2_old;
 
                 // Number of iterations.
                 c_picard = c_picard + 1;
@@ -1063,13 +1093,16 @@ int main()
         dt_CFL = 0.5 * ds * L / u1.maxCoeff();  
         dt     = min(dt_CFL, dt_max);
 
+        // Store solution in nc file.
         if (c == 0 || t > a(c))
         {
             cout << "\n t = " << t / sec_year;
+            cout << "\n dt = " << dt / sec_year;
 
             u1_plot = sec_year * u1;
             u2_plot = sec_year * u2 / L;
             t_plot  = t / sec_year;
+            dt_plot = dt / sec_year;
 
             start[0]   = c;
             start_0[0] = c;
@@ -1107,6 +1140,10 @@ int main()
             ERR(retval);
             if ((retval = nc_put_vara_float(ncid, picard_error_varid, start_0, cnt_0, &error)))
             ERR(retval);
+            if ((retval = nc_put_vara_float(ncid, dt_varid, start_0, cnt_0, &dt_plot)))
+            ERR(retval);
+            if ((retval = nc_put_vara_int(ncid, c_pic_varid, start_0, cnt_0, &c_picard)))
+            ERR(retval);
 
             if ((retval = nc_put_vara_float(ncid, theta_varid, start_z, cnt_z, &theta(0,0))))
             ERR(retval);
@@ -1115,7 +1152,6 @@ int main()
         }  
 
         // Update ice viscosity with new u2 field.
-        // Constant visc test.
         visc = f_visc(u2, B, n_exp, eps, L, n);
         /*filt = gaussian_filter(visc, zeros, 4.0, L, ds, n);
         visc = filt;*/

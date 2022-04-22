@@ -7,7 +7,7 @@
 
 // NETCDF PARAMETERS.
 /* This is the name of the data file we will create. */
-#define FILE_NAME "flow_line_mismip_exp_1.3.nc"
+#define FILE_NAME "output/mismip.exp.1/n.1000/relaxed/centred/w.0.5/eps.1.0e-14.nc"
  
 /* We are writing 1D data, n grid points*/
 #define NDIMS 2
@@ -28,6 +28,8 @@
 #define LMBD_NAME "lambda"
 #define B_NAME "b"
 #define L_NAME "L"
+#define DT_NAME "dt"
+#define C_PIC_NAME "c_picard"
 #define T_NAME "t"
 #define U2_BC_NAME "dudx_bc"
 #define U2_DIF_NAME "BC_error"
@@ -51,6 +53,8 @@
 #define LMBD_UNITS "dimensionless"
 #define B_UNITS "m/km"
 #define L_UNITS "km"
+#define DT_UNITS "yr"
+#define C_PIC_UNITS "dimensionless"
 #define T_UNITS "yr"
 #define U2_BC_UNITS "1/yr"
 #define U2_DIF_UNITS "1/yr"
@@ -73,7 +77,7 @@ int retval;
 /* IDs for the netCDF file, dimensions, and variables. */
 int ncid, x_dimid, z_dimid, time_dimid;
 int x_varid, z_varid, u1_varid, u2_varid, H_varid, visc_varid, s_varid, \
-    tau_varid, lmbd_varid, taud_varid, b_varid, L_varid, t_varid, \
+    tau_varid, lmbd_varid, taud_varid, b_varid, L_varid, dt_varid, c_pic_varid, t_varid, \
     u2_bc_varid, u2_dif_varid, picard_error_varid, u2_0_vec_varid, u2_dif_vec_varid, \
     theta_varid, C_bed_varid;
 int dimids[NDIMS];
@@ -186,6 +190,12 @@ int f_nc(int N, int N_Z)
     if ((retval = nc_def_var(ncid, L_NAME, NC_FLOAT, NDIMS_0,
                     dimids_0, &L_varid)))
         ERR(retval);
+    if ((retval = nc_def_var(ncid, DT_NAME, NC_FLOAT, NDIMS_0,
+                    dimids_0, &dt_varid)))
+        ERR(retval);
+    if ((retval = nc_def_var(ncid, C_PIC_NAME, NC_INT, NDIMS_0,
+                    dimids_0, &c_pic_varid)))
+        ERR(retval);
     if ((retval = nc_def_var(ncid, T_NAME, NC_FLOAT, NDIMS_0,
                     dimids_0, &t_varid)))
         ERR(retval);
@@ -243,6 +253,12 @@ int f_nc(int N, int N_Z)
 
     if ((retval = nc_put_att_text(ncid, L_varid, UNITS,
                     strlen(L_UNITS), L_UNITS)))
+        ERR(retval);
+    if ((retval = nc_put_att_text(ncid, dt_varid, UNITS,
+                    strlen(DT_UNITS), DT_UNITS)))
+        ERR(retval);
+    if ((retval = nc_put_att_text(ncid, c_pic_varid, UNITS,
+                    strlen(C_PIC_UNITS), C_PIC_UNITS)))
         ERR(retval);
     if ((retval = nc_put_att_text(ncid, t_varid, UNITS,
                     strlen(T_UNITS), T_UNITS)))
