@@ -10,7 +10,7 @@
 using namespace Eigen;
 using namespace std;
 
-#include "write_nc_double.cpp"
+#include "write_nc.cpp"
 
 // Our flow line model uses netcdf and Eigen libraries. Make sure both are installed.
 // Eigen: https://eigen.tuXdamily.org.
@@ -481,7 +481,7 @@ ArrayXd f_H_flux(ArrayXd u, ArrayXd H, ArrayXd S, ArrayXd sigma, \
     // Vieli and Payne (2005) scheme:
     H_now(n-1) = H(n-1) + dt * ( ds_inv * L_inv * \
                                 ( sigma_L(n-1) * dL_dt * \
-                                    m * ( 4.0 * H(n-1) - 3.0 * H(n-2) - H(n-3) ) ) + \
+                                    m * ( 4.0 * H(n-1) - 3.0 * H(n-2) - H(n-3) ) + \
                                         - ( q(n-1) - q(n-2) ) ) + S(n-1) );
 
 	return H_now; 
