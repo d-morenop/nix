@@ -7,7 +7,7 @@
 
 // NETCDF PARAMETERS.
 /* This is the name of the data file we will create. */
-#define FILE_NAME "output/mismip.exp.1/n.1000/relaxed/centred/w.0.5/eps.1.0e-14.nc"
+#define FILE_NAME "output/mismip.exp.3/n.1000/dt.correction/eps.1.0e-30.vieli.taub.min.20.0e30.nc"
  
 /* We are writing 1D data, n grid points*/
 #define NDIMS 2
@@ -30,6 +30,8 @@
 #define L_NAME "L"
 #define DT_NAME "dt"
 #define C_PIC_NAME "c_picard"
+#define ALPHA_NAME "alpha"
+#define OMEGA_NAME "omega"
 #define T_NAME "t"
 #define U2_BC_NAME "dudx_bc"
 #define U2_DIF_NAME "BC_error"
@@ -55,6 +57,8 @@
 #define L_UNITS "km"
 #define DT_UNITS "yr"
 #define C_PIC_UNITS "dimensionless"
+#define ALPHA_UNITS "dimensionless"
+#define OMEGA_UNITS "dimensionless"
 #define T_UNITS "yr"
 #define U2_BC_UNITS "1/yr"
 #define U2_DIF_UNITS "1/yr"
@@ -78,8 +82,8 @@ int retval;
 int ncid, x_dimid, z_dimid, time_dimid;
 int x_varid, z_varid, u1_varid, u2_varid, H_varid, visc_varid, s_varid, \
     tau_varid, lmbd_varid, taud_varid, b_varid, L_varid, dt_varid, c_pic_varid, t_varid, \
-    u2_bc_varid, u2_dif_varid, picard_error_varid, u2_0_vec_varid, u2_dif_vec_varid, \
-    theta_varid, C_bed_varid;
+    alpha_varid, omega_varid, u2_bc_varid, u2_dif_varid, picard_error_varid, \
+    u2_0_vec_varid, u2_dif_vec_varid, theta_varid, C_bed_varid;
 int dimids[NDIMS];
 
 // For the 0D plots (append the current length of domain L)
@@ -99,8 +103,8 @@ size_t start_z[NDIMS_Z], cnt_z[NDIMS_Z];
 int f_nc(int N, int N_Z)
 {
     /* These program variables hold one spatial variable x. */
-    float xs[N];    
-    float xz[N_Z];
+    double xs[N];    
+    double xz[N_Z];
         
     /* Create the file. */
     if ((retval = nc_create(FILE_NAME, NC_CLOBBER, &ncid)))
@@ -122,10 +126,10 @@ int f_nc(int N, int N_Z)
         an array of dimension IDs for each variable's dimensions, but
         since coordinate variables only have one dimension, we can
         simply provide the address of that dimension ID (&x_dimid). */
-    if ((retval = nc_def_var(ncid, X_NAME, NC_FLOAT, 1, &x_dimid,
+    if ((retval = nc_def_var(ncid, X_NAME, NC_DOUBLE, 1, &x_dimid,
                     &x_varid)))
         ERR(retval);
-    if ((retval = nc_def_var(ncid, Z_NAME, NC_FLOAT, 1, &z_dimid,
+    if ((retval = nc_def_var(ncid, Z_NAME, NC_DOUBLE, 1, &z_dimid,
                     &z_varid)))
         ERR(retval);
         
@@ -150,66 +154,72 @@ int f_nc(int N, int N_Z)
     dimids_z[1] = z_dimid;
         
     /* Define the netCDF variables */
-    if ((retval = nc_def_var(ncid, U1_NAME, NC_FLOAT, NDIMS,
+    if ((retval = nc_def_var(ncid, U1_NAME, NC_DOUBLE, NDIMS,
                     dimids, &x_varid)))
         ERR(retval);
-    if ((retval = nc_def_var(ncid, U2_NAME, NC_FLOAT, NDIMS,
+    if ((retval = nc_def_var(ncid, U2_NAME, NC_DOUBLE, NDIMS,
                     dimids, &u2_varid)))
         ERR(retval);
-    if ((retval = nc_def_var(ncid, H_NAME, NC_FLOAT, NDIMS,
+    if ((retval = nc_def_var(ncid, H_NAME, NC_DOUBLE, NDIMS,
                     dimids, &H_varid)))
         ERR(retval);
-    if ((retval = nc_def_var(ncid, VISC_NAME, NC_FLOAT, NDIMS,
+    if ((retval = nc_def_var(ncid, VISC_NAME, NC_DOUBLE, NDIMS,
                     dimids, &visc_varid)))
         ERR(retval);
-    if ((retval = nc_def_var(ncid, S_NAME, NC_FLOAT, NDIMS,
+    if ((retval = nc_def_var(ncid, S_NAME, NC_DOUBLE, NDIMS,
                     dimids, &s_varid)))
         ERR(retval);
-    if ((retval = nc_def_var(ncid, TAU_NAME, NC_FLOAT, NDIMS,
+    if ((retval = nc_def_var(ncid, TAU_NAME, NC_DOUBLE, NDIMS,
                     dimids, &tau_varid)))
         ERR(retval);
-    if ((retval = nc_def_var(ncid, LMBD_NAME, NC_FLOAT, NDIMS,
+    if ((retval = nc_def_var(ncid, LMBD_NAME, NC_DOUBLE, NDIMS,
                     dimids, &lmbd_varid)))
         ERR(retval);
-    if ((retval = nc_def_var(ncid, TAUD_NAME, NC_FLOAT, NDIMS,
+    if ((retval = nc_def_var(ncid, TAUD_NAME, NC_DOUBLE, NDIMS,
                     dimids, &taud_varid)))
         ERR(retval);
-    if ((retval = nc_def_var(ncid, B_NAME, NC_FLOAT, NDIMS,
+    if ((retval = nc_def_var(ncid, B_NAME, NC_DOUBLE, NDIMS,
                     dimids, &b_varid)))
         ERR(retval);
-    if ((retval = nc_def_var(ncid, C_BED_NAME, NC_FLOAT, NDIMS,
+    if ((retval = nc_def_var(ncid, C_BED_NAME, NC_DOUBLE, NDIMS,
                     dimids, &C_bed_varid)))
         ERR(retval);
-    if ((retval = nc_def_var(ncid, U2_DIF_VEC_NAME, NC_FLOAT, NDIMS,
+    if ((retval = nc_def_var(ncid, U2_DIF_VEC_NAME, NC_DOUBLE, NDIMS,
                     dimids, &u2_dif_vec_varid)))
         ERR(retval);
-    if ((retval = nc_def_var(ncid, U2_0_VEC_NAME, NC_FLOAT, NDIMS,
+    if ((retval = nc_def_var(ncid, U2_0_VEC_NAME, NC_DOUBLE, NDIMS,
                     dimids, &u2_0_vec_varid)))
         ERR(retval);
 
-    if ((retval = nc_def_var(ncid, L_NAME, NC_FLOAT, NDIMS_0,
+    if ((retval = nc_def_var(ncid, L_NAME, NC_DOUBLE, NDIMS_0,
                     dimids_0, &L_varid)))
         ERR(retval);
-    if ((retval = nc_def_var(ncid, DT_NAME, NC_FLOAT, NDIMS_0,
+    if ((retval = nc_def_var(ncid, DT_NAME, NC_DOUBLE, NDIMS_0,
                     dimids_0, &dt_varid)))
         ERR(retval);
     if ((retval = nc_def_var(ncid, C_PIC_NAME, NC_INT, NDIMS_0,
                     dimids_0, &c_pic_varid)))
         ERR(retval);
-    if ((retval = nc_def_var(ncid, T_NAME, NC_FLOAT, NDIMS_0,
+    if ((retval = nc_def_var(ncid, ALPHA_NAME, NC_DOUBLE, NDIMS_0,
+                    dimids_0, &alpha_varid)))
+        ERR(retval);
+    if ((retval = nc_def_var(ncid, OMEGA_NAME, NC_DOUBLE, NDIMS_0,
+                    dimids_0, &omega_varid)))
+        ERR(retval);
+    if ((retval = nc_def_var(ncid, T_NAME, NC_DOUBLE, NDIMS_0,
                     dimids_0, &t_varid)))
         ERR(retval);
-    if ((retval = nc_def_var(ncid, U2_BC_NAME, NC_FLOAT, NDIMS_0,
+    if ((retval = nc_def_var(ncid, U2_BC_NAME, NC_DOUBLE, NDIMS_0,
                     dimids_0, &u2_bc_varid)))
         ERR(retval);
-    if ((retval = nc_def_var(ncid, U2_DIF_NAME, NC_FLOAT, NDIMS_0,
+    if ((retval = nc_def_var(ncid, U2_DIF_NAME, NC_DOUBLE, NDIMS_0,
                     dimids_0, &u2_dif_varid)))
         ERR(retval);
-    if ((retval = nc_def_var(ncid, PICARD_ERROR_NAME, NC_FLOAT, NDIMS_0,
+    if ((retval = nc_def_var(ncid, PICARD_ERROR_NAME, NC_DOUBLE, NDIMS_0,
                     dimids_0, &picard_error_varid)))
         ERR(retval);
 
-    if ((retval = nc_def_var(ncid, THETA_NAME, NC_FLOAT, NDIMS_Z,
+    if ((retval = nc_def_var(ncid, THETA_NAME, NC_DOUBLE, NDIMS_Z,
                     dimids_z, &theta_varid)))
         ERR(retval);
 
@@ -260,6 +270,12 @@ int f_nc(int N, int N_Z)
     if ((retval = nc_put_att_text(ncid, c_pic_varid, UNITS,
                     strlen(C_PIC_UNITS), C_PIC_UNITS)))
         ERR(retval);
+    if ((retval = nc_put_att_text(ncid, alpha_varid, UNITS,
+                    strlen(ALPHA_UNITS), ALPHA_UNITS)))
+        ERR(retval);
+    if ((retval = nc_put_att_text(ncid, omega_varid, UNITS,
+                    strlen(OMEGA_UNITS), OMEGA_UNITS)))
+        ERR(retval);
     if ((retval = nc_put_att_text(ncid, t_varid, UNITS,
                     strlen(T_UNITS), T_UNITS)))
         ERR(retval);
@@ -283,9 +299,9 @@ int f_nc(int N, int N_Z)
         
     /* Write the coordinate variable data. This will put the x and z
      of our data grid into the netCDF file. */
-    if ((retval = nc_put_var_float(ncid, x_varid, &xs[0])))
+    if ((retval = nc_put_var_double(ncid, x_varid, &xs[0])))
         ERR(retval);
-    if ((retval = nc_put_var_float(ncid, z_varid, &xz[0])))
+    if ((retval = nc_put_var_double(ncid, z_varid, &xz[0])))
         ERR(retval);
         
     /* These settings tell netcdf to write one timestep of data. (The
