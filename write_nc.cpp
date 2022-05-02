@@ -7,7 +7,7 @@
 
 // NETCDF PARAMETERS.
 /* This is the name of the data file we will create. */
-#define FILE_NAME "output/test/dt.correction/eps.1.0e-30.vieli.taub.min.20.0e30.nc"
+#define FILE_NAME "output/test/dt.correction/eps.1.0e-30.order.4.taub.min.30.0e3.nc"
  
 /* We are writing 1D data, n grid points*/
 #define NDIMS 2

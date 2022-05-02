@@ -111,7 +111,7 @@ double const eps = 1.0e-30;                            // Final: 1.0e-14. Curren
 
 // BASAL FRICTION.
 double const m = 1.0 / 3.0;                     // Friction exponent.
-double const tau_b_min = 20.0e3;                // Minimum basal friciton value [Pa].
+double const tau_b_min = 30.0e3;                // Minimum basal friciton value [Pa].
 
 
 // DOMAIN DEFINITION.
@@ -135,7 +135,7 @@ ArrayXd a = ArrayXd::LinSpaced(t_n, t0, tf);      // Time steps in which the sol
 
 
 // COORDINATES.
-int const n = 1000;                     // Number of horizontal points. 200, 500, 2000
+int const n = 500;                     // Number of horizontal points. 200, 500, 2000
 double const ds = 1.0 / n;               // Normalized spatial resolution.
 double const ds_inv = n;
 
@@ -403,17 +403,14 @@ double f_L(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd H_c, \
     q = u1 * H;
 
     // Accumulation minus flux. First order.
-    num = - L * ds * S(n-1) + ( q(n-1) - q(n-2) );
-
-    // Yield strength ice. Following Bassis et al. (2017).
-    //den = H_c(n-1) - H_c(n-2) - ( H(n-1) - H(n-2) );
+    //num = - L * ds * S(n-1) + ( q(n-1) - q(n-2) );
 
     // Purely flotation condition (Following Schoof, 2007).
     // Sign before db/dx is correct. Otherwise, it migrates uphill.
     //den = H(n-1) - H(n-2) + ( rho_w / rho ) * ( bed(n-1) - bed(n-2) );
 
     // Third-order flux slope:
-    //num = - L * ds * S(n-1) + 0.5 * ( 3.0 * q(n-1) - 4.0 * q(n-2) + q(n-3) );
+    num = - L * ds * S(n-1) + 0.5 * ( 3.0 * q(n-1) - 4.0 * q(n-2) + q(n-3) );
     
     // Third-order thickness slope.
     //den = 0.5 * ( 4.0 * H(n-1) - 3.0 * H(n-2) - H(n-3) ) + \
@@ -422,6 +419,9 @@ double f_L(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd H_c, \
     // Fourth-order thickness slope.
     den = (1.0 / 6.0) * ( 11.0 * H(n-1) - 18.0 * H(n-2) + 9.0 * H(n-3) - 2.0 * H(n-4) ) + \
           ( rho_w / rho ) * 0.5 * ( 3.0 * bed(n-1) - 4.0 * bed(n-2) + bed(n-3) );
+
+    // Yield strength ice. Following Bassis et al. (2017).
+    //den = H_c(n-1) - H_c(n-2) - ( H(n-1) - H(n-2) );
 
     // Integrate grounding line position forward in time.
     dL_dt = num / den;
@@ -450,13 +450,6 @@ ArrayXd f_H_flux(ArrayXd u, ArrayXd H, ArrayXd S, ArrayXd sigma, \
     // Advection equation. Centred dH in the sigma_L term.
     for (int i=1; i<n-1; i++)
     {
-        //H_now(i) = H(i) + sigma_L(i) * 0.5 * delta_L * \
-                            0.5 * ( H(i+1) - H(i-1) ) * ds_inv + \
-                            - dt * ( q(i) - q(i-1) ) * L_inv * ds_inv + S(i) * dt;
-        // New delta_L:
-        //H_now(i) = H(i) + sigma_L(i) * dL_dt * \
-                            0.5 * ( H(i+1) - H(i-1) ) * ds_inv + \
-                            - dt * ( ( q(i) - q(i-1) ) * L_inv * ds_inv + S(i) );
         // Missing dt factor multiplying.
         H_now(i) = H(i) + dt * ( ds_inv * L_inv * \
                                 ( sigma_L(i) * dL_dt * \
@@ -468,18 +461,21 @@ ArrayXd f_H_flux(ArrayXd u, ArrayXd H, ArrayXd S, ArrayXd sigma, \
     H_now(0) = H_now(1); 
 
     // Flux in the last grid point. First order.
-    //H_now(n-1) = H(n-1) + sigma_L(n-1) * delta_L * \
-                         ( H(n-1) - H(n-2) ) * ds_inv + \
-                        - dt * ( q(n-1) - q(n-2) ) * L_inv * ds_inv + S(n-1) * dt;
+    //H_now(n-1) = H(n-1) + dt * ( ds_inv * L_inv * \
+                                 ( sigma_L(n-1) * dL_dt * \
+                                    ( H(n-1) - H(n-2) ) + \
+                                        - ( q(n-1) - q(n-2) ) ) + S(n-1) );
     
     // New assymetric version (MIT derivative calculator). \
-    https://web.media.mit.edu/~crtaylor/calculator.html
-    //H_now(n-1) = H(n-1) + sigma_L(n-1) * dL_dt * \
-                        0.5 * ( 3.0 * H(n-1) - 4.0 * H(n-2) + H(n-3) ) * ds_inv + \
-                        - dt * ( q(n-1) - q(n-2) ) * L_inv * ds_inv + S(n-1) * dt;
+    https://web.media.mit.edu/~crtaylor/calculator.html \
+    0.5 * ( 3.0 * H(n-1) - 4.0 * H(n-2) + H(n-3) )
+    H_now(n-1) = H(n-1) + dt * ( ds_inv * L_inv * \
+                                ( sigma_L(n-1) * dL_dt * \
+                                    0.5 * ( 3.0 * H(n-1) - 4.0 * H(n-2) + H(n-3) ) + \
+                                        - ( q(n-1) - q(n-2) ) ) + S(n-1) );
 
     // Vieli and Payne (2005) scheme:
-    H_now(n-1) = H(n-1) + dt * ( ds_inv * L_inv * \
+    //H_now(n-1) = H(n-1) + dt * ( ds_inv * L_inv * \
                                 ( sigma_L(n-1) * dL_dt * \
                                     m * ( 4.0 * H(n-1) - 3.0 * H(n-2) - H(n-3) ) + \
                                         - ( q(n-1) - q(n-2) ) ) + S(n-1) );
@@ -840,8 +836,6 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
     // Stress balance: driving - friction.
     F = c2 * dhds + tau_b * L;
 
-    //F = ArrayXd::Constant(n, -1.0e10); // Must be negative. -1.0e10
-
     // Grounding line sigma = 1 (x = L). u_min is just double32 0.0.
     D = abs( min(u_min, bed(n-1)) );   
 
@@ -941,7 +935,6 @@ int main()
 
     // We assume a constant viscosity in the first iteration.
     ArrayXd visc = ArrayXd::Constant(n, 1.0e14);
-
 
     //////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////
@@ -1157,8 +1150,6 @@ int main()
         L_new = L + dL_dt * dt;
 
         // Integrate ice thickness forward in time.
-        //H_now = f_H_flux(u1, H, S, sigma, dt, ds_inv, n, \
-                         L_new, L, L_old, H_c, D, rho, rho_w);
         H_now = f_H_flux(u1, H, S, sigma, dt, ds_inv, n, \
                          L_new, L, L_old, H_c, D, rho, rho_w, dL_dt);
         H   = H_now; 
