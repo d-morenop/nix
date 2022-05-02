@@ -111,7 +111,7 @@ double const eps = 1.0e-30;                            // Final: 1.0e-14. Curren
 
 // BASAL FRICTION.
 double const m = 1.0 / 3.0;                     // Friction exponent.
-double const tau_b_min = 30.0e3;                // Minimum basal friciton value [Pa].
+double const tau_b_min = 25.0e3;                // Minimum basal friciton value [Pa].
 
 
 // DOMAIN DEFINITION.
@@ -119,7 +119,7 @@ double L     = 702.3e3;                    // Grounding line position [m] (1.2e6
 double L_old = 702.3e3;
 double L_new;
 double const t0    = 0.0;                // Starting time [s].
-double const tf    = 100.0e3 * sec_year;    // 75.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
+double const tf    = 50.0e3 * sec_year;    // 75.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
 double t     = t0;                          // Time initialization [s].
 double t_plot;
 double dt;                                  // Time step [s].
@@ -403,21 +403,21 @@ double f_L(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd H_c, \
     q = u1 * H;
 
     // Accumulation minus flux. First order.
-    //num = - L * ds * S(n-1) + ( q(n-1) - q(n-2) );
+    num = - L * ds * S(n-1) + ( q(n-1) - q(n-2) );
 
     // Purely flotation condition (Following Schoof, 2007).
     // Sign before db/dx is correct. Otherwise, it migrates uphill.
-    //den = H(n-1) - H(n-2) + ( rho_w / rho ) * ( bed(n-1) - bed(n-2) );
+    den = H(n-1) - H(n-2) + ( rho_w / rho ) * ( bed(n-1) - bed(n-2) );
 
     // Third-order flux slope:
-    num = - L * ds * S(n-1) + 0.5 * ( 3.0 * q(n-1) - 4.0 * q(n-2) + q(n-3) );
+    //num = - L * ds * S(n-1) + 0.5 * ( 3.0 * q(n-1) - 4.0 * q(n-2) + q(n-3) );
     
     // Third-order thickness slope.
     //den = 0.5 * ( 4.0 * H(n-1) - 3.0 * H(n-2) - H(n-3) ) + \
           ( rho_w / rho ) * 0.5 * ( 3.0 * bed(n-1) - 4.0 * bed(n-2) + bed(n-3) );
 
     // Fourth-order thickness slope.
-    den = (1.0 / 6.0) * ( 11.0 * H(n-1) - 18.0 * H(n-2) + 9.0 * H(n-3) - 2.0 * H(n-4) ) + \
+    //den = (1.0 / 6.0) * ( 11.0 * H(n-1) - 18.0 * H(n-2) + 9.0 * H(n-3) - 2.0 * H(n-4) ) + \
           ( rho_w / rho ) * 0.5 * ( 3.0 * bed(n-1) - 4.0 * bed(n-2) + bed(n-3) );
 
     // Yield strength ice. Following Bassis et al. (2017).
@@ -441,18 +441,14 @@ ArrayXd f_H_flux(ArrayXd u, ArrayXd H, ArrayXd S, ArrayXd sigma, \
 
     q       = u * H;
     L_inv   = 1.0 / L;
-    sigma_L = sigma * L_inv;
-
-    // Grounding line position change.
-    //delta_L = L_new - L_old;
-    //delta_L = dL_dt;
+    //sigma_L = sigma * L_inv;
 
     // Advection equation. Centred dH in the sigma_L term.
     for (int i=1; i<n-1; i++)
     {
         // Missing dt factor multiplying.
         H_now(i) = H(i) + dt * ( ds_inv * L_inv * \
-                                ( sigma_L(i) * dL_dt * \
+                                ( sigma(i) * dL_dt * \
                                     0.5 * ( H(i+1) - H(i-1) ) + \
                                         - ( q(i) - q(i-1) ) ) + S(i) );
     }
@@ -461,22 +457,22 @@ ArrayXd f_H_flux(ArrayXd u, ArrayXd H, ArrayXd S, ArrayXd sigma, \
     H_now(0) = H_now(1); 
 
     // Flux in the last grid point. First order.
-    //H_now(n-1) = H(n-1) + dt * ( ds_inv * L_inv * \
-                                 ( sigma_L(n-1) * dL_dt * \
+    H_now(n-1) = H(n-1) + dt * ( ds_inv * L_inv * \
+                                 ( sigma(n-1) * dL_dt * \
                                     ( H(n-1) - H(n-2) ) + \
                                         - ( q(n-1) - q(n-2) ) ) + S(n-1) );
-    
+
     // New assymetric version (MIT derivative calculator). \
     https://web.media.mit.edu/~crtaylor/calculator.html \
     0.5 * ( 3.0 * H(n-1) - 4.0 * H(n-2) + H(n-3) )
-    H_now(n-1) = H(n-1) + dt * ( ds_inv * L_inv * \
-                                ( sigma_L(n-1) * dL_dt * \
+    //H_now(n-1) = H(n-1) + dt * ( ds_inv * L_inv * \
+                                ( sigma(n-1) * dL_dt * \
                                     0.5 * ( 3.0 * H(n-1) - 4.0 * H(n-2) + H(n-3) ) + \
                                         - ( q(n-1) - q(n-2) ) ) + S(n-1) );
 
     // Vieli and Payne (2005) scheme:
     //H_now(n-1) = H(n-1) + dt * ( ds_inv * L_inv * \
-                                ( sigma_L(n-1) * dL_dt * \
+                                ( sigma(n-1) * dL_dt * \
                                     m * ( 4.0 * H(n-1) - 3.0 * H(n-2) - H(n-3) ) + \
                                         - ( q(n-1) - q(n-2) ) ) + S(n-1) );
 
@@ -836,7 +832,7 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
     // Stress balance: driving - friction.
     F = c2 * dhds + tau_b * L;
 
-    // Grounding line sigma = 1 (x = L). u_min is just double32 0.0.
+    // Grounding line sigma = 1 (x = L). u_min is just double 0.0.
     D = abs( min(u_min, bed(n-1)) );   
 
     // Lateral boundary condition (Greve and Blatter Eq. 6.64).
@@ -858,10 +854,10 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
         This way we consider BC imposed in u2.
         
         // Average scheme:
-        u1(i+1) = u1(i) + ds * 0.5 * ( u2(i) + u2(i+1) );
+        //u1(i+1) = u1(i) + ds * 0.5 * ( u2(i) + u2(i+1) );
         
         // Forward shcheme.
-        //u1(i+1) = u1(i) + ds * u2(i);
+        u1(i+1) = u1(i) + ds * u2(i);
         u1(i+1) = max(u_min, u1(i+1));
     }
 
