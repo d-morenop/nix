@@ -111,7 +111,7 @@ double const eps = 1.0e-30;                            // Final: 1.0e-14. Curren
 
 // BASAL FRICTION.
 double const m = 1.0 / 3.0;                     // Friction exponent.
-double const tau_b_min = 25.0e3;                // Minimum basal friciton value [Pa].
+double const tau_b_min = 50.0e3;                // Minimum basal friciton value [Pa].
 
 
 // DOMAIN DEFINITION.
@@ -446,7 +446,7 @@ ArrayXd f_H_flux(ArrayXd u, ArrayXd H, ArrayXd S, ArrayXd sigma, \
     // Advection equation. Centred dH in the sigma_L term.
     for (int i=1; i<n-1; i++)
     {
-        // Missing dt factor multiplying.
+        // Centred in sigma, upwind in flux.
         H_now(i) = H(i) + dt * ( ds_inv * L_inv * \
                                 ( sigma(i) * dL_dt * \
                                     0.5 * ( H(i+1) - H(i-1) ) + \
@@ -848,7 +848,7 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
     u1(0) = 0.0;
 
     // Direct explicit integration to obtain u1 from u2. Forward integration.
-    for (int i=0; i<n-1; i++)
+    /*for (int i=0; i<n-1; i++)
     {
         // Modified Runge-Kutta order 2. \
         This way we consider BC imposed in u2.
@@ -859,15 +859,15 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
         // Forward shcheme.
         u1(i+1) = u1(i) + ds * u2(i);
         u1(i+1) = max(u_min, u1(i+1));
-    }
+    }*/
 
     // Centred scheme.
-    /*for (int i=1; i<n-1; i++)
+    for (int i=1; i<n-1; i++)
     {
         u1(i+1) = u1(i-1) + ds * 2.0 * u2(i);
         u1(i+1) = max(u_min, u1(i+1));
     }
-    u1(1) = u1(0) + ds * u2(0);*/
+    u1(1) = u1(0) + ds * u2(0);
 
     // Allocate solutions.
     out.row(0) = u1;
