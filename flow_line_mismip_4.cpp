@@ -111,7 +111,7 @@ double const eps = 1.0e-30;                            // Final: 1.0e-14. Curren
 
 // BASAL FRICTION.
 double const m = 1.0 / 3.0;                     // Friction exponent.
-double const tau_b_min = 50.0e3;                // Minimum basal friciton value [Pa].
+double const tau_b_min = 42.5e3;                // 35.0e3. Minimum basal friciton value [Pa].
 
 
 // DOMAIN DEFINITION.
@@ -119,7 +119,7 @@ double L     = 702.3e3;                    // Grounding line position [m] (1.2e6
 double L_old = 702.3e3;
 double L_new;
 double const t0    = 0.0;                // Starting time [s].
-double const tf    = 50.0e3 * sec_year;    // 75.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
+double const tf    = 75.0e3 * sec_year;    // 75.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
 double t     = t0;                          // Time initialization [s].
 double t_plot;
 double dt;                                  // Time step [s].
@@ -414,11 +414,11 @@ double f_L(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd H_c, \
     
     // Third-order thickness slope.
     //den = 0.5 * ( 4.0 * H(n-1) - 3.0 * H(n-2) - H(n-3) ) + \
-          ( rho_w / rho ) * 0.5 * ( 3.0 * bed(n-1) - 4.0 * bed(n-2) + bed(n-3) );
+          ( rho_w / rho ) * ( bed(n-1) - bed(n-2) );
 
     // Fourth-order thickness slope.
     //den = (1.0 / 6.0) * ( 11.0 * H(n-1) - 18.0 * H(n-2) + 9.0 * H(n-3) - 2.0 * H(n-4) ) + \
-          ( rho_w / rho ) * 0.5 * ( 3.0 * bed(n-1) - 4.0 * bed(n-2) + bed(n-3) );
+          ( rho_w / rho ) * 0.5 * ( bed(n-1) - bed(n-2) );
 
     // Yield strength ice. Following Bassis et al. (2017).
     //den = H_c(n-1) - H_c(n-2) - ( H(n-1) - H(n-2) );
@@ -461,6 +461,8 @@ ArrayXd f_H_flux(ArrayXd u, ArrayXd H, ArrayXd S, ArrayXd sigma, \
                                  ( sigma(n-1) * dL_dt * \
                                     ( H(n-1) - H(n-2) ) + \
                                         - ( q(n-1) - q(n-2) ) ) + S(n-1) );
+
+    //cout << "\n sigma(n-1) = " << sigma(n-1);
 
     // New assymetric version (MIT derivative calculator). \
     https://web.media.mit.edu/~crtaylor/calculator.html \
@@ -827,7 +829,7 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
 
     dhds = 0.5 * dhds * ds_inv;
 
-    // mi amor, no te preocupes. qué lo vas a hacer genial.
+    // mi amor, no te preocupes. que lo vas a hacer genial.
 
     // Stress balance: driving - friction.
     F = c2 * dhds + tau_b * L;
@@ -861,13 +863,26 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
         u1(i+1) = max(u_min, u1(i+1));
     }*/
 
-    // Centred scheme.
-    for (int i=1; i<n-1; i++)
-    {
-        u1(i+1) = u1(i-1) + ds * 2.0 * u2(i);
-        u1(i+1) = max(u_min, u1(i+1));
-    }
+    // 2 step initialization.
     u1(1) = u1(0) + ds * u2(0);
+    u1(2) = u1(0) + ds * 2.0 * u2(1);
+
+    //for (int i=1; i<n-1; i++)
+    for (int i=2; i<n-2; i++)
+    {
+        // Centred
+        u1(i+1) = u1(i-1) + ds * 2.0 * u2(i);
+        //u1(i+1) = max(u_min, u1(i+1));
+
+        // Order 4. \
+        u2(i) = ( u1[i-2] - 8 * u1[i-1] + 8 * u1[i+1] - u1[i+2]) / (12 * ds)
+        u1(i+2) = u1(i-2) - 8.0 * u1(i-1) + 8.0 * u1(i+1) - 12.0 * ds * u2(i);
+
+        // Ensure postive velocity.
+        u1(i+2) = max(u_min, u1(i+2));
+    }
+    
+    //cout << "\n u1 = " << sec_year * u1;
 
     // Allocate solutions.
     out.row(0) = u1;
@@ -930,7 +945,7 @@ int main()
     B    = pow(A, ( -1 / n_gln ) );
 
     // We assume a constant viscosity in the first iteration.
-    ArrayXd visc = ArrayXd::Constant(n, 1.0e14);
+    ArrayXd visc = ArrayXd::Constant(n, 1.0e13);
 
     //////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////
@@ -1017,7 +1032,7 @@ int main()
 
                     alpha = c_s_2.norm() / c_s_dif.norm();
                     alpha = min(alpha_max, alpha);
-                    //alpha = 0.75;
+                    //alpha = 0.7;
                     
                     omega = acos( c_s_1.dot(c_s_2) / \
                                  ( c_s_1.norm() * c_s_2.norm() ) );
