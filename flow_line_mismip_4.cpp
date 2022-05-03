@@ -12,6 +12,8 @@ using namespace std;
 
 #include "write_nc.cpp"
 
+// TEST BRANCH UNIT_YEARS.
+
 // Our flow line model uses netcdf and Eigen libraries. Make sure both are installed.
 // Eigen: https://eigen.tuXdamily.org.
 // Directory where eigen is installed: $ dpkg -L libeigen3-devcd
@@ -111,7 +113,7 @@ double const eps = 1.0e-30;                            // Final: 1.0e-14. Curren
 
 // BASAL FRICTION.
 double const m = 1.0 / 3.0;                     // Friction exponent.
-double const tau_b_min = 42.5e3;                // 35.0e3. Minimum basal friciton value [Pa].
+double const tau_b_min = 50.0e3;                // 42.5e3. Minimum basal friciton value [Pa].
 
 
 // DOMAIN DEFINITION.
@@ -119,7 +121,7 @@ double L     = 702.3e3;                    // Grounding line position [m] (1.2e6
 double L_old = 702.3e3;
 double L_new;
 double const t0    = 0.0;                // Starting time [s].
-double const tf    = 75.0e3 * sec_year;    // 75.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
+double const tf    = 100.0e3 * sec_year;    // 75.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
 double t     = t0;                          // Time initialization [s].
 double t_plot;
 double dt;                                  // Time step [s].
@@ -803,20 +805,16 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
     }
 
     // Derivatives at the boundaries O(x).
-    dhds(0)   = 2.0 * ( h(1) - h(0) );
-    dhds(n-1) = 2.0 * ( h(n-1) - h(n-2) );
+    //dhds(0)   = 2.0 * ( h(1) - h(0) );
+    //dhds(n-1) = 2.0 * ( h(n-1) - h(n-2) );
+    // Third order derivatives at the boundaries:
+    dhds(0)   = - 3.0 * h(0) + 4.0 * h(1) - h(2);
+    dhds(n-1) = 3.0 * h(n-1) - 4.0 * h(n-2) + h(n-3); // corrected
     
-    // FINISH MISMIP EXPERIMENTS!!!
-    // Boundary values vectors.
-    // Original (is this correct?): \
-    We need to tune eps as we change A?
-    //B(0)   = - 2.0 * visc_dot_H(0) * ds_inv;
-    //B(n-1) = 2.0 * visc_dot_H(n-1) * ds_inv;
-    // New:
+    // Tridiagonal vectors at the boundaries.
     B(0)   = - 2.0 * visc_dot_H(0);
     B(n-1) = 2.0 * visc_dot_H(n-1);
 
-    // New.
     C(0)   = 2.0 * visc_dot_H(1);
     C(n-1) = 0.0;
     A(0)   = 0.0;
@@ -849,19 +847,7 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
     // Ice divide in sigma = 0.
     u1(0) = 0.0;
 
-    // Direct explicit integration to obtain u1 from u2. Forward integration.
-    /*for (int i=0; i<n-1; i++)
-    {
-        // Modified Runge-Kutta order 2. \
-        This way we consider BC imposed in u2.
-        
-        // Average scheme:
-        //u1(i+1) = u1(i) + ds * 0.5 * ( u2(i) + u2(i+1) );
-        
-        // Forward shcheme.
-        u1(i+1) = u1(i) + ds * u2(i);
-        u1(i+1) = max(u_min, u1(i+1));
-    }*/
+    // Direct explicit integration to obtain u1 from u2.
 
     // 2 step initialization.
     u1(1) = u1(0) + ds * u2(0);
@@ -870,7 +856,7 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
     //for (int i=1; i<n-1; i++)
     for (int i=2; i<n-2; i++)
     {
-        // Centred
+        // Centred.
         u1(i+1) = u1(i-1) + ds * 2.0 * u2(i);
         //u1(i+1) = max(u_min, u1(i+1));
 
@@ -881,8 +867,6 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
         // Ensure postive velocity.
         u1(i+2) = max(u_min, u1(i+2));
     }
-    
-    //cout << "\n u1 = " << sec_year * u1;
 
     // Allocate solutions.
     out.row(0) = u1;
@@ -994,7 +978,6 @@ int main()
             {
                 tau_b(i) = max(tau_b_min, tau_b(i));
             }
-            //tau_b(0) = tau_b(1);
 
             error    = 1.0;
             c_picard = 0;
