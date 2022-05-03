@@ -107,13 +107,12 @@ double const n_exp = (1.0 - n_gln) / n_gln;      // Pattyn.
 
 // VISCOSITY REGULARIZATION TERM.
 // eps is fundamental for GL, velocities, thickness, etc.
-// New eps without squared.
 double const eps = 1.0e-30;                            // Final: 1.0e-14. Current 1.0e-7. Yelmo: 1.0e-6. 2.5e-9 good GL but bad H.
 
 
 // BASAL FRICTION.
-double const m = 1.0 / 3.0;                     // Friction exponent.
-double const tau_b_min = 50.0e3;                // 42.5e3. Minimum basal friciton value [Pa].
+double const m = 1.0 / 3.0;                  // Friction exponent.
+double const tau_b_min = 60.0;                // 42.5e3. Minimum basal friciton value [Pa].
 
 
 // DOMAIN DEFINITION.
@@ -121,14 +120,14 @@ double L     = 702.3e3;                    // Grounding line position [m] (1.2e6
 double L_old = 702.3e3;
 double L_new;
 double const t0    = 0.0;                // Starting time [s].
-double const tf    = 100.0e3 * sec_year;    // 75.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
-double t     = t0;                          // Time initialization [s].
+double const tf    = 50.0e3;             // 75.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
+double t     = t0;                       // Time initialization [s].
 double t_plot;
-double dt;                                  // Time step [s].
-double dt_CFL;                              // Courant-Friedrichs-Lewis condition
-double const dt_max = 5.0 * sec_year;       // Maximum time step = 10 years [s].
-double const t_eq = 5.0 * sec_year;         // 20.0. Length of explicit scheme. try 50?
-double const t_bc = 10.0 * sec_year;        // 1.0e3. Implicit scheme spin-up. End of u2_bc equilibration.
+double dt;                               // Time step [s].
+double dt_CFL;                           // Courant-Friedrichs-Lewis condition
+double const dt_max = 5.0;               // Maximum time step = 10 years [s].
+double const t_eq = 5.0;                 // 20.0. Length of explicit scheme. try 50?
+double const t_bc = 10.0;                // 1.0e3. Implicit scheme spin-up. End of u2_bc equilibration.
 double dt_plot;
 
 int const t_n = 30;                        // Number of output frames. 30.
@@ -174,10 +173,10 @@ double A, B;
 // PICARD ITERATION
 double error;                           // Norm of the velocity difference between iterations.
 double const picard_tol = 1.0e-5;       // 1.0e-5. Convergence tolerance within Picard iteration.
-int const n_picard = 10;               // Max number iter. Good results: 5, 1 is enough for convergence! (10, 15)
-int c_picard;                          // Number of Picard iterations.
+int const n_picard = 10;                // Max number iter. Good results: 5, 1 is enough for convergence! (10, 15)
+int c_picard;                           // Number of Picard iterations.
 double omega, mu, alpha_1, alpha_2;                 
-double alpha = 0.75;               // Relaxation method within Picard iteration. 0.5, 0.7
+double alpha;                           // Relaxation method within Picard iteration. 0.5, 0.7
 double const alpha_max = 1.0;
 
 // PREPARE VARIABLES.
@@ -886,7 +885,7 @@ int main()
 {
     cout << " \n h = " << ds;
     cout << " \n n = " << n;
-    cout << " \n tf = " << tf / sec_year;
+    cout << " \n tf = " << tf;
 
     // Call nc write function.
     f_nc(n, n_z);
@@ -906,11 +905,11 @@ int main()
 
         // MISMIP EXPERIMENTS.
         H(i) = 10.0;             // Initial ice thickness [m].
-        S(i) = 0.3;              // Snow accumulation [m/s].
+        S(i) = 0.3;              // Snow accumulation [m/yr].
     }
     
     // Units consistency.
-    S = S / sec_year; 
+    //S = S / sec_year; 
 
     // Temperature initial conditions (-25ºC).
     //ArrayXXd theta = ArrayXXd::Constant(n, n_z, 248.0);
@@ -920,16 +919,20 @@ int main()
     //////////////////////////////////////////////////////////
     // MISMIP experiments.
 
-    // Constant friction coeff.
-    ArrayXd C_bed = ArrayXd::Constant(n, 7.624e6); //7.624e6, 4.624e6
+    // Constant friction coeff. 7.624e6 [Pa m^-1/3 s^1/3]
+    ArrayXd C_bed = ArrayXd::Constant(n, 7.624e6);    // [Pa m^-1/3 s^1/3]
+    //cout << "\n C_bed [Pa m^-1/3 s^1/3] = " << C_bed;
+    C_bed = C_bed / pow(sec_year, m);
+    //cout << "\n C_bed [Pa m^-1/3 yr^1/3] = " << C_bed;
 
-    // Viscosity from constant A value. u2 = 0 initialization.
-    // AS WE DECREASE A, THE ICE SHEET LOSES MASS EARLIER.
-    A    = 4.6416e-24;               // 4.6416e-24, 2.1544e-24
+    // Viscosity from constant A value. u2 = 0 initialization. \
+    // 4.6416e-24, 2.1544e-24. [Pa^-3 s^-1] ==> [Pa^-3 yr^-1]
+    A    = 4.6416e-24 * sec_year;               
     B    = pow(A, ( -1 / n_gln ) );
 
     // We assume a constant viscosity in the first iteration.
-    ArrayXd visc = ArrayXd::Constant(n, 1.0e13);
+    ArrayXd visc = ArrayXd::Constant(n, 1.0e13); // [Pa s]
+    visc = visc / sec_year;
 
     //////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////
@@ -1068,12 +1071,12 @@ int main()
         // Store solution in nc file.
         if (c == 0 || t > a(c))
         {
-            cout << "\n t = " << t / sec_year;
+            cout << "\n t = " << t;
 
-            u1_plot = sec_year * u1;
-            u2_plot = sec_year * u2 / L;
-            t_plot  = t / sec_year;
-            dt_plot = dt / sec_year;
+            u1_plot = u1;
+            u2_plot = u2 / L;
+            t_plot  = t;
+            dt_plot = dt;
 
             start[0]   = c;
             start_0[0] = c;
@@ -1166,7 +1169,7 @@ int main()
     auto elapsed = chrono::duration_cast<chrono::nanoseconds>(end - begin);
     printf("\n Time measured: %.3f seconds.\n", elapsed.count() * 1e-9);
     printf("\n Computational speed: %.3f kyr/hr.\n", \
-            60 * 60 * (1.0e-3 * tf / sec_year) /  (elapsed.count() * 1e-9) );
+            60 * 60 * (1.0e-3 * tf) /  (elapsed.count() * 1e-9) );
 
     // Close nc file. 
     if ((retval = nc_close(ncid)))
