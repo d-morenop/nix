@@ -7,7 +7,7 @@
 
 // NETCDF PARAMETERS.
 /* This is the name of the data file we will create. */
-#define FILE_NAME "output/test/years/eps.1.0e-30.taub.min.60.0e3.nc"
+#define FILE_NAME "output/test/years/eps.1.0e-5.taub.min.40.0e3.nc"
  
 /* We are writing 1D data, n grid points*/
 #define NDIMS 2
@@ -30,7 +30,7 @@
 #define L_NAME "L"
 #define DT_NAME "dt"
 #define C_PIC_NAME "c_picard"
-#define ALPHA_NAME "alpha"
+#define MU_NAME "mu"
 #define OMEGA_NAME "omega"
 #define T_NAME "t"
 #define U2_BC_NAME "dudx_bc"
@@ -57,7 +57,7 @@
 #define L_UNITS "km"
 #define DT_UNITS "yr"
 #define C_PIC_UNITS "dimensionless"
-#define ALPHA_UNITS "dimensionless"
+#define MU_UNITS "dimensionless"
 #define OMEGA_UNITS "dimensionless"
 #define T_UNITS "yr"
 #define U2_BC_UNITS "1/yr"
@@ -82,7 +82,7 @@ int retval;
 int ncid, x_dimid, z_dimid, time_dimid;
 int x_varid, z_varid, u1_varid, u2_varid, H_varid, visc_varid, s_varid, \
     tau_varid, lmbd_varid, taud_varid, b_varid, L_varid, dt_varid, c_pic_varid, t_varid, \
-    alpha_varid, omega_varid, u2_bc_varid, u2_dif_varid, picard_error_varid, \
+    mu_varid, omega_varid, u2_bc_varid, u2_dif_varid, picard_error_varid, \
     u2_0_vec_varid, u2_dif_vec_varid, theta_varid, C_bed_varid;
 int dimids[NDIMS];
 
@@ -200,8 +200,8 @@ int f_nc(int N, int N_Z)
     if ((retval = nc_def_var(ncid, C_PIC_NAME, NC_INT, NDIMS_0,
                     dimids_0, &c_pic_varid)))
         ERR(retval);
-    if ((retval = nc_def_var(ncid, ALPHA_NAME, NC_DOUBLE, NDIMS_0,
-                    dimids_0, &alpha_varid)))
+    if ((retval = nc_def_var(ncid, MU_NAME, NC_DOUBLE, NDIMS_0,
+                    dimids_0, &mu_varid)))
         ERR(retval);
     if ((retval = nc_def_var(ncid, OMEGA_NAME, NC_DOUBLE, NDIMS_0,
                     dimids_0, &omega_varid)))
@@ -270,8 +270,8 @@ int f_nc(int N, int N_Z)
     if ((retval = nc_put_att_text(ncid, c_pic_varid, UNITS,
                     strlen(C_PIC_UNITS), C_PIC_UNITS)))
         ERR(retval);
-    if ((retval = nc_put_att_text(ncid, alpha_varid, UNITS,
-                    strlen(ALPHA_UNITS), ALPHA_UNITS)))
+    if ((retval = nc_put_att_text(ncid, mu_varid, UNITS,
+                    strlen(MU_UNITS), MU_UNITS)))
         ERR(retval);
     if ((retval = nc_put_att_text(ncid, omega_varid, UNITS,
                     strlen(OMEGA_UNITS), OMEGA_UNITS)))

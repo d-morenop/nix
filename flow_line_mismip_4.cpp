@@ -107,12 +107,12 @@ double const n_exp = (1.0 - n_gln) / n_gln;      // Pattyn.
 
 // VISCOSITY REGULARIZATION TERM.
 // eps is fundamental for GL, velocities, thickness, etc.
-double const eps = 1.0e-30;                            // Final: 1.0e-14. Current 1.0e-7. Yelmo: 1.0e-6. 2.5e-9 good GL but bad H.
+double const eps = 1.0e-10;                            // Final: 1.0e-30. Current 1.0e-7. Yelmo: 1.0e-6. 2.5e-9 good GL but bad H.
 
 
 // BASAL FRICTION.
 double const m = 1.0 / 3.0;                  // Friction exponent.
-double const tau_b_min = 60.0;                // 42.5e3. Minimum basal friciton value [Pa].
+double const tau_b_min = 40.0e3;             // [Pa]. 42.5e3. Minimum basal friciton value [Pa].
 
 
 // DOMAIN DEFINITION.
@@ -120,7 +120,7 @@ double L     = 702.3e3;                    // Grounding line position [m] (1.2e6
 double L_old = 702.3e3;
 double L_new;
 double const t0    = 0.0;                // Starting time [s].
-double const tf    = 50.0e3;             // 75.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
+double const tf    = 100.0e3;             // 75.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
 double t     = t0;                       // Time initialization [s].
 double t_plot;
 double dt;                               // Time step [s].
@@ -175,9 +175,11 @@ double error;                           // Norm of the velocity difference betwe
 double const picard_tol = 1.0e-5;       // 1.0e-5. Convergence tolerance within Picard iteration.
 int const n_picard = 10;                // Max number iter. Good results: 5, 1 is enough for convergence! (10, 15)
 int c_picard;                           // Number of Picard iterations.
-double omega, mu, alpha_1, alpha_2;                 
+double omega, mu;                 
 double alpha;                           // Relaxation method within Picard iteration. 0.5, 0.7
-double const alpha_max = 1.0;
+//double const alpha_max = 1.0;
+double const omega_1 = 0.125 * M_PI;          // De Smedt et al. (2010) Eq. 10.
+double const omega_2 = (19.0 / 20.0) * M_PI;
 
 // PREPARE VARIABLES.
 ArrayXd H(n);                        // Ice thickness [m].
@@ -203,11 +205,14 @@ ArrayXd u2_old_2(n);
 ArrayXd u2_0_vec(n);                 // Ranged sampled of u2_0 for a certain iteration.
 ArrayXd u2_dif_vec(n);               // Difference with analytical BC.
 VectorXd dif_iter(n);                 // Velocity difference between two consequtive iterations [m/s].
+VectorXd u1_vec(n); 
 VectorXd u2_vec(n); 
-VectorXd c_s_1(n);                   // Correction vector Picard relaxed iteration.
-VectorXd c_s_2(n);
-VectorXd c_s_dif(n);
-//VectorXd u2_vec(n);
+VectorXd c_u1_1(n);                   // Correction vector Picard relaxed iteration.
+VectorXd c_u1_2(n);
+VectorXd c_u2_1(n);
+VectorXd c_u2_2(n);
+VectorXd c_u1_dif(n);
+VectorXd c_u2_dif(n);
 
 
 //ArrayXd smth(n);                     // Smooth field.
@@ -835,9 +840,9 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
     D = abs( min(u_min, bed(n-1)) );   
 
     // Lateral boundary condition (Greve and Blatter Eq. 6.64).
-    //u2_bc = 0.125 * g * H(n-1) * L * rho * ( rho_w - rho ) / ( rho_w * visc(n-1) );
+    u2_bc = 0.125 * g * H(n-1) * L * rho * ( rho_w - rho ) / ( rho_w * visc(n-1) );
     // New:
-    u2_bc = 0.5 * c1(n-1) * g * L * ( rho * pow(H(n-1),2) - rho_w * pow(D,2) );
+    //u2_bc = 0.5 * c1(n-1) * g * L * ( rho * pow(H(n-1),2) - rho_w * pow(D,2) );
 
     // TRIDIAGONAL SOLVER.
     u2 = tridiagonal_solver(A, B, C, F, n, u2_bc, u2_RK);
@@ -848,7 +853,7 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
 
     // Direct explicit integration to obtain u1 from u2.
 
-    // 2 step initialization.
+    // 2 step initialization. Forward and centred.
     u1(1) = u1(0) + ds * u2(0);
     u1(2) = u1(0) + ds * 2.0 * u2(1);
 
@@ -921,9 +926,7 @@ int main()
 
     // Constant friction coeff. 7.624e6 [Pa m^-1/3 s^1/3]
     ArrayXd C_bed = ArrayXd::Constant(n, 7.624e6);    // [Pa m^-1/3 s^1/3]
-    //cout << "\n C_bed [Pa m^-1/3 s^1/3] = " << C_bed;
-    C_bed = C_bed / pow(sec_year, m);
-    //cout << "\n C_bed [Pa m^-1/3 yr^1/3] = " << C_bed;
+    C_bed = C_bed / pow(sec_year, m);                 // [Pa m^-1/3 yr^1/3]
 
     // Viscosity from constant A value. u2 = 0 initialization. \
     // 4.6416e-24, 2.1544e-24. [Pa^-3 s^-1] ==> [Pa^-3 yr^-1]
@@ -931,8 +934,8 @@ int main()
     B    = pow(A, ( -1 / n_gln ) );
 
     // We assume a constant viscosity in the first iteration.
-    ArrayXd visc = ArrayXd::Constant(n, 1.0e13); // [Pa s]
-    visc = visc / sec_year;
+    ArrayXd visc = ArrayXd::Constant(n, 1.0e13);    // [Pa s]
+    visc = visc / sec_year;                         // [Pa yr]
 
     //////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////
@@ -988,8 +991,6 @@ int main()
             while (error > picard_tol & c_picard < n_picard)
             {
                 // Save previous iteration solution.
-                //u1_old = u1;
-                //u2_old = u2;
                 u1_old_1 = u1;
                 u2_old_1 = u2;
 
@@ -1004,59 +1005,61 @@ int main()
                 D     = u(4,0);
 
                 // Current error (vector class required to compute norm). 
-                // Eq. 12 De-Smedt et al. (2010).
-                //dif_iter = u2 - u2_old;
-                dif_iter = u2 - u2_old_1;
-                u2_vec   = u2;
-                error    = dif_iter.norm() / u2_vec.norm();
+                // Eq. 12 (De-Smedt et al., 2010).
+                c_u1_1  = u1 - u1_old_1;
+                c_u2_1  = u2 - u2_old_1;
+                u1_vec = u1;
+                //u2_vec = u2;
+                error  = c_u1_1.norm() / u1_vec.norm();
+                //error  = c_u2_1.norm() / u2_vec.norm();
                 
                 // New relaxed Picard iteration. Pattyn (2003). 
                 if (c_picard > 0)
                 {
-                    c_s_1   = dif_iter;
-                    c_s_dif = c_s_1 - c_s_2;
+                    // Difference in iter i-2.
+                    c_u1_2   = u1_old_1 - u1_old_2;
+                    c_u2_2   = u2_old_1 - u2_old_2;
+                    c_u1_dif = c_u1_1 - c_u1_2;
+                    c_u2_dif = c_u2_1 - c_u2_2;
 
-                    alpha = c_s_2.norm() / c_s_dif.norm();
-                    alpha = min(alpha_max, alpha);
-                    //alpha = 0.7;
+                    //alpha = c_u1_2.norm() / c_u1_dif.norm();
+                    //alpha = min(alpha_max, alpha);
                     
-                    omega = acos( c_s_1.dot(c_s_2) / \
-                                 ( c_s_1.norm() * c_s_2.norm() ) );
+                    omega = acos( c_u1_1.dot(c_u1_2) / \
+                                 ( c_u1_1.norm() * c_u1_2.norm() ) );
+                    //omega = acos( c_u2_1.dot(c_u2_2) / \
+                                 ( c_u2_1.norm() * c_u2_2.norm() ) );
+                    
+                    //cout << "\n sum(c_u2_1) = " << c_u2_1.sum();
 
-                    // De Smedt et al. (2010) Eq. 10.
-                    /*alpha_1 = 0.125 * M_PI;
-                    alpha_2 = (19.0 / 20.0) * M_PI;
-
-                    if (alpha <= alpha_1)
+                    // De Smedt et al. (2010). Eq. 10.
+                    if (omega <= omega_1 || c_u1_1.norm() == 0.0)
                     {
                         mu = 2.5;
                     }
-                    else if (alpha > alpha_1 & alpha < alpha_2)
+                    else if (omega > omega_1 & omega < omega_2)
                     {
                         mu = 1.0;
                     }
                     else
                     {
                         mu = 0.5;
-                    }*/
+                    }
 
                     // New guess based on updated alpha.
-                    u2 = ( 1.0 - alpha ) * u2_old_1 + alpha * u2;
-                    u1 = ( 1.0 - alpha ) * u1_old_1 + alpha * u1;
+                    //u2 = ( 1.0 - alpha ) * u2_old_1 + alpha * u2;
+                    //u1 = ( 1.0 - alpha ) * u1_old_1 + alpha * u1;
 
-                    //u2 = ( 1.0 - mu ) * u2_old_1 + mu * u2;
-                    //u1 = ( 1.0 - mu ) * u1_old_1 + mu * u1;
+                    u2 = u2_old_1 + mu * c_u2_1.array();
+                    u1 = u1_old_1 + mu * c_u1_1.array();
 
                     // Update viscosity with new u2 field.
                     visc = f_visc(u2, B, n_exp, eps, L, n);
                 }
 
                 // Update multistep variables.
-                //u1_old_2 = u1_old_1;
-                //u2_old_2 = u2_old_1;
-
-                // Store in separate vector.
-                c_s_2 = c_s_1;
+                u1_old_2 = u1_old_1;
+                u2_old_2 = u2_old_1;
 
                 // Number of iterations.
                 c_picard = c_picard + 1;
@@ -1121,8 +1124,8 @@ int main()
             ERR(retval);
             if ((retval = nc_put_vara_int(ncid, c_pic_varid, start_0, cnt_0, &c_picard)))
             ERR(retval);
-            if ((retval = nc_put_vara_double(ncid, alpha_varid, start_0, cnt_0, &alpha)))
-            ERR(retval);
+            if ((retval = nc_put_vara_double(ncid, mu_varid, start_0, cnt_0, &mu)))
+            ERR(retval); // currently mu
             if ((retval = nc_put_vara_double(ncid, omega_varid, start_0, cnt_0, &omega)))
             ERR(retval);
 
