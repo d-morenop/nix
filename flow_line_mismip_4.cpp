@@ -112,7 +112,7 @@ double const eps = 1.0e-10;                            // Final: 1.0e-30. Curren
 
 // BASAL FRICTION.
 double const m = 1.0 / 3.0;                  // Friction exponent.
-double const tau_b_min = 40.0e3;             // [Pa]. 42.5e3. Minimum basal friciton value [Pa].
+double const tau_b_min = 30.0e3;             // [Pa]. 42.5e3. Minimum basal friciton value [Pa].
 
 
 // DOMAIN DEFINITION.
@@ -120,7 +120,7 @@ double L     = 702.3e3;                    // Grounding line position [m] (1.2e6
 double L_old = 702.3e3;
 double L_new;
 double const t0    = 0.0;                // Starting time [s].
-double const tf    = 100.0e3;             // 75.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
+double const tf    = 50.0e3;             // 75.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
 double t     = t0;                       // Time initialization [s].
 double t_plot;
 double dt;                               // Time step [s].
@@ -364,6 +364,9 @@ ArrayXd tridiagonal_solver(ArrayXd A, ArrayXd B, ArrayXd C, \
         u(j) = P(j) * u(j+1) + Q(j);
     }
 
+    // What if we impose dq/ds here?
+    //u(0) = 0.0;
+
     return u;
 }
 
@@ -440,14 +443,16 @@ double f_L(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd H_c, \
 ArrayXd f_H_flux(ArrayXd u, ArrayXd H, ArrayXd S, ArrayXd sigma, \
                     double dt, double ds_inv, int n, double L_new, \
                     double L, double L_old, ArrayXd H_c, double D, \
-                    double rho, double rho_w, double dL_dt)
+                    double rho, double rho_w, double dL_dt, ArrayXd bed)
 {
     ArrayXd H_now(n), sigma_L(n), q(n);
     double L_inv, delta_L;
 
     q       = u * H;
     L_inv   = 1.0 / L;
-    //sigma_L = sigma * L_inv;
+
+    // Impose Vieli BC here on flux
+    //q(1) = q(0);
 
     // Advection equation. Centred dH in the sigma_L term.
     for (int i=1; i<n-1; i++)
@@ -458,17 +463,20 @@ ArrayXd f_H_flux(ArrayXd u, ArrayXd H, ArrayXd S, ArrayXd sigma, \
                                     0.5 * ( H(i+1) - H(i-1) ) + \
                                         - ( q(i) - q(i-1) ) ) + S(i) );
     }
-
+    
     // Ice thickness BC at sigma = 0. dH = 0.
+    //H_now(1) = H_now(2); 
     H_now(0) = H_now(1); 
+    
+    // Impose now dhds = 0 rather than dHds = 0.
+    //H_now(1) = H_now(2) - abs( bed(2) - bed(1) ); 
+    //H_now(0) = H_now(1) - abs( bed(1) - bed(0) ); 
 
     // Flux in the last grid point. First order.
     H_now(n-1) = H(n-1) + dt * ( ds_inv * L_inv * \
                                  ( sigma(n-1) * dL_dt * \
                                     ( H(n-1) - H(n-2) ) + \
                                         - ( q(n-1) - q(n-2) ) ) + S(n-1) );
-
-    //cout << "\n sigma(n-1) = " << sigma(n-1);
 
     // New assymetric version (MIT derivative calculator). \
     https://web.media.mit.edu/~crtaylor/calculator.html \
@@ -477,6 +485,12 @@ ArrayXd f_H_flux(ArrayXd u, ArrayXd H, ArrayXd S, ArrayXd sigma, \
                                 ( sigma(n-1) * dL_dt * \
                                     0.5 * ( 3.0 * H(n-1) - 4.0 * H(n-2) + H(n-3) ) + \
                                         - ( q(n-1) - q(n-2) ) ) + S(n-1) );
+
+    // Third order in q.
+    //H_now(n-1) = H(n-1) + dt * ( ds_inv * L_inv * \
+                                ( sigma(n-1) * dL_dt * \
+                                    0.5 * ( 3.0 * H(n-1) - 4.0 * H(n-2) + H(n-3) ) + \
+                                    - 0.5 * ( 3.0 * q(n-1) - 4.0 * q(n-2) + q(n-3) ) ) + S(n-1) );
 
     // Vieli and Payne (2005) scheme:
     //H_now(n-1) = H(n-1) + dt * ( ds_inv * L_inv * \
@@ -800,20 +814,24 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
     {
         // Surface elevation gradient. Centred stencil.
         dhds(i) = h(i+1) - h(i-1);
+        //dhds(i) = 2.0 * (h(i) - h(i-1));
 
         // Diagonal, B; lower diagonal, A; upper diagonal, C.
         B(i) = 0.0;
         A(i) = visc_dot_H(i-1); 
         C(i) = visc_dot_H(i+1);
-
     }
 
     // Derivatives at the boundaries O(x).
     //dhds(0)   = 2.0 * ( h(1) - h(0) );
     //dhds(n-1) = 2.0 * ( h(n-1) - h(n-2) );
     // Third order derivatives at the boundaries:
-    dhds(0)   = - 3.0 * h(0) + 4.0 * h(1) - h(2);
-    dhds(n-1) = 3.0 * h(n-1) - 4.0 * h(n-2) + h(n-3); // corrected
+    //dhds(0)   = - 3.0 * h(0) + 4.0 * h(1) - h(2);
+    //dhds(n-1) = 3.0 * h(n-1) - 4.0 * h(n-2) + h(n-3); // corrected
+
+    // BC at x = 0 is dhds = 0 (Schoof, 2007; Vieli and Payne, 2005)
+    dhds(0)   = 0.0;
+    dhds(n-1) = 2.0 * ( h(n-1) - h(n-2) );
     
     // Tridiagonal vectors at the boundaries.
     B(0)   = - 2.0 * visc_dot_H(0);
@@ -831,7 +849,7 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
 
     dhds = 0.5 * dhds * ds_inv;
 
-    // mi amor, no te preocupes. que lo vas a hacer genial.
+    // mi amor, no te preocupes, que lo vas a hacer genial.
 
     // Stress balance: driving - friction.
     F = c2 * dhds + tau_b * L;
@@ -851,25 +869,22 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
     // Ice divide in sigma = 0.
     u1(0) = 0.0;
 
-    // Direct explicit integration to obtain u1 from u2.
-
-    // 2 step initialization. Forward and centred.
+    // Firs step initialization.
     u1(1) = u1(0) + ds * u2(0);
-    u1(2) = u1(0) + ds * 2.0 * u2(1);
-
-    //for (int i=1; i<n-1; i++)
-    for (int i=2; i<n-2; i++)
+    
+    // Do we need to impose dq/dx = 0 in x = 0?
+    //u1(1) = 0.0;
+    
+    for (int i=1; i<n-1; i++)
     {
+        // Forward.
+        u1(i+1) = u1(i) + ds * u2(i);
+        //u1(i) = u1(i-1) + ds * u2(i-1);
+
         // Centred.
-        u1(i+1) = u1(i-1) + ds * 2.0 * u2(i);
-        //u1(i+1) = max(u_min, u1(i+1));
-
-        // Order 4. \
-        u2(i) = ( u1[i-2] - 8 * u1[i-1] + 8 * u1[i+1] - u1[i+2]) / (12 * ds)
-        u1(i+2) = u1(i-2) - 8.0 * u1(i-1) + 8.0 * u1(i+1) - 12.0 * ds * u2(i);
-
-        // Ensure postive velocity.
-        u1(i+2) = max(u_min, u1(i+2));
+        //u1(i+1) = u1(i-1) + ds * 2.0 * u2(i);
+        u1(i+1) = max(u_min, u1(i+1)); 
+        //u1(i) = max(u_min, u1(i));
     }
 
     // Allocate solutions.
@@ -973,17 +988,17 @@ int main()
         else
         {
             // Implicit velocity solver.
-            // Solution from explicit scheme used as initial guess to 
+            // The solution from explicit scheme is used as initial guess to 
             // ensure convergence. Picard iteration for non-linear viscosity.
             
             // Update basal friction with previous step velocity. Out of Picard iteration?
             tau_b = C_bed * pow(u1, m);
 
             // Min tau_b to avoid losing ice at equilibirum?
-            for (int i=0; i<n-1; i++)
+            /*for (int i=0; i<n-1; i++)
             {
                 tau_b(i) = max(tau_b_min, tau_b(i));
-            }
+            }*/
 
             error    = 1.0;
             c_picard = 0;
@@ -1013,6 +1028,7 @@ int main()
                 error  = c_u1_1.norm() / u1_vec.norm();
                 //error  = c_u2_1.norm() / u2_vec.norm();
                 
+                // REVISE THIS. THERE IS STILL A PROBLEM.
                 // New relaxed Picard iteration. Pattyn (2003). 
                 if (c_picard > 0)
                 {
@@ -1024,6 +1040,7 @@ int main()
 
                     //alpha = c_u1_2.norm() / c_u1_dif.norm();
                     //alpha = min(alpha_max, alpha);
+                    alpha = 1.0;
                     
                     omega = acos( c_u1_1.dot(c_u1_2) / \
                                  ( c_u1_1.norm() * c_u1_2.norm() ) );
@@ -1031,9 +1048,10 @@ int main()
                                  ( c_u2_1.norm() * c_u2_2.norm() ) );
                     
                     //cout << "\n sum(c_u2_1) = " << c_u2_1.sum();
+                    //cout << "\n sum(c_u2_2) = " << c_u2_2.sum();
 
                     // De Smedt et al. (2010). Eq. 10.
-                    if (omega <= omega_1 || c_u1_1.norm() == 0.0)
+                    /*if (omega <= omega_1 || c_u1_1.norm() == 0.0)
                     {
                         mu = 2.5;
                     }
@@ -1044,14 +1062,15 @@ int main()
                     else
                     {
                         mu = 0.5;
-                    }
+                    }*/
 
                     // New guess based on updated alpha.
-                    //u2 = ( 1.0 - alpha ) * u2_old_1 + alpha * u2;
-                    //u1 = ( 1.0 - alpha ) * u1_old_1 + alpha * u1;
+                    u2 = ( 1.0 - alpha ) * u2_old_1 + alpha * u2;
+                    u1 = ( 1.0 - alpha ) * u1_old_1 + alpha * u1;
 
-                    u2 = u2_old_1 + mu * c_u2_1.array();
-                    u1 = u1_old_1 + mu * c_u1_1.array();
+                    // c_u1_1  = u1 - u1_old_1;
+                    //u2 = u2_old_1 + mu * c_u2_1.array();
+                    //u1 = u1_old_1 + mu * c_u1_1.array();
 
                     // Update viscosity with new u2 field.
                     visc = f_visc(u2, B, n_exp, eps, L, n);
@@ -1151,7 +1170,7 @@ int main()
 
         // Integrate ice thickness forward in time.
         H_now = f_H_flux(u1, H, S, sigma, dt, ds_inv, n, \
-                         L_new, L, L_old, H_c, D, rho, rho_w, dL_dt);
+                         L_new, L, L_old, H_c, D, rho, rho_w, dL_dt, bed);
         H   = H_now; 
 
         // Integrate Fourier heat equation.
