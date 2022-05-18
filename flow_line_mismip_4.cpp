@@ -120,7 +120,7 @@ double L     = 702.3e3;                    // Grounding line position [m] (1.2e6
 double L_old = 702.3e3;
 double L_new;
 double const t0    = 0.0;                // Starting time [s].
-double const tf    = 50.0e3;             // 75.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
+double const tf    = 1.5e3;             // 75.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
 double t     = t0;                       // Time initialization [s].
 double t_plot;
 double dt;                               // Time step [s].
@@ -364,7 +364,7 @@ ArrayXd tridiagonal_solver(ArrayXd A, ArrayXd B, ArrayXd C, \
         u(j) = P(j) * u(j+1) + Q(j);
     }
 
-    // What if we impose dq/ds here?
+    // What if we impose du/ds here?
     //u(0) = 0.0;
 
     return u;
@@ -452,10 +452,12 @@ ArrayXd f_H_flux(ArrayXd u, ArrayXd H, ArrayXd S, ArrayXd sigma, \
     L_inv   = 1.0 / L;
 
     // Impose Vieli BC here on flux
+    // Already implicit in du/dx = 0.
     //q(1) = q(0);
 
     // Advection equation. Centred dH in the sigma_L term.
-    for (int i=1; i<n-1; i++)
+    //for (int i=1; i<n-1; i++)
+    for (int i=2; i<n-1; i++)
     {
         // Centred in sigma, upwind in flux.
         H_now(i) = H(i) + dt * ( ds_inv * L_inv * \
@@ -466,11 +468,20 @@ ArrayXd f_H_flux(ArrayXd u, ArrayXd H, ArrayXd S, ArrayXd sigma, \
     
     // Ice thickness BC at sigma = 0. dH = 0.
     //H_now(1) = H_now(2); 
-    H_now(0) = H_now(1); 
+    //H_now(0) = H_now(1); 
+
+    // Exotic BC (i+2 since the slope is centred differences?)
+    //H_now(0) = H_now(2); 
+    //H_now(1) = H_now(3);
     
     // Impose now dhds = 0 rather than dHds = 0.
+    // TRY SOMETHING ELSE HERE. IT SEEMS THE PROBLEM IS THE BC!
+    H_now(1) = H_now(2) - abs( bed(2) - bed(1) ); 
+    H_now(0) = H_now(1) - abs( bed(1) - bed(0) ); 
+
+    //H_now(1) = H_now(2); 
     //H_now(1) = H_now(2) - abs( bed(2) - bed(1) ); 
-    //H_now(0) = H_now(1) - abs( bed(1) - bed(0) ); 
+
 
     // Flux in the last grid point. First order.
     H_now(n-1) = H(n-1) + dt * ( ds_inv * L_inv * \
@@ -823,15 +834,18 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
     }
 
     // Derivatives at the boundaries O(x).
-    //dhds(0)   = 2.0 * ( h(1) - h(0) );
-    //dhds(n-1) = 2.0 * ( h(n-1) - h(n-2) );
+    dhds(0)   = 2.0 * ( h(1) - h(0) );
+    dhds(n-1) = 2.0 * ( h(n-1) - h(n-2) );
     // Third order derivatives at the boundaries:
     //dhds(0)   = - 3.0 * h(0) + 4.0 * h(1) - h(2);
     //dhds(n-1) = 3.0 * h(n-1) - 4.0 * h(n-2) + h(n-3); // corrected
 
-    // BC at x = 0 is dhds = 0 (Schoof, 2007; Vieli and Payne, 2005)
-    dhds(0)   = 0.0;
-    dhds(n-1) = 2.0 * ( h(n-1) - h(n-2) );
+    // Impose here BC at x = 0: dhds = 0 (Schoof, 2007; Vieli and Payne, 2005)
+    //dhds(0)   = 0.0;
+    //dhds(n-1) = 2.0 * ( h(n-1) - h(n-2) );
+
+    // Test
+    //dhds(1) = 0.0;
     
     // Tridiagonal vectors at the boundaries.
     B(0)   = - 2.0 * visc_dot_H(0);
@@ -867,10 +881,15 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
 
     // BOUNDARY CONDITIONS.
     // Ice divide in sigma = 0.
+    //u1(0) = 0.0;
+
+    // Vieli and Payne (2005), Pattyn et al. (2012) impose du/dx = 0.
+    // Ice divide is a symmetry axis.
     u1(0) = 0.0;
+    u1(1) = 0.0;
 
     // Firs step initialization.
-    u1(1) = u1(0) + ds * u2(0);
+    //u1(1) = u1(0) + ds * u2(0);
     
     // Do we need to impose dq/dx = 0 in x = 0?
     //u1(1) = 0.0;
@@ -883,9 +902,15 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
 
         // Centred.
         //u1(i+1) = u1(i-1) + ds * 2.0 * u2(i);
+
         u1(i+1) = max(u_min, u1(i+1)); 
         //u1(i) = max(u_min, u1(i));
     }
+
+    // BC in ice divide.
+    //u1(1) = 0.0;
+    //u1(1) = 0.5 * u1(2);
+    //u1(0) = 0.5 * u1(1);
 
     // Allocate solutions.
     out.row(0) = u1;
