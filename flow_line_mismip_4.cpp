@@ -148,6 +148,7 @@ ArrayXd sigma = ArrayXd::LinSpaced(n, 0.0, 1.0);    // Dimensionless x-coordinat
 
 // Auxiliar definitions.
 ArrayXd zeros = ArrayXd::Zero(n);
+ArrayXd ones = ArrayXd::Ones(n);
 
 
 // THERMODYNAMICS.
@@ -185,7 +186,7 @@ double const omega_2 = (19.0 / 20.0) * M_PI;
 ArrayXd H(n);                        // Ice thickness [m].
 ArrayXd H_now(n);                    // Current ice thickness [m].
 ArrayXd H_old(n);                    // Previous ice thickness [m].
-ArrayXd u1(n);                       // Velocity [m/s].
+ArrayXd u1(n);                       // Velocity [m/s]. Staggered grid!
 ArrayXd u2(n);                       // Velocity first derivative [1/s].
 ArrayXd bed(n);                      // Bedrock elevation [m].
 ArrayXd C_bed(n);                    // Friction coefficient [Pa m^-1/3 s^1/3].
@@ -326,7 +327,7 @@ MatrixXd deriv_sigma(ArrayXd x, ArrayXd y, ArrayXd z,\
 
 
 ArrayXd tridiagonal_solver(ArrayXd A, ArrayXd B, ArrayXd C, \
-                           ArrayXd F, int n, double u2_bc, double u2_RK)
+                           ArrayXd F, int n, double u2_bc)
 {
     ArrayXd P(n), Q(n), u(n);
     double m;
@@ -353,7 +354,9 @@ ArrayXd tridiagonal_solver(ArrayXd A, ArrayXd B, ArrayXd C, \
 
     // From notes: u(n-1) = Q(n-1).
     // Boundary condition at the GL on u2.
-    u(n-1) = u2_bc;             
+    //u(n-1) = u2_bc;        
+    // We are now solving for u1.   
+    u(n-1) = Q(n-1); 
     
     // Back substitution (n+1 is essential).
     // i = 2 --> j = n-2 --> u(n-2)
@@ -445,10 +448,10 @@ ArrayXd f_H_flux(ArrayXd u, ArrayXd H, ArrayXd S, ArrayXd sigma, \
                     double L, double L_old, ArrayXd H_c, double D, \
                     double rho, double rho_w, double dL_dt, ArrayXd bed)
 {
-    ArrayXd H_now(n), sigma_L(n), q(n);
+    ArrayXd H_now(n), sigma_L(n), q(n), A(n), B(n), C(n), F(n);
     double L_inv, delta_L;
 
-    q       = u * H;
+    //q       = u * H;
     L_inv   = 1.0 / L;
 
     // Impose Vieli BC here on flux
@@ -459,6 +462,10 @@ ArrayXd f_H_flux(ArrayXd u, ArrayXd H, ArrayXd S, ArrayXd sigma, \
     //for (int i=1; i<n-1; i++)
     for (int i=2; i<n-1; i++)
     {
+        // Flux from staggered grid.
+        q(i)   = H(i) * 0.5 * ( u(i) + u(i-1) );
+        q(i-1) = H(i-1) * 0.5 * ( u(i-1) + u(i-2) );
+
         // Centred in sigma, upwind in flux.
         H_now(i) = H(i) + dt * ( ds_inv * L_inv * \
                                 ( sigma(i) * dL_dt * \
@@ -467,23 +474,13 @@ ArrayXd f_H_flux(ArrayXd u, ArrayXd H, ArrayXd S, ArrayXd sigma, \
     }
     
     // Ice thickness BC at sigma = 0. dH = 0.
-    //H_now(1) = H_now(2); 
-    //H_now(0) = H_now(1); 
-
-    // Exotic BC (i+2 since the slope is centred differences?)
-    //H_now(0) = H_now(2); 
-    //H_now(1) = H_now(3);
-    
-    // Impose now dhds = 0 rather than dHds = 0.
-    // TRY SOMETHING ELSE HERE. IT SEEMS THE PROBLEM IS THE BC!
-    H_now(1) = H_now(2) - abs( bed(2) - bed(1) ); 
-    H_now(0) = H_now(1) - abs( bed(1) - bed(0) ); 
-
-    //H_now(1) = H_now(2); 
-    //H_now(1) = H_now(2) - abs( bed(2) - bed(1) ); 
+    H_now(0) = H_now(2); 
 
 
     // Flux in the last grid point. First order.
+    q(n-1) = H(n-1) * u(n-1);
+    q(n-2) = H(n-2) * 0.5 * ( u(n-2) + u(n-3) );
+
     H_now(n-1) = H(n-1) + dt * ( ds_inv * L_inv * \
                                  ( sigma(n-1) * dL_dt * \
                                     ( H(n-1) - H(n-2) ) + \
@@ -491,23 +488,6 @@ ArrayXd f_H_flux(ArrayXd u, ArrayXd H, ArrayXd S, ArrayXd sigma, \
 
     // New assymetric version (MIT derivative calculator). \
     https://web.media.mit.edu/~crtaylor/calculator.html \
-    0.5 * ( 3.0 * H(n-1) - 4.0 * H(n-2) + H(n-3) )
-    //H_now(n-1) = H(n-1) + dt * ( ds_inv * L_inv * \
-                                ( sigma(n-1) * dL_dt * \
-                                    0.5 * ( 3.0 * H(n-1) - 4.0 * H(n-2) + H(n-3) ) + \
-                                        - ( q(n-1) - q(n-2) ) ) + S(n-1) );
-
-    // Third order in q.
-    //H_now(n-1) = H(n-1) + dt * ( ds_inv * L_inv * \
-                                ( sigma(n-1) * dL_dt * \
-                                    0.5 * ( 3.0 * H(n-1) - 4.0 * H(n-2) + H(n-3) ) + \
-                                    - 0.5 * ( 3.0 * q(n-1) - 4.0 * q(n-2) + q(n-3) ) ) + S(n-1) );
-
-    // Vieli and Payne (2005) scheme:
-    //H_now(n-1) = H(n-1) + dt * ( ds_inv * L_inv * \
-                                ( sigma(n-1) * dL_dt * \
-                                    m * ( 4.0 * H(n-1) - 3.0 * H(n-2) - H(n-3) ) + \
-                                        - ( q(n-1) - q(n-2) ) ) + S(n-1) );
 
 	return H_now; 
 }
@@ -719,6 +699,7 @@ MatrixXd rungeKutta(double u1_0, double u2_0, double u_min, double u_0, \
         
         // Runge-Kutta 4th order iteration.
         for (int i=0; i<n-1; i++)
+        //for (int i=1; i<n-1; i++)
         {
             // Apply Runge-Kutta scheme. u1 = u_sol(0), u2 = u_sol(1).
             // k1(0) = du1/ds, k1(1) = du2/ds. L * 
@@ -745,6 +726,9 @@ MatrixXd rungeKutta(double u1_0, double u2_0, double u_min, double u_0, \
             u1(i+1) = max(u_min, u_sol(0));
             u2(i+1) = u_sol(1); 
         }
+
+        // Symmetry (ice divide). Schoof (2007) treats BC at x = 0.
+        //u1(0) = - u(1);
 
 
         // Update IVP perturbation.
@@ -807,66 +791,62 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
     ArrayXd u2(n), dhds(n), visc_dot_H(n), c1(n), c2(n), h(n), \
             A(n), B(n), C(n), F(n);
 
-    MatrixXd dff(n,1), out(5,n);
+    MatrixXd out(5,n);
+    MatrixXd dff(n,3);
 
     double D, u2_bc, d_vis_H;
+    double ds_inv_2 = pow(ds_inv, 2);
 
     // Defined for convenience.
     visc_dot_H = 4.0 * visc * H;
+    /*for (int i=0; i<n-1; i++)
+    {
+        visc_dot_H(i) = 2.0 * ( visc(i) + visc(i-1) ) * H(i);
+    }*/
+    
     c1         = 1.0 / visc_dot_H;      
 	c2         = rho * g * H;
     h          = bed + H;           // Ice surface elevation.
 
     ///////////////////////////////////////
     ///////////////////////////////////////
-    // Centred implicit scheme for u2.
+    // Staggered grid. Implicit solver for velocities u1.
 
     for (int i=1; i<n-1; i++)
     {
         // Surface elevation gradient. Centred stencil.
-        dhds(i) = h(i+1) - h(i-1);
-        //dhds(i) = 2.0 * (h(i) - h(i-1));
+        //dhds(i) = h(i+1) - h(i-1);
+        dhds(i) = ( h(i+1) - h(i) ) * ds_inv;
 
         // Diagonal, B; lower diagonal, A; upper diagonal, C.
-        B(i) = 0.0;
-        A(i) = visc_dot_H(i-1); 
+        B(i) = - visc_dot_H(i+1) - visc_dot_H(i);
+        A(i) = - visc_dot_H(i); 
         C(i) = visc_dot_H(i+1);
+
+        // Stress balance: driving - friction.
+        F(i) = 0.5 * ( c2(i+1) + c2(i) ) * dhds(i) * L + tau_b(i) * pow(L,2);
     }
 
     // Derivatives at the boundaries O(x).
-    dhds(0)   = 2.0 * ( h(1) - h(0) );
-    dhds(n-1) = 2.0 * ( h(n-1) - h(n-2) );
-    // Third order derivatives at the boundaries:
-    //dhds(0)   = - 3.0 * h(0) + 4.0 * h(1) - h(2);
-    //dhds(n-1) = 3.0 * h(n-1) - 4.0 * h(n-2) + h(n-3); // corrected
+    dhds(0)   = h(1) - h(0);
+    dhds(n-1) = h(n-1) - h(n-2);
 
-    // Impose here BC at x = 0: dhds = 0 (Schoof, 2007; Vieli and Payne, 2005)
-    //dhds(0)   = 0.0;
-    //dhds(n-1) = 2.0 * ( h(n-1) - h(n-2) );
-
-    // Test
-    //dhds(1) = 0.0;
     
     // Tridiagonal vectors at the boundaries.
-    B(0)   = - 2.0 * visc_dot_H(0);
-    B(n-1) = 2.0 * visc_dot_H(n-1);
+    B(0)   = - visc_dot_H(1) - visc_dot_H(0);
+    B(n-1) = - visc_dot_H(n-1);
 
-    C(0)   = 2.0 * visc_dot_H(1);
+    C(0)   = visc_dot_H(1);
     C(n-1) = 0.0;
     A(0)   = 0.0;
-    A(n-1) = 2.0 * visc_dot_H(n-2); 
+    A(n-1) = - visc_dot_H(n-2); 
 
     // Vectors in tridiagonal matrix.
-    A = - 0.5 * A * ds_inv; 
-    C = 0.5 * C * ds_inv;
-    B = 0.5 * B * ds_inv;
-
-    dhds = 0.5 * dhds * ds_inv;
+    A = A * ds_inv_2; 
+    C = C * ds_inv_2;
+    B = B * ds_inv_2;
 
     // mi amor, no te preocupes, que lo vas a hacer genial.
-
-    // Stress balance: driving - friction.
-    F = c2 * dhds + tau_b * L;
 
     // Grounding line sigma = 1 (x = L). u_min is just double 0.0.
     D = abs( min(u_min, bed(n-1)) );   
@@ -877,40 +857,25 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
     //u2_bc = 0.5 * c1(n-1) * g * L * ( rho * pow(H(n-1),2) - rho_w * pow(D,2) );
 
     // TRIDIAGONAL SOLVER.
-    u2 = tridiagonal_solver(A, B, C, F, n, u2_bc, u2_RK);
+    u1 = tridiagonal_solver(A, B, C, F, n, u2_bc);
+
+    // Symmetry (ice divide). Schoof (2007) treats BC at x = 0.
+    u1(0) = - u1(1);
 
     // BOUNDARY CONDITIONS.
-    // Ice divide in sigma = 0.
-    //u1(0) = 0.0;
-
     // Vieli and Payne (2005), Pattyn et al. (2012) impose du/dx = 0.
     // Ice divide is a symmetry axis.
-    u1(0) = 0.0;
-    u1(1) = 0.0;
-
-    // Firs step initialization.
-    //u1(1) = u1(0) + ds * u2(0);
+    //u1(0) = 0.0;
     
-    // Do we need to impose dq/dx = 0 in x = 0?
-    //u1(1) = 0.0;
-    
-    for (int i=1; i<n-1; i++)
+    /*for (int i=0; i<n-1; i++)
     {
-        // Forward.
         u1(i+1) = u1(i) + ds * u2(i);
-        //u1(i) = u1(i-1) + ds * u2(i-1);
-
-        // Centred.
-        //u1(i+1) = u1(i-1) + ds * 2.0 * u2(i);
-
         u1(i+1) = max(u_min, u1(i+1)); 
-        //u1(i) = max(u_min, u1(i));
-    }
+    }*/
 
-    // BC in ice divide.
-    //u1(1) = 0.0;
-    //u1(1) = 0.5 * u1(2);
-    //u1(0) = 0.5 * u1(1);
+
+    dff = deriv_sigma(u1, u1, u1, n, ds_inv, L);
+    u2  = dff.col(0);
 
     // Allocate solutions.
     out.row(0) = u1;
@@ -983,7 +948,7 @@ int main()
     int c = 0;
     t  = 0.0;
 
-    while (t < tf)
+    while (t < tf & c == 0)
     {
         // Update bedrock with new domain extension L.
         bed = f_bed(sigma, L, n, 1);
@@ -1009,6 +974,9 @@ int main()
             u2_dif = u(4,2);
             u2_0_vec   = u.row(5);
             u2_dif_vec = u.row(6);
+
+            c = c + 1;
+            cout << "\n c = " << c;
         }
         else
         {
