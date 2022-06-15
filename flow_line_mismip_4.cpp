@@ -120,7 +120,7 @@ double L     = 702.3e3;                    // Grounding line position [m] (1.2e6
 double L_old = 702.3e3;
 double L_new;
 double const t0    = 0.0;                // Starting time [s].
-double const tf    = 1.5e3;             // 75.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
+double const tf    = 0.5e3;             // 75.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
 double t     = t0;                       // Time initialization [s].
 double t_plot;
 double dt;                               // Time step [s].
@@ -130,7 +130,7 @@ double const t_eq = 5.0;                 // 20.0. Length of explicit scheme. try
 double const t_bc = 10.0;                // 1.0e3. Implicit scheme spin-up. End of u2_bc equilibration.
 double dt_plot;
 
-int const t_n = 30;                        // Number of output frames. 30.
+int const t_n = 20;                        // Number of output frames. 30.
 
 ArrayXd a = ArrayXd::LinSpaced(t_n, t0, tf);      // Time steps in which the solution is saved. 
 
@@ -173,7 +173,7 @@ double A, B;
 // PICARD ITERATION
 double error;                           // Norm of the velocity difference between iterations.
 double const picard_tol = 1.0e-5;       // 1.0e-5. Convergence tolerance within Picard iteration.
-int const n_picard = 10;                // Max number iter. Good results: 5, 1 is enough for convergence! (10, 15)
+int const n_picard = 1;                // Max number iter. Good results: 10, 1 is enough for convergence! (10, 15)
 int c_picard;                           // Number of Picard iterations.
 double omega, mu;                 
 double alpha;                           // Relaxation method within Picard iteration. 0.5, 0.7
@@ -183,9 +183,10 @@ double const omega_2 = (19.0 / 20.0) * M_PI;
 
 // PREPARE VARIABLES.
 ArrayXd H(n);                        // Ice thickness [m].
-ArrayXd H_now(n);                    // Current ice thickness [m].
+//ArrayXd H_now(n);                    // Current ice thickness [m].
 ArrayXd H_old(n);                    // Previous ice thickness [m].
 ArrayXd u1(n);                       // Velocity [m/s].
+ArrayXd q(n);                        // Ice flux [m²/s].
 ArrayXd u2(n);                       // Velocity first derivative [1/s].
 ArrayXd bed(n);                      // Bedrock elevation [m].
 ArrayXd C_bed(n);                    // Friction coefficient [Pa m^-1/3 s^1/3].
@@ -326,7 +327,7 @@ MatrixXd deriv_sigma(ArrayXd x, ArrayXd y, ArrayXd z,\
 
 
 ArrayXd tridiagonal_solver(ArrayXd A, ArrayXd B, ArrayXd C, \
-                           ArrayXd F, int n, double u2_bc, double u2_RK)
+                           ArrayXd F, int n, double u2_bc)
 {
     ArrayXd P(n), Q(n), u(n);
     double m;
@@ -353,7 +354,9 @@ ArrayXd tridiagonal_solver(ArrayXd A, ArrayXd B, ArrayXd C, \
 
     // From notes: u(n-1) = Q(n-1).
     // Boundary condition at the GL on u2.
-    u(n-1) = u2_bc;             
+    //u(n-1) = u2_bc;          
+    // Now solving for u1:
+    u(n-1) = Q(n-1);   
     
     // Back substitution (n+1 is essential).
     // i = 2 --> j = n-2 --> u(n-2)
@@ -363,9 +366,6 @@ ArrayXd tridiagonal_solver(ArrayXd A, ArrayXd B, ArrayXd C, \
         j = n - i;
         u(j) = P(j) * u(j+1) + Q(j);
     }
-
-    // What if we impose du/ds here?
-    //u(0) = 0.0;
 
     return u;
 }
@@ -418,6 +418,8 @@ double f_L(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd H_c, \
     // Sign before db/dx is correct. Otherwise, it migrates uphill.
     den = H(n-1) - H(n-2) + ( rho_w / rho ) * ( bed(n-1) - bed(n-2) );
 
+
+
     // Third-order flux slope:
     //num = - L * ds * S(n-1) + 0.5 * ( 3.0 * q(n-1) - 4.0 * q(n-2) + q(n-3) );
     
@@ -443,21 +445,15 @@ double f_L(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd H_c, \
 ArrayXd f_H_flux(ArrayXd u, ArrayXd H, ArrayXd S, ArrayXd sigma, \
                     double dt, double ds_inv, int n, double L_new, \
                     double L, double L_old, ArrayXd H_c, double D, \
-                    double rho, double rho_w, double dL_dt, ArrayXd bed)
+                    double rho, double rho_w, double dL_dt, ArrayXd bed, ArrayXd q)
 {
-    ArrayXd H_now(n), sigma_L(n), q(n);
+    ArrayXd H_now(n), sigma_L(n);
     double L_inv, delta_L;
 
-    q       = u * H;
-    L_inv   = 1.0 / L;
-
-    // Impose Vieli BC here on flux
-    // Already implicit in du/dx = 0.
-    //q(1) = q(0);
+    L_inv = 1.0 / L;
 
     // Advection equation. Centred dH in the sigma_L term.
-    //for (int i=1; i<n-1; i++)
-    for (int i=2; i<n-1; i++)
+    for (int i=1; i<n-1; i++)
     {
         // Centred in sigma, upwind in flux.
         H_now(i) = H(i) + dt * ( ds_inv * L_inv * \
@@ -467,21 +463,8 @@ ArrayXd f_H_flux(ArrayXd u, ArrayXd H, ArrayXd S, ArrayXd sigma, \
     }
     
     // Ice thickness BC at sigma = 0. dH = 0.
-    //H_now(1) = H_now(2); 
-    //H_now(0) = H_now(1); 
-
-    // Exotic BC (i+2 since the slope is centred differences?)
-    //H_now(0) = H_now(2); 
-    //H_now(1) = H_now(3);
-    
-    // Impose now dhds = 0 rather than dHds = 0.
-    // TRY SOMETHING ELSE HERE. IT SEEMS THE PROBLEM IS THE BC!
-    H_now(1) = H_now(2) - abs( bed(2) - bed(1) ); 
-    H_now(0) = H_now(1) - abs( bed(1) - bed(0) ); 
-
-    //H_now(1) = H_now(2); 
-    //H_now(1) = H_now(2) - abs( bed(2) - bed(1) ); 
-
+    H_now(0) = H_now(2); 
+     
 
     // Flux in the last grid point. First order.
     H_now(n-1) = H(n-1) + dt * ( ds_inv * L_inv * \
@@ -525,7 +508,7 @@ ArrayXd f_dhdx(ArrayXd dH, ArrayXd b, int n)
 }
 
 
-ArrayXd f_visc(ArrayXd u2, double B, double n_exp, \
+ArrayXd f_visc(ArrayXd u1, double B, double n_exp, \
                 double eps, double L, int n)
 {
     ArrayXd u2_L(n), visc(n); 
@@ -534,7 +517,18 @@ ArrayXd f_visc(ArrayXd u2, double B, double n_exp, \
     // to sigma. It needs transformation to x-derivative.
 
     // Test wihtout square. n_exp = (1-n)/n
-    u2_L = ( abs(u2) / L ) + eps;
+    // From u2:
+    //u2_L = ( abs(u2) / L ) + eps;
+
+    // From u1:
+    for (int i=0; i<n-1; i++)
+    {
+        u2_L(i) = ( abs( u1(i+1) - u(i) ) / ( ds * L ) ) + eps;
+    }
+    
+    // Last grid point value taken from second last.
+    u2_L(n-1) = u2_L(n-2);
+
     visc = 0.5 * B * pow(u2_L, n_exp);
 
     // Constant viscosity experiment:
@@ -804,69 +798,65 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
                     ArrayXd bed, double rho, double g, double L, ArrayXd C_bed, \
                     ArrayXd tau_b, double t, double u2_RK)
 {
-    ArrayXd u2(n), dhds(n), visc_dot_H(n), c1(n), c2(n), h(n), \
+    ArrayXd u2(n), dhds(n), visc_H(n), c1(n), c2(n), h(n), \
             A(n), B(n), C(n), F(n);
 
     MatrixXd dff(n,1), out(5,n);
 
-    double D, u2_bc, d_vis_H;
+    double D, u2_bc, d_vis_H, ds_inv_2, L_inv;
 
+    L_inv = 1.0 / L;
+    ds_inv_2  = pow(ds_inv, 2);
+    
     // Defined for convenience.
-    visc_dot_H = 4.0 * visc * H;
-    c1         = 1.0 / visc_dot_H;      
-	c2         = rho * g * H;
-    h          = bed + H;           // Ice surface elevation.
+    visc_H = visc * H;
+    h      = bed + H;           // Ice surface elevation.
 
     ///////////////////////////////////////
     ///////////////////////////////////////
-    // Centred implicit scheme for u2.
+    // Staggered scheme.
 
-    for (int i=1; i<n-1; i++)
+    for (int i=0; i<n-1; i++)
     {
-        // Surface elevation gradient. Centred stencil.
-        dhds(i) = h(i+1) - h(i-1);
-        //dhds(i) = 2.0 * (h(i) - h(i-1));
+        // Lower diagonal A.
+        A(i) = visc_H(i); 
 
-        // Diagonal, B; lower diagonal, A; upper diagonal, C.
-        B(i) = 0.0;
-        A(i) = visc_dot_H(i-1); 
-        C(i) = visc_dot_H(i+1);
+        // Diagonal B.
+        B(i) = - ( visc_H(i+1) + visc_H(i) );
+
+        // Upper diagonal C.
+        C(i) = visc_H(i+1);
+
+        // Pseudo-driving stress.
+        tau_d(i) = ( H(i) + H(i+1) ) * ( h(i+1) - h(i) );
     }
 
-    // Derivatives at the boundaries O(x).
-    dhds(0)   = 2.0 * ( h(1) - h(0) );
-    dhds(n-1) = 2.0 * ( h(n-1) - h(n-2) );
-    // Third order derivatives at the boundaries:
-    //dhds(0)   = - 3.0 * h(0) + 4.0 * h(1) - h(2);
-    //dhds(n-1) = 3.0 * h(n-1) - 4.0 * h(n-2) + h(n-3); // corrected
+    // Driving stress.
+    tau_d = 0.5 * rho * g * ds_inv * tau_d;
+    tau_d(n-1) = 0.5 * rho * g * ds_inv * tau_d(n-1); 
 
-    // Impose here BC at x = 0: dhds = 0 (Schoof, 2007; Vieli and Payne, 2005)
-    //dhds(0)   = 0.0;
-    //dhds(n-1) = 2.0 * ( h(n-1) - h(n-2) );
-
-    // Test
-    //dhds(1) = 0.0;
+    tau_d = 2.0 * tau_b;
     
     // Tridiagonal vectors at the boundaries.
-    B(0)   = - 2.0 * visc_dot_H(0);
-    B(n-1) = 2.0 * visc_dot_H(n-1);
+    // A(0) and C(n-1) given by tridiagonal definition.
+    A(0)   = 0.0; 
+    A(n-1) = visc_H(n-1); 
 
-    C(0)   = 2.0 * visc_dot_H(1);
+    B(0)   = - ( visc_H(1) + visc_H(0) );
+    B(n-1) = - visc_H(n-1);
+
+    C(0)   = visc_H(1);
     C(n-1) = 0.0;
-    A(0)   = 0.0;
-    A(n-1) = 2.0 * visc_dot_H(n-2); 
-
+    
     // Vectors in tridiagonal matrix.
-    A = - 0.5 * A * ds_inv; 
-    C = 0.5 * C * ds_inv;
-    B = 0.5 * B * ds_inv;
-
-    dhds = 0.5 * dhds * ds_inv;
+    A = 2.0 * A * L_inv * ds_inv_2; 
+    B = 2.0 * B * L_inv * ds_inv_2; 
+    C = 2.0 * C * L_inv * ds_inv_2; 
 
     // mi amor, no te preocupes, que lo vas a hacer genial.
 
     // Stress balance: driving - friction.
-    F = c2 * dhds + tau_b * L;
+    F = tau_d + tau_b * L;
 
     // Grounding line sigma = 1 (x = L). u_min is just double 0.0.
     D = abs( min(u_min, bed(n-1)) );   
@@ -877,45 +867,24 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
     //u2_bc = 0.5 * c1(n-1) * g * L * ( rho * pow(H(n-1),2) - rho_w * pow(D,2) );
 
     // TRIDIAGONAL SOLVER.
-    u2 = tridiagonal_solver(A, B, C, F, n, u2_bc, u2_RK);
+    u1 = tridiagonal_solver(A, B, C, F, n, u2_bc);
+    
+    //cout << "\n u1 = " << u1;
+    cout << "\n F = " << F;
+    //cout << "\n tau_b = " << tau_b;
+    //cout << "\n tau_d = " << tau_d;
+    
+    // As in Pattyn's notes (Eq. 5.15).
+    u1(n-1) = u1(n-2) + u2_bc * ds;
 
-    // BOUNDARY CONDITIONS.
-    // Ice divide in sigma = 0.
-    //u1(0) = 0.0;
-
+    // BOUNDARY CONDITIONS. Ice divide is a symmetry axis.
     // Vieli and Payne (2005), Pattyn et al. (2012) impose du/dx = 0.
-    // Ice divide is a symmetry axis.
-    u1(0) = 0.0;
-    u1(1) = 0.0;
-
-    // Firs step initialization.
-    //u1(1) = u1(0) + ds * u2(0);
-    
-    // Do we need to impose dq/dx = 0 in x = 0?
-    //u1(1) = 0.0;
-    
-    for (int i=1; i<n-1; i++)
-    {
-        // Forward.
-        u1(i+1) = u1(i) + ds * u2(i);
-        //u1(i) = u1(i-1) + ds * u2(i-1);
-
-        // Centred.
-        //u1(i+1) = u1(i-1) + ds * 2.0 * u2(i);
-
-        u1(i+1) = max(u_min, u1(i+1)); 
-        //u1(i) = max(u_min, u1(i));
-    }
-
-    // BC in ice divide.
-    //u1(1) = 0.0;
-    //u1(1) = 0.5 * u1(2);
-    //u1(0) = 0.5 * u1(1);
+    //u1(0) = - u1(1);
 
     // Allocate solutions.
     out.row(0) = u1;
-    out.row(1) = u2;
-    out.row(2) = c2 * dhds;
+    //out.row(1) = u2;
+    out.row(2) = tau_d;
     out.row(3) = tau_b;
     out(4,0)   = D;
     out(4,1)   = u2_bc;
@@ -983,7 +952,8 @@ int main()
     int c = 0;
     t  = 0.0;
 
-    while (t < tf)
+    //while (t < tf)
+    while (c < 10)
     {
         // Update bedrock with new domain extension L.
         bed = f_bed(sigma, L, n, 1);
@@ -992,7 +962,8 @@ int main()
         //C_bed = f_C_bed(theta, theta_max, C_thaw, C_froz, n);
 
         // First, explcit scheme. Then, implicit using explicit guess.
-        if (t < t_eq)
+        //if (t < t_eq)
+        if (c < 9)
         {
             // First iterations using an explicit scheme RK-4.
             //cout << " \n Runge-Kutta \n ";
@@ -1018,6 +989,10 @@ int main()
             
             // Update basal friction with previous step velocity. Out of Picard iteration?
             tau_b = C_bed * pow(u1, m);
+            /*for (int i=0; i<n-1; i++)
+            {
+                tau_b(i) = 0.5 * ( C_bed(i+1) + C_bed(i) ) * pow(u1(i+1), m);
+            }*/
 
             // Min tau_b to avoid losing ice at equilibirum?
             /*for (int i=0; i<n-1; i++)
@@ -1025,6 +1000,16 @@ int main()
                 tau_b(i) = max(tau_b_min, tau_b(i));
             }*/
 
+            // Call implicit solver.
+            u = vel_solver(H, ds, ds_inv, n, visc, \
+                               bed, rho, g, L, C_bed, tau_b, t, u2_bc);
+
+            // Allocate variables.
+            u1    = u.row(0);
+            tau_d = u.row(2);
+            D     = u(4,0);
+
+            /*
             error    = 1.0;
             c_picard = 0;
 
@@ -1040,14 +1025,14 @@ int main()
 
                 // Allocate variables.
                 u1    = u.row(0);
-                u2    = u.row(1);
                 tau_d = u.row(2);
                 D     = u(4,0);
 
+                
                 // Current error (vector class required to compute norm). 
                 // Eq. 12 (De-Smedt et al., 2010).
                 c_u1_1  = u1 - u1_old_1;
-                c_u2_1  = u2 - u2_old_1;
+                //c_u2_1  = u2 - u2_old_1;
                 u1_vec = u1;
                 //u2_vec = u2;
                 error  = c_u1_1.norm() / u1_vec.norm();
@@ -1059,9 +1044,9 @@ int main()
                 {
                     // Difference in iter i-2.
                     c_u1_2   = u1_old_1 - u1_old_2;
-                    c_u2_2   = u2_old_1 - u2_old_2;
+                    //c_u2_2   = u2_old_1 - u2_old_2;
                     c_u1_dif = c_u1_1 - c_u1_2;
-                    c_u2_dif = c_u2_1 - c_u2_2;
+                    //c_u2_dif = c_u2_1 - c_u2_2;
 
                     //alpha = c_u1_2.norm() / c_u1_dif.norm();
                     //alpha = min(alpha_max, alpha);
@@ -1076,7 +1061,7 @@ int main()
                     //cout << "\n sum(c_u2_2) = " << c_u2_2.sum();
 
                     // De Smedt et al. (2010). Eq. 10.
-                    /*if (omega <= omega_1 || c_u1_1.norm() == 0.0)
+                    if (omega <= omega_1 || c_u1_1.norm() == 0.0)
                     {
                         mu = 2.5;
                     }
@@ -1087,10 +1072,10 @@ int main()
                     else
                     {
                         mu = 0.5;
-                    }*/
+                    }
 
                     // New guess based on updated alpha.
-                    u2 = ( 1.0 - alpha ) * u2_old_1 + alpha * u2;
+                    //u2 = ( 1.0 - alpha ) * u2_old_1 + alpha * u2;
                     u1 = ( 1.0 - alpha ) * u1_old_1 + alpha * u1;
 
                     // c_u1_1  = u1 - u1_old_1;
@@ -1098,7 +1083,7 @@ int main()
                     //u1 = u1_old_1 + mu * c_u1_1.array();
 
                     // Update viscosity with new u2 field.
-                    visc = f_visc(u2, B, n_exp, eps, L, n);
+                    visc = f_visc(u1, B, n_exp, eps, L, n);
                 }
 
                 // Update multistep variables.
@@ -1107,7 +1092,7 @@ int main()
 
                 // Number of iterations.
                 c_picard = c_picard + 1;
-            }
+            }*/
         }
 
         // Update timestep from velocity field.
@@ -1116,7 +1101,8 @@ int main()
         dt     = min(dt_CFL, dt_max);
 
         // Store solution in nc file.
-        if (c == 0 || t > a(c))
+        //if (c == 0 || t > a(c))
+        if (c >= 0 & c < 10)
         {
             cout << "\n t = " << t;
 
@@ -1177,26 +1163,35 @@ int main()
             if ((retval = nc_put_vara_double(ncid, theta_varid, start_z, cnt_z, &theta(0,0))))
             ERR(retval);
 
-            c = c + 1;
+            //c = c + 1;
         }  
 
         // Update ice viscosity with new u2 field.
-        visc = f_visc(u2, B, n_exp, eps, L, n);
+        visc = f_visc(u1, B, n_exp, eps, L, n);
         /*filt = gaussian_filter(visc, zeros, 4.0, L, ds, n);
         visc = filt;*/
 
         // Evaluate calving front thickness from tau_b field.
         //H_c = f_calv(tau_b, D, rho, rho_w, g, bed);
 
+        // STAGGERED GRID.
+        // Define updated ice flux q = u * H.
+        for (int i=0; i<n-1; i++)
+        {
+            q(i) = u(i) * 0.5 * ( H(i+1) + H(i) );
+        }
+        // At the grounding line.
+        q(n-1) = u(n-1) * H(n-1);
+
+
         // Update grounding line position with new velocity field.
-        //L_new = f_L(u1, H, S, H_c, dt, L, ds, n, bed, rho, rho_w);
         dL_dt = f_L(u1, H, S, H_c, dt, L, ds, n, bed, rho, rho_w);
         L_new = L + dL_dt * dt;
 
         // Integrate ice thickness forward in time.
-        H_now = f_H_flux(u1, H, S, sigma, dt, ds_inv, n, \
-                         L_new, L, L_old, H_c, D, rho, rho_w, dL_dt, bed);
-        H   = H_now; 
+        H = f_H_flux(u1, H, S, sigma, dt, ds_inv, n, \
+                         L_new, L, L_old, H_c, D, rho, rho_w, dL_dt, bed, q);
+        //H   = H_now; 
 
         // Integrate Fourier heat equation.
         /*theta_now = f_theta(theta, u1, H, tau_b, theta_max, kappa, \
@@ -1209,6 +1204,7 @@ int main()
 
         // Update time.
         t = t + dt;
+        c = c + 1;
     }
     
     // Running time (measures wall time).
