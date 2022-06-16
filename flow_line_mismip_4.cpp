@@ -120,7 +120,7 @@ double L     = 702.3e3;                    // Grounding line position [m] (1.2e6
 double L_old = 702.3e3;
 double L_new;
 double const t0    = 0.0;                // Starting time [s].
-double const tf    = 1.5e3;             // 75.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
+double const tf    = 100.0e3;             // 75.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
 double t     = t0;                       // Time initialization [s].
 double t_plot;
 double dt;                               // Time step [s].
@@ -130,7 +130,7 @@ double const t_eq = 5.0;                 // 20.0. Length of explicit scheme. try
 double const t_bc = 10.0;                // 1.0e3. Implicit scheme spin-up. End of u2_bc equilibration.
 double dt_plot;
 
-int const t_n = 30;                        // Number of output frames. 30.
+int const t_n = 20;                        // Number of output frames. 30.
 
 ArrayXd a = ArrayXd::LinSpaced(t_n, t0, tf);      // Time steps in which the solution is saved. 
 
@@ -173,7 +173,7 @@ double A, B;
 // PICARD ITERATION
 double error;                           // Norm of the velocity difference between iterations.
 double const picard_tol = 1.0e-5;       // 1.0e-5. Convergence tolerance within Picard iteration.
-int const n_picard = 10;                // Max number iter. Good results: 5, 1 is enough for convergence! (10, 15)
+int const n_picard = 1;                // Max number iter. Good results: 10.
 int c_picard;                           // Number of Picard iterations.
 double omega, mu;                 
 double alpha;                           // Relaxation method within Picard iteration. 0.5, 0.7
@@ -411,6 +411,11 @@ double f_L(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd H_c, \
     // Ice flux.
     q = u1 * H;
 
+    // Staggered:
+    //q(n-1)   = H(n-1) * u(n-1);
+    //q(n-2) = H(n-2) * 0.5 * ( u(n-2) + u(n-3) );
+
+
     // Accumulation minus flux. First order.
     num = - L * ds * S(n-1) + ( q(n-1) - q(n-2) );
 
@@ -456,9 +461,13 @@ ArrayXd f_H_flux(ArrayXd u, ArrayXd H, ArrayXd S, ArrayXd sigma, \
     //q(1) = q(0);
 
     // Advection equation. Centred dH in the sigma_L term.
-    //for (int i=1; i<n-1; i++)
-    for (int i=2; i<n-1; i++)
+    for (int i=1; i<n-1; i++)
+    //for (int i=2; i<n-1; i++)
     {
+        //q(i)   = H(i) * 0.5 * ( u(i) + u(i+1) );
+        //q(i-1) = H(i-1) * 0.5 * ( u(i-1) + u(i) );
+
+
         // Centred in sigma, upwind in flux.
         H_now(i) = H(i) + dt * ( ds_inv * L_inv * \
                                 ( sigma(i) * dL_dt * \
@@ -466,9 +475,19 @@ ArrayXd f_H_flux(ArrayXd u, ArrayXd H, ArrayXd S, ArrayXd sigma, \
                                         - ( q(i) - q(i-1) ) ) + S(i) );
     }
     
-    // Ice thickness BC at sigma = 0. dH = 0.
-    //H_now(1) = H_now(2); 
-    //H_now(0) = H_now(1); 
+    // Ice thickness BC at sigma = 0. dH = 0.  
+    //H_now(0) = H(0) + dt * ( - ds_inv * L_inv * \
+                                ( H(0) * u(0) + H(1) * u(1) ) + S(0) );
+
+    H_now(0) = H_now(1);
+    //H_now(0) = H(0) + dt * ( - ds_inv * L_inv * \
+                                2.0 * ( H(1) * u(1) ) + S(0) );
+    
+
+    //H_now(0) = ( 4.0 * H_now(1) - H_now(2) ) / 3.0;
+    
+    //H_now(0) = H_now(2);
+    //H_now(0) = H_now(1);
 
     // Exotic BC (i+2 since the slope is centred differences?)
     //H_now(0) = H_now(2); 
@@ -476,8 +495,8 @@ ArrayXd f_H_flux(ArrayXd u, ArrayXd H, ArrayXd S, ArrayXd sigma, \
     
     // Impose now dhds = 0 rather than dHds = 0.
     // TRY SOMETHING ELSE HERE. IT SEEMS THE PROBLEM IS THE BC!
-    H_now(1) = H_now(2) - abs( bed(2) - bed(1) ); 
-    H_now(0) = H_now(1) - abs( bed(1) - bed(0) ); 
+    //H_now(1) = H_now(2) - abs( bed(2) - bed(1) ); 
+    //H_now(0) = H_now(1) - abs( bed(1) - bed(0) ); 
 
     //H_now(1) = H_now(2); 
     //H_now(1) = H_now(2) - abs( bed(2) - bed(1) ); 
@@ -822,15 +841,21 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
     // Centred implicit scheme for u2.
 
     for (int i=1; i<n-1; i++)
+    //for (int i=0; i<n-1; i++)
     {
         // Surface elevation gradient. Centred stencil.
         dhds(i) = h(i+1) - h(i-1);
-        //dhds(i) = 2.0 * (h(i) - h(i-1));
+        //dhds(i) = 2.0 * ( h(i+1) - h(i) );
 
         // Diagonal, B; lower diagonal, A; upper diagonal, C.
         B(i) = 0.0;
         A(i) = visc_dot_H(i-1); 
         C(i) = visc_dot_H(i+1);
+
+        // Forward scheme.
+        /*A(i) = 0.0;
+        B(i) = visc_dot_H(i);
+        C(i) = visc_dot_H(i+1);*/
     }
 
     // Derivatives at the boundaries O(x).
@@ -848,13 +873,21 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
     //dhds(1) = 0.0;
     
     // Tridiagonal vectors at the boundaries.
-    B(0)   = - 2.0 * visc_dot_H(0);
+    //B(0)   = - 2.0 * visc_dot_H(0);
+    //B(0)   = - 2.0 * visc_dot_H(0) * ( 1.0 + 0.15e-4 );
+    B(0)   = - 2.0 * visc_dot_H(0) * ( 1.0 + 0.5e-4 );
     B(n-1) = 2.0 * visc_dot_H(n-1);
 
     C(0)   = 2.0 * visc_dot_H(1);
     C(n-1) = 0.0;
     A(0)   = 0.0;
     A(n-1) = 2.0 * visc_dot_H(n-2); 
+
+    // Forward scheme.
+    /*C(n-1) = 0.0;
+    A(n-1) = 0.0;
+    B(n-1) = 2.0 * visc_dot_H(n-1);*/
+ 
 
     // Vectors in tridiagonal matrix.
     A = - 0.5 * A * ds_inv; 
@@ -886,31 +919,23 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
     // Vieli and Payne (2005), Pattyn et al. (2012) impose du/dx = 0.
     // Ice divide is a symmetry axis.
     u1(0) = 0.0;
-    u1(1) = 0.0;
-
-    // Firs step initialization.
-    //u1(1) = u1(0) + ds * u2(0);
-    
-    // Do we need to impose dq/dx = 0 in x = 0?
     //u1(1) = 0.0;
     
-    for (int i=1; i<n-1; i++)
+    for (int i=0; i<n-1; i++)
+    //for (int i=1; i<n-1; i++)
     {
         // Forward.
         u1(i+1) = u1(i) + ds * u2(i);
-        //u1(i) = u1(i-1) + ds * u2(i-1);
 
         // Centred.
         //u1(i+1) = u1(i-1) + ds * 2.0 * u2(i);
 
         u1(i+1) = max(u_min, u1(i+1)); 
-        //u1(i) = max(u_min, u1(i));
     }
+    
+    //cout << "\n u1 = \n " << u1;
 
-    // BC in ice divide.
-    //u1(1) = 0.0;
-    //u1(1) = 0.5 * u1(2);
-    //u1(0) = 0.5 * u1(1);
+    //u1(0) = ( 4.0 * u1(1) - u1(2) ) / 3.0;
 
     // Allocate solutions.
     out.row(0) = u1;
