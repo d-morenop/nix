@@ -343,8 +343,9 @@ ArrayXd tridiagonal_solver(ArrayXd A, ArrayXd B, ArrayXd C, \
     P(0) = - C(0) / B(0);
     Q(0) = F(0) / B(0);
 
+
     // Forward elimination.
-    for (int i=1; i<n; i++)
+    for (int i=1; i<n-1; i++)
     {
         m    = 1.0 / ( B(i) + A(i) * P(i-1) );
         P(i) = - C(i) * m;
@@ -353,19 +354,24 @@ ArrayXd tridiagonal_solver(ArrayXd A, ArrayXd B, ArrayXd C, \
 
     // From notes: u(n-1) = Q(n-1).
     // Boundary condition at the GL on u2.
-    //u(n-1) = u2_bc;             
-    u(n-1) = Q(n-1);
-    cout << "\n u(n-1) = " << u(n-1);
-    //u(n-1) = 10.0;
+    u(n-1) = 10.0;             
+    //u(n-1) = Q(n-1);
+    //cout << "\n u1(n-1) = " << u(n-1);
 
     // Back substitution (n+1 is essential).
     // i = 2 --> j = n-2 --> u(n-2)
     // i = n --> j = 0   --> u(0)
-    for (int i=2; i<n+1; i++)
+    //for (int i=2; i<n+1; i++)
+    for (int i=2; i<n; i++)
     {
         j = n - i;
         u(j) = P(j) * u(j+1) + Q(j);
     }
+
+    u(0) = 0.0;
+    //u(n-1) = u(n-2) + ds * u2_bc;
+
+    cout << "\n u1 = " << u;
 
     // What if we impose du/ds here?
     //u(n-1) = u2_bc;
@@ -556,8 +562,8 @@ ArrayXd f_visc(ArrayXd u1, double B, double n_exp, \
     //visc = visc / sec_year;
 
     // Constant viscosity experiment: 1.0e15, 0.5e17
-    visc = ArrayXd::Constant(n, 1.0e13);
-    visc = visc / sec_year;
+    //visc = ArrayXd::Constant(n, 1.0e13);
+    //visc = visc / sec_year;
     
 	return visc;
 }	
@@ -842,8 +848,8 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
     ///////////////////////////////////////
     // Centred implicit scheme for u1.
 
-    //for (int i=1; i<n-1; i++)
-    for (int i=0; i<n-1; i++)
+    for (int i=1; i<n-1; i++)
+    //for (int i=0; i<n-1; i++)
     {
         // Surface elevation gradient. Forward stencil.
         dhds(i) = h(i+1) - h(i);
@@ -856,8 +862,8 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
     }
 
     // Derivatives at the boundaries O(x).
-    dhds(0)   = h(1) - h(0);
-    dhds(n-1) = h(n-1) - h(n-2);
+    //dhds(0)   = h(1) - h(0);
+    //dhds(n-1) = h(n-1) - h(n-2);
     
     // Tridiagonal vectors at the boundaries.
     /*B(0)   = - 2.0 * visc_dot_H(0) * ( 1.0 + 0.20e-4 ); */
@@ -870,8 +876,8 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
     C(n-1) = 0.0;
 
     //B(n-1) = visc_dot_H(n-2) - visc_dot_H(n-1);
-    B(n-1) = visc_dot_H(n-1);
-    A(n-1) = visc_dot_H(n-1);
+    //B(n-1) = visc_dot_H(n-1);
+    //A(n-1) = visc_dot_H(n-1);
 
     A = A * ds_inv_2; 
     C = C * ds_inv_2;
@@ -882,7 +888,8 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
     // mi amor, no te preocupes, que lo vas a hacer genial.
 
     // Stress balance: driving - friction.
-    //F = L * ( - c2 * dhds + tau_b * L );
+    //cout << "\n tau_d = " << L * c2 * dhds;
+    //cout << "\n tau_b = " << tau_b * L * L;
     F = - L * ( c2 * dhds + tau_b * L );
 
     // Grounding line sigma = 1 (x = L). u_min is just double 0.0.
@@ -1127,7 +1134,7 @@ int main()
             start_0[0] = c;
             start_z[0] = c;
 
-            cout << "\n visc = " << visc;
+            //cout << "\n visc = " << visc;
 
             // 2D variables.
             if ((retval = nc_put_vara_double(ncid, x_varid, start, cnt, &u1_plot(0))))
