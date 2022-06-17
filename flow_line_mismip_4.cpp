@@ -120,7 +120,7 @@ double L     = 702.3e3;                    // Grounding line position [m] (1.2e6
 double L_old = 702.3e3;
 double L_new;
 double const t0    = 0.0;                // Starting time [s].
-double const tf    = 100.0e3;             // 75.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
+double const tf    = 10.0;             // 75.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
 double t     = t0;                       // Time initialization [s].
 double t_plot;
 double dt;                               // Time step [s].
@@ -353,8 +353,11 @@ ArrayXd tridiagonal_solver(ArrayXd A, ArrayXd B, ArrayXd C, \
 
     // From notes: u(n-1) = Q(n-1).
     // Boundary condition at the GL on u2.
-    u(n-1) = u2_bc;             
-    
+    //u(n-1) = u2_bc;             
+    u(n-1) = Q(n-1);
+    cout << "\n u(n-1) = " << u(n-1);
+    //u(n-1) = 10.0;
+
     // Back substitution (n+1 is essential).
     // i = 2 --> j = n-2 --> u(n-2)
     // i = n --> j = 0   --> u(0)
@@ -365,7 +368,7 @@ ArrayXd tridiagonal_solver(ArrayXd A, ArrayXd B, ArrayXd C, \
     }
 
     // What if we impose du/ds here?
-    //u(0) = 0.0;
+    //u(n-1) = u2_bc;
 
     return u;
 }
@@ -456,18 +459,11 @@ ArrayXd f_H_flux(ArrayXd u, ArrayXd H, ArrayXd S, ArrayXd sigma, \
     q       = u * H;
     L_inv   = 1.0 / L;
 
-    // Impose Vieli BC here on flux
-    // Already implicit in du/dx = 0.
-    //q(1) = q(0);
 
     // Advection equation. Centred dH in the sigma_L term.
     for (int i=1; i<n-1; i++)
     //for (int i=2; i<n-1; i++)
     {
-        //q(i)   = H(i) * 0.5 * ( u(i) + u(i+1) );
-        //q(i-1) = H(i-1) * 0.5 * ( u(i-1) + u(i) );
-
-
         // Centred in sigma, upwind in flux.
         H_now(i) = H(i) + dt * ( ds_inv * L_inv * \
                                 ( sigma(i) * dL_dt * \
@@ -479,12 +475,12 @@ ArrayXd f_H_flux(ArrayXd u, ArrayXd H, ArrayXd S, ArrayXd sigma, \
     //H_now(0) = H(0) + dt * ( - ds_inv * L_inv * \
                                 ( H(0) * u(0) + H(1) * u(1) ) + S(0) );
 
-    H_now(0) = H_now(1);
+    //H_now(0) = H_now(1);
+
     //H_now(0) = H(0) + dt * ( - ds_inv * L_inv * \
                                 2.0 * ( H(1) * u(1) ) + S(0) );
     
-
-    //H_now(0) = ( 4.0 * H_now(1) - H_now(2) ) / 3.0;
+    H_now(0) = ( 4.0 * H_now(1) - H_now(2) ) / 3.0;
     
     //H_now(0) = H_now(2);
     //H_now(0) = H_now(1);
@@ -511,6 +507,7 @@ ArrayXd f_H_flux(ArrayXd u, ArrayXd H, ArrayXd S, ArrayXd sigma, \
     // New assymetric version (MIT derivative calculator). \
     https://web.media.mit.edu/~crtaylor/calculator.html \
     0.5 * ( 3.0 * H(n-1) - 4.0 * H(n-2) + H(n-3) )
+    
     //H_now(n-1) = H(n-1) + dt * ( ds_inv * L_inv * \
                                 ( sigma(n-1) * dL_dt * \
                                     0.5 * ( 3.0 * H(n-1) - 4.0 * H(n-2) + H(n-3) ) + \
@@ -544,10 +541,11 @@ ArrayXd f_dhdx(ArrayXd dH, ArrayXd b, int n)
 }
 
 
-ArrayXd f_visc(ArrayXd u2, double B, double n_exp, \
+ArrayXd f_visc(ArrayXd u1, double B, double n_exp, \
                 double eps, double L, int n)
 {
     ArrayXd u2_L(n), visc(n); 
+    double u2;
 
     // u2 comes from integration where derivatives are respect
     // to sigma. It needs transformation to x-derivative.
@@ -555,9 +553,11 @@ ArrayXd f_visc(ArrayXd u2, double B, double n_exp, \
     // Test wihtout square. n_exp = (1-n)/n
     u2_L = ( abs(u2) / L ) + eps;
     visc = 0.5 * B * pow(u2_L, n_exp);
+    //visc = visc / sec_year;
 
-    // Constant viscosity experiment:
-    // ArrayXd visc = ArrayXd::Constant(n, 0.5e17); // 1.0e15, 0.5e17
+    // Constant viscosity experiment: 1.0e15, 0.5e17
+    visc = ArrayXd::Constant(n, 1.0e13);
+    visc = visc / sec_year;
     
 	return visc;
 }	
@@ -828,7 +828,9 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
 
     MatrixXd dff(n,1), out(5,n);
 
-    double D, u2_bc, d_vis_H;
+    double D, u2_bc, d_vis_H, ds_inv_2;
+
+    ds_inv_2 = pow(ds_inv, 2);
 
     // Defined for convenience.
     visc_dot_H = 4.0 * visc * H;
@@ -838,68 +840,50 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
 
     ///////////////////////////////////////
     ///////////////////////////////////////
-    // Centred implicit scheme for u2.
+    // Centred implicit scheme for u1.
 
-    for (int i=1; i<n-1; i++)
-    //for (int i=0; i<n-1; i++)
+    //for (int i=1; i<n-1; i++)
+    for (int i=0; i<n-1; i++)
     {
-        // Surface elevation gradient. Centred stencil.
-        dhds(i) = h(i+1) - h(i-1);
-        //dhds(i) = 2.0 * ( h(i+1) - h(i) );
+        // Surface elevation gradient. Forward stencil.
+        dhds(i) = h(i+1) - h(i);
 
         // Diagonal, B; lower diagonal, A; upper diagonal, C.
-        B(i) = 0.0;
-        A(i) = visc_dot_H(i-1); 
-        C(i) = visc_dot_H(i+1);
-
         // Forward scheme.
-        /*A(i) = 0.0;
-        B(i) = visc_dot_H(i);
-        C(i) = visc_dot_H(i+1);*/
+        A(i) = visc_dot_H(i);
+        B(i) = - ( visc_dot_H(i) + visc_dot_H(i+1) );
+        C(i) = visc_dot_H(i+1);
     }
 
     // Derivatives at the boundaries O(x).
-    dhds(0)   = 2.0 * ( h(1) - h(0) );
-    dhds(n-1) = 2.0 * ( h(n-1) - h(n-2) );
-    // Third order derivatives at the boundaries:
-    //dhds(0)   = - 3.0 * h(0) + 4.0 * h(1) - h(2);
-    //dhds(n-1) = 3.0 * h(n-1) - 4.0 * h(n-2) + h(n-3); // corrected
-
-    // Impose here BC at x = 0: dhds = 0 (Schoof, 2007; Vieli and Payne, 2005)
-    //dhds(0)   = 0.0;
-    //dhds(n-1) = 2.0 * ( h(n-1) - h(n-2) );
-
-    // Test
-    //dhds(1) = 0.0;
+    dhds(0)   = h(1) - h(0);
+    dhds(n-1) = h(n-1) - h(n-2);
     
     // Tridiagonal vectors at the boundaries.
-    //B(0)   = - 2.0 * visc_dot_H(0);
-    //B(0)   = - 2.0 * visc_dot_H(0) * ( 1.0 + 0.15e-4 );
-    B(0)   = - 2.0 * visc_dot_H(0) * ( 1.0 + 0.5e-4 );
-    B(n-1) = 2.0 * visc_dot_H(n-1);
+    /*B(0)   = - 2.0 * visc_dot_H(0) * ( 1.0 + 0.20e-4 ); */
 
-    C(0)   = 2.0 * visc_dot_H(1);
-    C(n-1) = 0.0;
+    // Forward scheme. Now working!
+    // For some reason, a very close solution is found if the first diagonal 
+    // includes a small correction.
+    //B(0) =  B(0) * ( 1.0 + 0.06e-4 );
     A(0)   = 0.0;
-    A(n-1) = 2.0 * visc_dot_H(n-2); 
+    C(n-1) = 0.0;
 
-    // Forward scheme.
-    /*C(n-1) = 0.0;
-    A(n-1) = 0.0;
-    B(n-1) = 2.0 * visc_dot_H(n-1);*/
+    //B(n-1) = visc_dot_H(n-2) - visc_dot_H(n-1);
+    B(n-1) = visc_dot_H(n-1);
+    A(n-1) = visc_dot_H(n-1);
+
+    A = A * ds_inv_2; 
+    C = C * ds_inv_2;
+    B = B * ds_inv_2;
  
-
-    // Vectors in tridiagonal matrix.
-    A = - 0.5 * A * ds_inv; 
-    C = 0.5 * C * ds_inv;
-    B = 0.5 * B * ds_inv;
-
-    dhds = 0.5 * dhds * ds_inv;
+    dhds = dhds * ds_inv;
 
     // mi amor, no te preocupes, que lo vas a hacer genial.
 
     // Stress balance: driving - friction.
-    F = c2 * dhds + tau_b * L;
+    //F = L * ( - c2 * dhds + tau_b * L );
+    F = - L * ( c2 * dhds + tau_b * L );
 
     // Grounding line sigma = 1 (x = L). u_min is just double 0.0.
     D = abs( min(u_min, bed(n-1)) );   
@@ -910,32 +894,16 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
     //u2_bc = 0.5 * c1(n-1) * g * L * ( rho * pow(H(n-1),2) - rho_w * pow(D,2) );
 
     // TRIDIAGONAL SOLVER.
-    u2 = tridiagonal_solver(A, B, C, F, n, u2_bc, u2_RK);
+    u1 = tridiagonal_solver(A, B, C, F, n, u2_bc, u2_RK);
 
-    // BOUNDARY CONDITIONS.
-    // Ice divide in sigma = 0.
-    //u1(0) = 0.0;
+    // Boundary condition.
+    //u1(n-1) = u1(n-2) + ds * u2_bc;
 
-    // Vieli and Payne (2005), Pattyn et al. (2012) impose du/dx = 0.
-    // Ice divide is a symmetry axis.
-    u1(0) = 0.0;
-    //u1(1) = 0.0;
-    
     for (int i=0; i<n-1; i++)
-    //for (int i=1; i<n-1; i++)
-    {
-        // Forward.
-        u1(i+1) = u1(i) + ds * u2(i);
-
-        // Centred.
-        //u1(i+1) = u1(i-1) + ds * 2.0 * u2(i);
-
-        u1(i+1) = max(u_min, u1(i+1)); 
+    {    
+        u2(i) = ( u1(i+1) - u1(i) ) / ds;
     }
-    
-    //cout << "\n u1 = \n " << u1;
-
-    //u1(0) = ( 4.0 * u1(1) - u1(2) ) / 3.0;
+    u2(n-1) = u2_bc;
 
     // Allocate solutions.
     out.row(0) = u1;
@@ -1069,6 +1037,10 @@ int main()
                 tau_d = u.row(2);
                 D     = u(4,0);
 
+                visc = f_visc(u2, B, n_exp, eps, L, n);
+                //cout << "\n visc = " << visc;
+
+
                 // Current error (vector class required to compute norm). 
                 // Eq. 12 (De-Smedt et al., 2010).
                 c_u1_1  = u1 - u1_old_1;
@@ -1124,6 +1096,7 @@ int main()
 
                     // Update viscosity with new u2 field.
                     visc = f_visc(u2, B, n_exp, eps, L, n);
+
                 }
 
                 // Update multistep variables.
@@ -1153,6 +1126,8 @@ int main()
             start[0]   = c;
             start_0[0] = c;
             start_z[0] = c;
+
+            cout << "\n visc = " << visc;
 
             // 2D variables.
             if ((retval = nc_put_vara_double(ncid, x_varid, start, cnt, &u1_plot(0))))
