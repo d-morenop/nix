@@ -120,7 +120,7 @@ double L     = 702.3e3;                    // Grounding line position [m] (1.2e6
 double L_old = 702.3e3;
 double L_new;
 double const t0    = 0.0;                // Starting time [s].
-double const tf    = 40.0e3;             // 75.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
+double const tf    = 50.0e3;             // 75.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
 double t     = t0;                       // Time initialization [s].
 double t_plot;
 double dt;                               // Time step [s].
@@ -479,12 +479,12 @@ ArrayXd f_H_flux(ArrayXd u, ArrayXd H, ArrayXd S, ArrayXd sigma, \
     //H_now(0) = H(0) + dt * ( - ds_inv * L_inv * \
                                 ( H(0) * u(0) + H(1) * u(1) ) + S(0) );
 
-    H_now(0) = H_now(1);
+    //H_now(0) = H_now(1);
     //H_now(0) = H(0) + dt * ( - ds_inv * L_inv * \
                                 2.0 * ( H(1) * u(1) ) + S(0) );
     
 
-    //H_now(0) = ( 4.0 * H_now(1) - H_now(2) ) / 3.0;
+    H_now(0) = ( 4.0 * H_now(1) - H_now(2) ) / 3.0;
     
     //H_now(0) = H_now(2);
     //H_now(0) = H_now(1);
@@ -497,9 +497,6 @@ ArrayXd f_H_flux(ArrayXd u, ArrayXd H, ArrayXd S, ArrayXd sigma, \
     // TRY SOMETHING ELSE HERE. IT SEEMS THE PROBLEM IS THE BC!
     //H_now(1) = H_now(2) - abs( bed(2) - bed(1) ); 
     //H_now(0) = H_now(1) - abs( bed(1) - bed(0) ); 
-
-    //H_now(1) = H_now(2); 
-    //H_now(1) = H_now(2) - abs( bed(2) - bed(1) ); 
 
 
     // Flux in the last grid point. First order.
@@ -832,7 +829,7 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
 
     // Defined for convenience.
     visc_dot_H = 4.0 * visc * H;
-    c1         = 1.0 / visc_dot_H;      
+    //c1         = 1.0 / visc_dot_H;      
 	c2         = rho * g * H;
     h          = bed + H;           // Ice surface elevation.
 
@@ -840,61 +837,64 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
     ///////////////////////////////////////
     // Centred implicit scheme for u2.
 
-    for (int i=1; i<n-1; i++)
-    //for (int i=0; i<n-1; i++)
+    //for (int i=1; i<n-1; i++)
+    for (int i=0; i<n-1; i++)
     {
         // Surface elevation gradient. Centred stencil.
-        dhds(i) = h(i+1) - h(i-1);
-        //dhds(i) = 2.0 * ( h(i+1) - h(i) );
+        //dhds(i) = h(i+1) - h(i-1);
+        dhds(i) = h(i+1) - h(i);
 
         // Diagonal, B; lower diagonal, A; upper diagonal, C.
-        B(i) = 0.0;
+        /*B(i) = 0.0;
         A(i) = visc_dot_H(i-1); 
-        C(i) = visc_dot_H(i+1);
+        C(i) = visc_dot_H(i+1);*/
 
         // Forward scheme.
-        /*A(i) = 0.0;
-        B(i) = visc_dot_H(i);
-        C(i) = visc_dot_H(i+1);*/
+        A(i) = 0.0;
+        B(i) = - visc_dot_H(i);
+        C(i) = visc_dot_H(i+1);
     }
 
     // Derivatives at the boundaries O(x).
-    dhds(0)   = 2.0 * ( h(1) - h(0) );
-    dhds(n-1) = 2.0 * ( h(n-1) - h(n-2) );
+    //dhds(0)   = 2.0 * ( h(1) - h(0) );
+    //dhds(n-1) = 2.0 * ( h(n-1) - h(n-2) );
     // Third order derivatives at the boundaries:
     //dhds(0)   = - 3.0 * h(0) + 4.0 * h(1) - h(2);
+    dhds(0)   = h(1) - h(0);
+    dhds(n-1) = h(n-1) - h(n-2);
     //dhds(n-1) = 3.0 * h(n-1) - 4.0 * h(n-2) + h(n-3); // corrected
 
     // Impose here BC at x = 0: dhds = 0 (Schoof, 2007; Vieli and Payne, 2005)
     //dhds(0)   = 0.0;
     //dhds(n-1) = 2.0 * ( h(n-1) - h(n-2) );
-
-    // Test
-    //dhds(1) = 0.0;
     
     // Tridiagonal vectors at the boundaries.
     //B(0)   = - 2.0 * visc_dot_H(0);
-    //B(0)   = - 2.0 * visc_dot_H(0) * ( 1.0 + 0.15e-4 );
-    B(0)   = - 2.0 * visc_dot_H(0) * ( 1.0 + 0.5e-4 );
-    B(n-1) = 2.0 * visc_dot_H(n-1);
+    //B(0)   = - 2.0 * visc_dot_H(0) * ( 1.0 + 0.1e-4 );
+    //B(0)   = - 2.0 * visc_dot_H(0) * ( 1.0 + 0.5e-4 );
+    /*B(n-1) = 2.0 * visc_dot_H(n-1);
 
     C(0)   = 2.0 * visc_dot_H(1);
     C(n-1) = 0.0;
     A(0)   = 0.0;
-    A(n-1) = 2.0 * visc_dot_H(n-2); 
+    A(n-1) = 2.0 * visc_dot_H(n-2); */
 
     // Forward scheme.
-    /*C(n-1) = 0.0;
-    A(n-1) = 0.0;
-    B(n-1) = 2.0 * visc_dot_H(n-1);*/
+    C(n-1) = 0.0;
+    A(n-1) = - visc_dot_H(n-1);
+    B(n-1) = visc_dot_H(n-1);
  
-
     // Vectors in tridiagonal matrix.
-    A = - 0.5 * A * ds_inv; 
+    /*A = - 0.5 * A * ds_inv; 
     C = 0.5 * C * ds_inv;
-    B = 0.5 * B * ds_inv;
+    B = 0.5 * B * ds_inv;*/
 
-    dhds = 0.5 * dhds * ds_inv;
+    A = - A * ds_inv; 
+    C = C * ds_inv;
+    B = B * ds_inv;
+
+    //dhds = 0.5 * dhds * ds_inv;
+    dhds = dhds * ds_inv;
 
     // mi amor, no te preocupes, que lo vas a hacer genial.
 
