@@ -120,23 +120,23 @@ double L     = 702.3e3;                    // Grounding line position [m] (1.2e6
 double L_old = 702.3e3;
 double L_new;
 double const t0    = 0.0;                // Starting time [s].
-double const tf    = 8.0e3;             // 75.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
+double const tf    = 30.0e3;             // 75.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
 double t     = t0;                       // Time initialization [s].
 double t_plot;
 double dt;                               // Time step [s].
 double dt_CFL;                           // Courant-Friedrichs-Lewis condition
-double const dt_max = 5.0;               // Maximum time step = 10 years [s].
+double const dt_max = 0.1;               // Maximum time step = 5 years [s].
 double const t_eq = 0.0;                 // 20.0. Length of explicit scheme. try 50?
 double const t_bc = 10.0;                // 1.0e3. Implicit scheme spin-up. End of u2_bc equilibration.
 double dt_plot;
 
-int const t_n = 10;                        // Number of output frames. 30.
+int const t_n = 40;                        // Number of output frames. 30.
 
 ArrayXd a = ArrayXd::LinSpaced(t_n, t0, tf);      // Time steps in which the solution is saved. 
 
 
 // COORDINATES.
-int const n = 500;                     // Number of horizontal points 250. 200, 500, 2000
+int const n = 100;                     // Number of horizontal points 250. 200, 500, 2000
 double const ds = 1.0 / n;               // Normalized spatial resolution.
 double const ds_inv = n;
 
@@ -173,7 +173,7 @@ double A, B;
 // PICARD ITERATION
 double error;                           // Norm of the velocity difference between iterations.
 double const picard_tol = 1.0e-5;       // 1.0e-5. Convergence tolerance within Picard iteration.
-int const n_picard = 1;                // Max number iter. Good results: 10.
+int const n_picard = 10;                // Max number iter. Good results: 10.
 int c_picard;                           // Number of Picard iterations.
 double omega, mu;                 
 double alpha;                           // Relaxation method within Picard iteration. 0.5, 0.7
@@ -260,6 +260,32 @@ ArrayXd gaussian_filter(ArrayXd w, ArrayXd zeros, \
     smth = A * summ;
 
     return smth;
+}
+
+ArrayXd running_mean(ArrayXd x, int p, int n)
+{
+    ArrayXd y(n);
+
+    double sum, k;
+
+    // Assign values at the borders f(p).
+    y = x;
+
+    // Average.
+    k = 1.0 / ( p + 1.0 );
+ 
+    // Loop.
+    for (int i=p; i<n-p; i++) 
+    {
+        sum = 0;
+        for (int j=i-p; j<i+p+1; j++) 
+        {
+            sum = sum + x(j);
+        }
+        y(i) = k * sum;
+    }
+ 
+    return y;
 }
 
 
@@ -367,6 +393,8 @@ ArrayXd tridiagonal_solver(ArrayXd A, ArrayXd B, ArrayXd C, \
         j = n - i;
         u(j) = P(j) * u(j+1) + Q(j);
         //cout << "\n u1(i) = " << u1(j);
+        // Ensure positive velocity here?
+        //u(j) = max(0.0, u(j));
     }
 
     return u;
@@ -458,6 +486,10 @@ ArrayXd f_H_flux(ArrayXd u, ArrayXd H, ArrayXd S, ArrayXd sigma, \
                                     ( H(n-1) - H(n-2) ) + \
                                         - ( q(n-1) - q(n-2) ) ) + S(n-1) );
 
+    //H_now(n-1) = H(n-1) + dt * ( ds_inv * L_inv * \
+                                 ( sigma(n-1) * dL_dt * \
+                                    0.5 * ( 3.0 * H(n-1) - 4.0 * H(n-2) + H(n-3)) + \
+                                        - ( q(n-1) - q(n-2) ) ) + S(n-1) );
 	return H_now; 
 }
 
@@ -792,6 +824,7 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
     // Tridiagonal boundary values. Correct????
     A(0) = 0.0;
     B(0) = - gamma * ( visc_H(0) + visc_H(1) ) - beta(0);
+    //B(0) = - gamma * ( visc_H(0) + visc_H(1) ); //- beta(0);
     C(0) = visc_H(1);
 
     A(n-1) = visc_H(n-1);
@@ -826,8 +859,8 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
 
     // Boundary conditions.
     // Ice divide symmetry x = 0.
-    //u1(0) = 0.0;
     u1(0)   = - u1(1);
+    //u1(0) = ( 4.0 * u1(1) - u1(2) ) / 3.0;
     u1(n-1) = u1(n-2) + ds * u2_bc;
 
     // Compute first derivative for viscosity.
@@ -960,6 +993,8 @@ int main()
             
             // Update basal friction with previous step velocity. Out of Picard iteration?
             tau_b = C_bed * pow(u1, m);
+            // Symmetry.
+            tau_b(0) = tau_b(1);
 
             // Flux definition. Staggered grid.
             for (int i=0; i<n-1; i++)
@@ -991,7 +1026,9 @@ int main()
                 u2_bc = u(4,1);
 
                 // Beta definition: tau_b = beta * u.
-                beta = C_bed * pow( abs(u1), m - 1.0);
+                //beta = C_bed * pow( abs(u1), m - 1.0);
+                beta    = C_bed * pow( u1, m - 1.0);
+                beta(0) = beta(1);
 
                 // Current error (vector class required to compute norm). 
                 // Eq. 12 (De-Smedt et al., 2010).
@@ -1010,13 +1047,12 @@ int main()
                     alpha = min(alpha_max, alpha);
                     //alpha = 1.0;
                     
-                    //omega = acos( c_u1_1.dot(c_u1_2) / \
+                    omega = acos( c_u1_1.dot(c_u1_2) / \
                                  ( c_u1_1.norm() * c_u1_2.norm() ) );
                     
-                    //cout << "\n sum(c_u2_1) = " << c_u2_1.sum();
 
                     // De Smedt et al. (2010). Eq. 10.
-                    /*if (omega <= omega_1 || c_u1_1.norm() == 0.0)
+                    if (omega <= omega_1 || c_u1_1.norm() == 0.0)
                     {
                         mu = 2.5;
                     }
@@ -1027,12 +1063,12 @@ int main()
                     else
                     {
                         mu = 0.5;
-                    }*/
+                    }
 
                     // New guess based on updated alpha.
-                    u1     = ( 1.0 - alpha ) * u1_old_1 + alpha * u1;
+                    //u1     = ( 1.0 - alpha ) * u1_old_1 + alpha * u1;
                     c_u1_1 = u1 - u1_old_1;
-                    //u1 = u1_old_1 + mu * c_u1_1.array();
+                    u1 = u1_old_1 + mu * c_u1_1.array();
 
                     // Update viscosity with new u2 field.
                     visc = f_visc(u2, B, n_exp, eps, L, n);
@@ -1040,8 +1076,7 @@ int main()
                 }
 
                 // Update multistep variables.
-                //u1_old_2 = u1_old_1;
-                //u2_old_2 = u2_old_1;
+                u1_old_2 = u1_old_1;
 
                 // Number of iterations.
                 c_picard = c_picard + 1;
@@ -1060,7 +1095,8 @@ int main()
             cout << "\n t = " << t;
 
             u1_plot = u1;
-            u2_plot = u2 / L;
+            //u2_plot = u2 / L;
+            u2_plot = u2;
             t_plot  = t;
             dt_plot = dt;
 
@@ -1113,7 +1149,7 @@ int main()
             ERR(retval);
             if ((retval = nc_put_vara_double(ncid, mu_varid, start_0, cnt_0, &mu)))
             ERR(retval); // currently mu
-            if ((retval = nc_put_vara_double(ncid, omega_varid, start_0, cnt_0, &omega)))
+            if ((retval = nc_put_vara_double(ncid, omega_varid, start_0, cnt_0, &alpha)))
             ERR(retval);
 
             // 3D variables.
@@ -1127,6 +1163,7 @@ int main()
         // VISCOSITY IS CORRECT NOW. HOWEVER, THERE ARE SOME NUMERICAL INSTABILTIES
         // ON THE RIGHT SIDE OF THE VISCOSITY. THIS NOISE MAKES THE EXPERIMENTS CRASH.
         // THIS HAPPENS AT AROUND 6500 YEARS IN THE SIMULATION.
+        //u2 = running_mean(u2, 2, n);
         visc = f_visc(u2, B, n_exp, eps, L, n);
         //filt = gaussian_filter(visc, zeros, 4.0, L, ds, n);
         /*filt = gaussian_filter(visc, zeros, 1.5, L, ds, n);
