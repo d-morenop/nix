@@ -24,6 +24,7 @@
 #define VISC_NAME "visc"
 #define S_NAME "S"
 #define TAU_NAME "tau_b"
+#define BETA_NAME "beta"
 #define TAUD_NAME "tau_d"
 #define LMBD_NAME "lambda"
 #define B_NAME "b"
@@ -51,6 +52,7 @@
 #define VISC_UNITS "Pa s"
 #define S_UNITS "mm/day"
 #define TAU_UNITS "Pa"
+#define BETA_UNITS "Pa yr / m"
 #define TAUD_UNITS "Pa"
 #define LMBD_UNITS "dimensionless"
 #define B_UNITS "m/km"
@@ -81,9 +83,9 @@ int retval;
 /* IDs for the netCDF file, dimensions, and variables. */
 int ncid, x_dimid, z_dimid, time_dimid;
 int x_varid, z_varid, u1_varid, u2_varid, H_varid, visc_varid, s_varid, \
-    tau_varid, lmbd_varid, taud_varid, b_varid, L_varid, dt_varid, c_pic_varid, t_varid, \
-    mu_varid, omega_varid, u2_bc_varid, u2_dif_varid, picard_error_varid, \
-    u2_0_vec_varid, u2_dif_vec_varid, theta_varid, C_bed_varid;
+    tau_varid, beta_varid, lmbd_varid, taud_varid, b_varid, L_varid, dt_varid, \
+    c_pic_varid, t_varid, mu_varid, omega_varid, u2_bc_varid, u2_dif_varid, \
+    picard_error_varid, u2_0_vec_varid, u2_dif_vec_varid, theta_varid, C_bed_varid;
 int dimids[NDIMS];
 
 // For the 0D plots (append the current length of domain L)
@@ -172,6 +174,9 @@ int f_nc(int N, int N_Z)
     if ((retval = nc_def_var(ncid, TAU_NAME, NC_DOUBLE, NDIMS,
                     dimids, &tau_varid)))
         ERR(retval);
+    if ((retval = nc_def_var(ncid, BETA_NAME, NC_DOUBLE, NDIMS,
+                    dimids, &beta_varid)))
+        ERR(retval);
     if ((retval = nc_def_var(ncid, LMBD_NAME, NC_DOUBLE, NDIMS,
                     dimids, &lmbd_varid)))
         ERR(retval);
@@ -241,6 +246,9 @@ int f_nc(int N, int N_Z)
         ERR(retval);
     if ((retval = nc_put_att_text(ncid, tau_varid, UNITS,
                     strlen(TAU_UNITS), TAU_UNITS)))
+        ERR(retval);
+    if ((retval = nc_put_att_text(ncid, beta_varid, UNITS,
+                    strlen(BETA_UNITS), BETA_UNITS)))
         ERR(retval);
     if ((retval = nc_put_att_text(ncid, lmbd_varid, UNITS,
                     strlen(LMBD_UNITS), LMBD_UNITS)))
