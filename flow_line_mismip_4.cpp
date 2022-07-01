@@ -120,12 +120,12 @@ double L     = 702.3e3;                    // Grounding line position [m] (1.2e6
 double L_old = 702.3e3;
 double L_new;
 double const t0    = 0.0;                // Starting time [s].
-double const tf    = 10.0e3;             // 30.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
+double const tf    = 10.0;             // 30.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
 double t     = t0;                       // Time initialization [s].
 double t_plot;
 double dt;                               // Time step [s].
 double dt_CFL;                           // Courant-Friedrichs-Lewis condition
-double const dt_max = 2.0;               // Maximum time step = 1 years [s].
+double const dt_max = 1.0;               // Maximum time step = 1 years [s].
 double const dt_min = 1.0;
 double const t_eq = 0.0;                 // 20.0. Length of explicit scheme. 
 double const t_bc = 10.0;                // 1.0e3. Implicit scheme spin-up.
@@ -140,7 +140,7 @@ ArrayXd a = ArrayXd::LinSpaced(t_n, t0, tf);      // Time steps in which the sol
 // HIGHLY SENSITIVE TO THE PARTICULAR CHOICE OF dt and n.
 // OUR AIM NOW_ TRY TO ACHIEVE HIGHER N WHILE KEEPING NUMERICALLY STABLE.
 // TRY AN ADAPTATIVE TIMESTEP THAT CONSIDERS THE ERROR IN THE PICARD ITERATION?
-int const n = 200;                     // Number of horizontal points 180. 210, 290, 500, 2000
+int const n = 100;                     // Number of horizontal points 180. 210, 290, 500, 2000
 double const ds = 1.0 / n;               // Normalized spatial resolution.
 double const ds_inv = n;
 
@@ -350,7 +350,7 @@ MatrixXd deriv_sigma(ArrayXd x, ArrayXd y, ArrayXd z,\
 
 
 ArrayXd tridiagonal_solver(ArrayXd A, ArrayXd B, ArrayXd C, \
-                           ArrayXd F, int n, double u2_bc, double u2_RK)
+                           ArrayXd F, int n)
 {
     ArrayXd P(n), Q(n), u(n);
     double m;
@@ -384,6 +384,7 @@ ArrayXd tridiagonal_solver(ArrayXd A, ArrayXd B, ArrayXd C, \
     // Back substitution (n+1 is essential).
     // i = 2 --> j = n-2 --> u(n-2)
     // i = n --> j = 0   --> u(0)
+
     for (int i=2; i<n; i++)
     {
         j = n - i;
@@ -449,39 +450,57 @@ double f_L(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd H_c, \
 } 
 
 // First order scheme. New variable sigma.
-ArrayXd f_H_flux(ArrayXd u, ArrayXd H, ArrayXd S, ArrayXd sigma, \
+ArrayXd f_H_flux(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd sigma, \
                     double dt, double ds_inv, int n, double L_new, \
                     double L, double L_old, ArrayXd H_c, double D, \
                     double rho, double rho_w, double dL_dt, ArrayXd bed, ArrayXd q)
 {
-    ArrayXd H_now(n), sigma_L(n);
-    double L_inv, delta_L;
+    ArrayXd H_now(n), A(n), B(n), C(n), F(n);
+    double gamma, L_inv;
 
-    L_inv   = 1.0 / L;
+    L_inv = 1.0 / L;
+    gamma = dt / ( 2.0 * ds * L );
 
-    // Advection equation. Centred dH in the sigma_L term.
+    // Implicit scheme to avoid numerical instabilities.
     for (int i=1; i<n-1; i++)
     {
-        // Centred in sigma, upwind in flux.
-        H_now(i) = H(i) + dt * ( ds_inv * L_inv * \
-                                 ( sigma(i) * dL_dt * \
-                                    0.5 * ( H(i+1) - H(i-1) ) + \
-                                        - ( q(i) - q(i-1) ) ) + S(i) );
-        //H_now(i) = H(i) + dt * ( ds_inv * L_inv * \
-                                 ( sigma(i-1) * dL_dt * \
-                                    0.5 * ( H(i+1) - H(i-1) ) + \
-                                        - ( q(i) - q(i-1) ) ) + S(i) );
-    }
-    
-    H_now(0) = H_now(2);
-    //H_now(0) = ( 4.0 * H_now(1) - H_now(2) ) / 3.0;
+        // Tridiagonal vectors.
+        A(i) = u1(i-1) + dL_dt * sigma(i);
+        B(i) = 1.0 - gamma * ( u1(i) + u1(i-1) );
+        C(i) = u1(i) - dL_dt * sigma(i);
 
+        // Inhomogeneous term.
+        F(i) = H(i) + S(i) * dt;
+    }
+
+    // Vectors at the boundary.
+    A(0) = 0.0;
+    B(0) = 1.0 - gamma * u1(0);
+    C(0) = u1(0) - dL_dt * sigma(0);
+
+    A(n-1) = u1(n-2) + dL_dt * sigma(n-1);
+    B(n-1) = 1.0 - gamma * u1(n-1);
+    C(n-1) = 0.0;
+
+    // Discretization factor.
+    A = gamma * A;
+    C = gamma * C;
+
+    // Tridiagonal solver.
+    H_now = tridiagonal_solver(A, B, C, F, n);
+
+    // Boundary conditons.
+    H_now(0) = H_now(2);
+    //H_now(n-1) = D * ( rho_w / rho );
+    //H_now(n-1) = H(n-2) - abs( H(n-2) - H(n-3) );
+
+    //cout << "\n H_now = " << H_now;
+    //cout << "\n u1 = " << H_now;
+
+    // It is now working. JUST ISSUE WITH H_now(n-1)!
     // Lateral boundary: sigma(n-1) = 1.
     H_now(n-1) = H(n-1) + dt * ( ds_inv * L_inv * \
                                  (  dL_dt * ( H(n-1) - H(n-2) ) + \
-                                        - ( q(n-1) - q(n-2) ) ) + S(n-1) );
-    //H_now(n-1) = H(n-1) + dt * ( ds_inv * L_inv * \
-                                 (  sigma(n-2) * dL_dt * ( H(n-1) - H(n-2) ) + \
                                         - ( q(n-1) - q(n-2) ) ) + S(n-1) );
     return H_now; 
 }
@@ -844,7 +863,7 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
     u2_bc = L * A_ice * pow( 0.25 * ( rho * g * H(n-1) * (1.0 - rho / rho_w) ), n_gln);
 
     // TRIDIAGONAL SOLVER.
-    u1 = tridiagonal_solver(A, B, C, F, n, u2_bc, u2_RK);
+    u1 = tridiagonal_solver(A, B, C, F, n);
 
     // Boundary conditions.
     // Ice divide symmetry x = 0.
@@ -1135,12 +1154,12 @@ int main()
         // Courant-Friedrichs-Lewis condition (factor 1/2, 3/4).
         dt_CFL = 0.01 * ds * L / u1.maxCoeff();  
         //cout << "\n dt_CFL = " << dt_CFL;
-        //dt     = min(dt_CFL, dt_max);
-        dt = dt_CFL;
-        if ( t < 5.0e3 )
+        dt     = min(dt_CFL, dt_max);
+        //dt = dt_CFL;
+        /*if ( t < 5.0e3 )
         {
             dt = 1.0;
-        }
+        }*/
 
         // Save solution with desired frequency.
         if (c == 0 || t > a(c))
