@@ -140,7 +140,7 @@ ArrayXd a = ArrayXd::LinSpaced(t_n, t0, tf);      // Time steps in which the sol
 // HIGHLY SENSITIVE TO THE PARTICULAR CHOICE OF dt and n.
 // OUR AIM NOW_ TRY TO ACHIEVE HIGHER N WHILE KEEPING NUMERICALLY STABLE.
 // TRY AN ADAPTATIVE TIMESTEP THAT CONSIDERS THE ERROR IN THE PICARD ITERATION?
-int const n = 500;                     // Number of horizontal points 180. 210, 290, 500, 2000
+int const n = 200;                     // Number of horizontal points 180. 210, 290, 500, 2000
 double const ds = 1.0 / n;               // Normalized spatial resolution.
 double const ds_inv = n;
 
@@ -176,7 +176,7 @@ double A, B;
 
 // PICARD ITERATION
 double error;                           // Norm of the velocity difference between iterations.
-double const picard_tol = 1.0e-6;       // 1.0e-5. Convergence tolerance within Picard iteration.
+double const picard_tol = 1.0e-5;       // 1.0e-5. Convergence tolerance within Picard iteration.
 int const n_picard = 20;                // Max number iter. Good results: 10.
 int c_picard;                           // Number of Picard iterations.
 double omega, mu;                 
@@ -1039,18 +1039,20 @@ int main()
                     {
                         //mu = 2.5; // De Smedt.
                         //mu = 1.0; // To avoid negative velocities?
-                        mu = 1.0;
+                        mu = 0.7;
                     }
                     else if (omega > omega_1 & omega < omega_2)
                     {
                         //mu = 1.0; // De Smedt.
-                        mu = 1.0;
+                        //mu = 1.0;
+                        mu = 0.7;
                     }
                     else
                     {
                         //mu = 0.5; // De Smedt.
-                        mu = 1.0; // Numerically more stable for large n?
+                        //mu = 1.0; // Numerically more stable for large n?
                         //mu = 0.4;
+                        mu = 0.7;
                     }
 
                     // New velocity guess based on updated omega.
@@ -1131,14 +1133,20 @@ int main()
 
         // Update timestep from velocity field.
         // Courant-Friedrichs-Lewis condition (factor 1/2, 3/4).
-        dt_CFL = 0.5 * ds * L / u1.maxCoeff();  
+        dt_CFL = 0.01 * ds * L / u1.maxCoeff();  
         //cout << "\n dt_CFL = " << dt_CFL;
-        dt     = min(dt_CFL, dt_max);
+        //dt     = min(dt_CFL, dt_max);
+        dt = dt_CFL;
+        if ( t < 5.0e3 )
+        {
+            dt = 1.0;
+        }
 
         // Save solution with desired frequency.
         if (c == 0 || t > a(c))
         {
             cout << "\n t = " << t;
+            cout << "\n dt = " << dt;
 
             // Write solution in nc.
             f_write(c, u1, u2,  H, visc, S, tau_b, beta, tau_d, bed, \
