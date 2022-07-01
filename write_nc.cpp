@@ -330,3 +330,67 @@ int f_nc(int N, int N_Z)
 
     return N;
 }
+
+
+int f_write(int c, ArrayXd u1, ArrayXd u2, ArrayXd H, ArrayXd visc, ArrayXd S, \
+            ArrayXd tau_b, ArrayXd beta, ArrayXd tau_d, ArrayXd bed, \
+            ArrayXd C_bed, ArrayXd u2_dif_vec, ArrayXd u2_0_vec, \
+            double L, double t, double u2_bc, double u2_dif, double error, \
+            double dt, int c_picard, double mu, double omega, ArrayXXd theta)
+{
+    start[0]   = c;
+    start_0[0] = c;
+    start_z[0] = c;
+
+    // 2D variables.
+    if ((retval = nc_put_vara_double(ncid, x_varid, start, cnt, &u1(0))))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid, u2_varid, start, cnt, &u2(0))))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid, H_varid, start, cnt, &H(0))))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid, visc_varid, start, cnt, &visc(0))))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid, s_varid, start, cnt, &S(0))))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid, tau_varid, start, cnt, &tau_b(0))))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid, beta_varid, start, cnt, &beta(0))))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid, taud_varid, start, cnt, &tau_d(0))))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid, b_varid, start, cnt, &bed(0))))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid, C_bed_varid, start, cnt, &C_bed(0))))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid, u2_dif_vec_varid, start, cnt, &u2_dif_vec(0))))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid, u2_0_vec_varid, start, cnt, &u2_0_vec(0))))
+    ERR(retval);
+
+    // 1D variables.
+    if ((retval = nc_put_vara_double(ncid, L_varid, start_0, cnt_0, &L)))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid, t_varid, start_0, cnt_0, &t)))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid, u2_bc_varid, start_0, cnt_0, &u2_bc)))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid, u2_dif_varid, start_0, cnt_0, &u2_dif)))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid, picard_error_varid, start_0, cnt_0, &error)))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid, dt_varid, start_0, cnt_0, &dt)))
+    ERR(retval);
+    if ((retval = nc_put_vara_int(ncid, c_pic_varid, start_0, cnt_0, &c_picard)))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid, mu_varid, start_0, cnt_0, &mu)))
+    ERR(retval); // currently mu
+    if ((retval = nc_put_vara_double(ncid, omega_varid, start_0, cnt_0, &omega)))
+    ERR(retval);
+
+    // 3D variables.
+    if ((retval = nc_put_vara_double(ncid, theta_varid, start_z, cnt_z, &theta(0,0))))
+    ERR(retval);
+
+    return c;
+}

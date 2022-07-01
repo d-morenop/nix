@@ -99,7 +99,7 @@ double const C_thaw = 7.624e6;                  // 1.75e6 [Pa m^-1/3 s^1/3].
 double const C_froz = 7.624e6;                  // 2.0e6 [Pa m^-1/3 s^1/3].
 
 // GROUNDING LINE.
-double dL_dt;
+double dL_dt;                                   // GL migration [m/yr]. 
 
 // ICE VISCOSITY: f_visc.
 double const n_gln = 3.0;
@@ -120,12 +120,13 @@ double L     = 702.3e3;                    // Grounding line position [m] (1.2e6
 double L_old = 702.3e3;
 double L_new;
 double const t0    = 0.0;                // Starting time [s].
-double const tf    = 30.0e3;             // 75.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
+double const tf    = 10.0e3;             // 30.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
 double t     = t0;                       // Time initialization [s].
 double t_plot;
 double dt;                               // Time step [s].
 double dt_CFL;                           // Courant-Friedrichs-Lewis condition
-double const dt_max = 0.5;               // Maximum time step = 1 years [s].
+double const dt_max = 2.0;               // Maximum time step = 1 years [s].
+double const dt_min = 1.0;
 double const t_eq = 0.0;                 // 20.0. Length of explicit scheme. 
 double const t_bc = 10.0;                // 1.0e3. Implicit scheme spin-up.
 //double dt_plot;
@@ -136,8 +137,10 @@ ArrayXd a = ArrayXd::LinSpaced(t_n, t0, tf);      // Time steps in which the sol
 
 
 // COORDINATES.
-// PROBLEMS WHEN WE INCREASE THE NUMBER OF POINTS!!
-int const n = 140;                     // Number of horizontal points 100. 200, 500, 2000
+// HIGHLY SENSITIVE TO THE PARTICULAR CHOICE OF dt and n.
+// OUR AIM NOW_ TRY TO ACHIEVE HIGHER N WHILE KEEPING NUMERICALLY STABLE.
+// TRY AN ADAPTATIVE TIMESTEP THAT CONSIDERS THE ERROR IN THE PICARD ITERATION?
+int const n = 500;                     // Number of horizontal points 180. 210, 290, 500, 2000
 double const ds = 1.0 / n;               // Normalized spatial resolution.
 double const ds_inv = n;
 
@@ -173,7 +176,7 @@ double A, B;
 
 // PICARD ITERATION
 double error;                           // Norm of the velocity difference between iterations.
-double const picard_tol = 1.0e-5;       // 1.0e-5. Convergence tolerance within Picard iteration.
+double const picard_tol = 1.0e-6;       // 1.0e-5. Convergence tolerance within Picard iteration.
 int const n_picard = 20;                // Max number iter. Good results: 10.
 int c_picard;                           // Number of Picard iterations.
 double omega, mu;                 
@@ -202,6 +205,7 @@ ArrayXd u1_old_1(n);
 ArrayXd u1_old_2(n);  
 ArrayXd u2_0_vec(n);                 // Ranged sampled of u2_0 for a certain iteration.
 ArrayXd u2_dif_vec(n);               // Difference with analytical BC.
+ArrayXi u1_nan(n);
 VectorXd u1_vec(n); 
 VectorXd u2_vec(n); 
 VectorXd c_u1_1(n);                   // Correction vector Picard relaxed iteration.
@@ -384,7 +388,6 @@ ArrayXd tridiagonal_solver(ArrayXd A, ArrayXd B, ArrayXd C, \
     {
         j = n - i;
         u(j) = P(j) * u(j+1) + Q(j);
-        //cout << "\n u1(i) = " << u1(j);
         // Ensure positive velocity here?
         //u(j) = max(0.0, u(j));
     }
@@ -464,17 +467,23 @@ ArrayXd f_H_flux(ArrayXd u, ArrayXd H, ArrayXd S, ArrayXd sigma, \
                                  ( sigma(i) * dL_dt * \
                                     0.5 * ( H(i+1) - H(i-1) ) + \
                                         - ( q(i) - q(i-1) ) ) + S(i) );
+        //H_now(i) = H(i) + dt * ( ds_inv * L_inv * \
+                                 ( sigma(i-1) * dL_dt * \
+                                    0.5 * ( H(i+1) - H(i-1) ) + \
+                                        - ( q(i) - q(i-1) ) ) + S(i) );
     }
     
     H_now(0) = H_now(2);
     //H_now(0) = ( 4.0 * H_now(1) - H_now(2) ) / 3.0;
 
-
     // Lateral boundary: sigma(n-1) = 1.
     H_now(n-1) = H(n-1) + dt * ( ds_inv * L_inv * \
                                  (  dL_dt * ( H(n-1) - H(n-2) ) + \
                                         - ( q(n-1) - q(n-2) ) ) + S(n-1) );
-	return H_now; 
+    //H_now(n-1) = H(n-1) + dt * ( ds_inv * L_inv * \
+                                 (  sigma(n-2) * dL_dt * ( H(n-1) - H(n-2) ) + \
+                                        - ( q(n-1) - q(n-2) ) ) + S(n-1) );
+    return H_now; 
 }
 
 
@@ -780,7 +789,8 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
 
     L_inv = 1.0 / L;
     ds_inv_2 = pow(ds_inv, 2);
-    gamma = 2.0 * ds_inv_2 * pow(L_inv, 2);
+    //gamma = 2.0 * ds_inv_2 * pow(L_inv, 2);
+    gamma = 4.0 * ds_inv_2 * pow(L_inv, 2); // Factor 2 difference from Vieli and Payne (2005).
 
     // Defined for convenience.
     visc_H = visc * H;
@@ -803,7 +813,8 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
 
     // Derivatives at the boundaries O(x).
     dhds(0)   = 0.5 * ( H(0) + H(1) ) * ( h(1) - h(0) );
-    dhds(n-1) = 2.0 * H(n-1) * ( h(n-1) - h(n-2) );
+    //dhds(n-1) = 2.0 * H(n-1) * ( h(n-1) - h(n-2) );
+    dhds(n-1) = H(n-1) * ( h(n-1) - h(n-2) ); // without a factor 2???
 
     // Tridiagonal boundary values. Correct????
     A(0) = 0.0;
@@ -819,20 +830,18 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
     A = gamma * A;
     C = gamma * C;
 
-    //cout << "\n A = " << A;
-    //cout << "\n C = " << C;
-    //cout << "\n B = " << B;
-
     // Grounding line sigma = 1 (x = L). u_min is just double 0.0.
     D = abs( min(u_min, bed(n-1)) );   
 
     // Lateral boundary condition (Greve and Blatter Eq. 6.64).
     //cout << "\n visc(n-1) = " << visc(n-1);
-    u2_bc = 0.125 * g * H(n-1) * L * rho * ( rho_w - rho ) / ( rho_w * visc(n-1) );
+    // Now:
+    //u2_bc = 0.125 * g * H(n-1) * L * rho * ( rho_w - rho ) / ( rho_w * visc(n-1) );
+    // Old:
     //u2_bc = 0.5 * c1(n-1) * g * L * ( rho * pow(H(n-1),2) - rho_w * pow(D,2) );
 
     // Pattyn.
-    //u2_bc = L * A_ice * pow( 0.25 * ( rho * g * H(n-1) * (1.0 - rho / rho_w) ), n_gln);
+    u2_bc = L * A_ice * pow( 0.25 * ( rho * g * H(n-1) * (1.0 - rho / rho_w) ), n_gln);
 
     // TRIDIAGONAL SOLVER.
     u1 = tridiagonal_solver(A, B, C, F, n, u2_bc, u2_RK);
@@ -918,7 +927,7 @@ int main()
 
     // Viscosity from constant A value. u2 = 0 initialization. \
     // 4.6416e-24, 2.1544e-24. [Pa^-3 s^-1] ==> [Pa^-3 yr^-1]
-    A = 4.6416e-24 * sec_year;               
+    A = 1.0e-26 * sec_year;               
     B = pow(A, ( -1 / n_gln ) );
 
     // We assume a constant viscosity in the first iteration.
@@ -973,7 +982,7 @@ int main()
             // Update basal friction with previous step velocity. Out of Picard iteration?
             tau_b = C_bed * pow(u1, m);
             // Symmetry.
-            tau_b(0) = tau_b(1);
+            //tau_b(0) = tau_b(1);
 
             // Flux definition. Staggered grid.
             for (int i=0; i<n-1; i++)
@@ -1020,10 +1029,6 @@ int main()
                     // Difference in iter i-2.
                     c_u1_2   = u1_old_1 - u1_old_2;
                     c_u1_dif = c_u1_1 - c_u1_2;
-
-                    //alpha = c_u1_2.norm() / c_u1_dif.norm();
-                    //alpha = min(alpha_max, alpha);
-                    //alpha = 1.0;
                     
                     omega = acos( c_u1_1.dot(c_u1_2) / \
                                  ( c_u1_1.norm() * c_u1_2.norm() ) );
@@ -1032,23 +1037,42 @@ int main()
                     // De Smedt et al. (2010). Eq. 10.
                     if (omega <= omega_1 || c_u1_1.norm() == 0.0)
                     {
-                        mu = 2.5;
+                        //mu = 2.5; // De Smedt.
+                        //mu = 1.0; // To avoid negative velocities?
+                        mu = 1.0;
                     }
                     else if (omega > omega_1 & omega < omega_2)
                     {
+                        //mu = 1.0; // De Smedt.
                         mu = 1.0;
                     }
                     else
                     {
-                        mu = 0.5;
+                        //mu = 0.5; // De Smedt.
+                        mu = 1.0; // Numerically more stable for large n?
+                        //mu = 0.4;
                     }
 
-                    // New guess based on updated alpha.
-                    //u1     = ( 1.0 - alpha ) * u1_old_1 + alpha * u1;
-                    c_u1_1 = u1 - u1_old_1;
+                    // New velocity guess based on updated omega.
                     u1 = u1_old_1 + mu * c_u1_1.array();
 
                     // Update viscosity with new u2 field.
+                    for (int i=1; i<n-1; i++)
+                    {
+                        // Ensure positive velocities here. Potentially negative 
+                        // due to relaxation iteration. 
+                        /*if ( u1(i) < 0.0 )
+                        {
+                            u1(i) = max(u1_old_1(i), u1(i));
+                        }*/
+                        
+                        // Centred stencil.
+                        u2(i) = 0.5 * ( u1(i+1) - u1(i-1) );
+                    }
+                    u2(0)   = u1(1) - u1(0);
+                    u2(n-1) = u1(n-1) - u1(n-2);
+
+                    u2 = abs(u2) / (ds * L);
                     visc = f_visc(u2, B, n_exp, eps, L, n);
                     
                 }
@@ -1061,90 +1085,73 @@ int main()
             }
         }
 
+        // CONSISTENCY CHECK.
+        // Search for NaN or negative velocity values of i > 0.
+        for (int i=1; i<n; i++)
+        {
+            if ( u1(i) < 0.0 )
+            {
+                cout << "\n Negative velocities.";
+                cout << "\n Saving variables in nc file. \n ";
+
+                // Save previous iteration sol. (before NaN encountered).
+                f_write(c, u1, u2,  H, visc, S, tau_b, beta, tau_d, bed, \
+                        C_bed, u2_dif_vec, u2_0_vec, L, t, u2_bc, u2_dif, \
+                        error, dt, c_picard, mu, omega, theta);
+
+                // Close nc file. 
+                if ((retval = nc_close(ncid)))
+                ERR(retval);
+                printf("\n *** %s file has been successfully written \n", \
+                        FILE_NAME);
+                
+                // Abort flowline.
+                return 0;
+            }
+            else if ( u1(i) != u1(i) )
+            {
+                cout << "\n NaN found.";
+                cout << "\n Saving variables in nc file. \n ";
+
+                // Save previous iteration sol. (before NaN encountered).
+                f_write(c, u1_old_1, u2,  H, visc, S, tau_b, beta, tau_d, bed, \
+                        C_bed, u2_dif_vec, u2_0_vec, L, t, u2_bc, u2_dif, \
+                        error, dt, c_picard, mu, omega, theta);
+
+                // Close nc file. 
+                if ((retval = nc_close(ncid)))
+                ERR(retval);
+                printf("\n *** %s file has been successfully written \n", \
+                        FILE_NAME);
+                
+                // Abort flowline.
+                return 0;
+            }
+        }
+
         // Update timestep from velocity field.
         // Courant-Friedrichs-Lewis condition (factor 1/2, 3/4).
         dt_CFL = 0.5 * ds * L / u1.maxCoeff();  
         //cout << "\n dt_CFL = " << dt_CFL;
         dt     = min(dt_CFL, dt_max);
-        //dt = 1.0;
-        /*if (t > 5.0e3)
-        {
-            dt = 1.5;
-        }*/
 
-        // Store solution in nc file.
+        // Save solution with desired frequency.
         if (c == 0 || t > a(c))
         {
             cout << "\n t = " << t;
 
-            start[0]   = c;
-            start_0[0] = c;
-            start_z[0] = c;
-
-            //cout << "\n visc = " << visc;
-
-            // 2D variables.
-            if ((retval = nc_put_vara_double(ncid, x_varid, start, cnt, &u1(0))))
-            ERR(retval);
-            if ((retval = nc_put_vara_double(ncid, u2_varid, start, cnt, &u2(0))))
-            ERR(retval);
-            if ((retval = nc_put_vara_double(ncid, H_varid, start, cnt, &H(0))))
-            ERR(retval);
-            if ((retval = nc_put_vara_double(ncid, visc_varid, start, cnt, &visc(0))))
-            ERR(retval);
-            if ((retval = nc_put_vara_double(ncid, s_varid, start, cnt, &S(0))))
-            ERR(retval);
-            if ((retval = nc_put_vara_double(ncid, tau_varid, start, cnt, &tau_b(0))))
-            ERR(retval);
-            if ((retval = nc_put_vara_double(ncid, beta_varid, start, cnt, &beta(0))))
-            ERR(retval);
-            if ((retval = nc_put_vara_double(ncid, taud_varid, start, cnt, &tau_d(0))))
-            ERR(retval);
-            if ((retval = nc_put_vara_double(ncid, b_varid, start, cnt, &bed(0))))
-            ERR(retval);
-            if ((retval = nc_put_vara_double(ncid, C_bed_varid, start, cnt, &C_bed(0))))
-            ERR(retval);
-            if ((retval = nc_put_vara_double(ncid, u2_dif_vec_varid, start, cnt, &u2_dif_vec(0))))
-            ERR(retval);
-            if ((retval = nc_put_vara_double(ncid, u2_0_vec_varid, start, cnt, &u2_0_vec(0))))
-            ERR(retval);
-
-            // 1D variables.
-            if ((retval = nc_put_vara_double(ncid, L_varid, start_0, cnt_0, &L)))
-            ERR(retval);
-            if ((retval = nc_put_vara_double(ncid, t_varid, start_0, cnt_0, &t)))
-            ERR(retval);
-            if ((retval = nc_put_vara_double(ncid, u2_bc_varid, start_0, cnt_0, &u2_bc)))
-            ERR(retval);
-            if ((retval = nc_put_vara_double(ncid, u2_dif_varid, start_0, cnt_0, &u2_dif)))
-            ERR(retval);
-            if ((retval = nc_put_vara_double(ncid, picard_error_varid, start_0, cnt_0, &error)))
-            ERR(retval);
-            if ((retval = nc_put_vara_double(ncid, dt_varid, start_0, cnt_0, &dt)))
-            ERR(retval);
-            if ((retval = nc_put_vara_int(ncid, c_pic_varid, start_0, cnt_0, &c_picard)))
-            ERR(retval);
-            if ((retval = nc_put_vara_double(ncid, mu_varid, start_0, cnt_0, &mu)))
-            ERR(retval); // currently mu
-            if ((retval = nc_put_vara_double(ncid, omega_varid, start_0, cnt_0, &omega)))
-            ERR(retval);
-
-            // 3D variables.
-            if ((retval = nc_put_vara_double(ncid, theta_varid, start_z, cnt_z, &theta(0,0))))
-            ERR(retval);
+            // Write solution in nc.
+            f_write(c, u1, u2,  H, visc, S, tau_b, beta, tau_d, bed, \
+                    C_bed, u2_dif_vec, u2_0_vec, L, t, u2_bc, u2_dif, \
+                    error, dt, c_picard, mu, omega, theta);
 
             c = c + 1;
         }  
 
         // Update ice viscosity with new u2 field.
-        // VISCOSITY IS CORRECT NOW. HOWEVER, THERE ARE SOME NUMERICAL INSTABILTIES
-        // ON THE RIGHT SIDE OF THE VISCOSITY. THIS NOISE MAKES THE EXPERIMENTS CRASH.
-        // THIS HAPPENS AT AROUND 6500 YEARS IN THE SIMULATION.
         //u2 = running_mean(u2, 2, n);
         visc = f_visc(u2, B, n_exp, eps, L, n);
         //filt = gaussian_filter(visc, zeros, 4.0, L, ds, n);
-        /*filt = gaussian_filter(visc, zeros, 1.5, L, ds, n);
-        visc = filt;*/
 
         // Evaluate calving front thickness from tau_b field.
         //H_c = f_calv(tau_b, D, rho, rho_w, g, bed);
