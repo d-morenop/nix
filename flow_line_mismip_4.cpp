@@ -55,7 +55,6 @@ TOOLS.
 gauss_filter --->  Returns a gaussian smooth by using Weierstrass transform.
 half_step    --->  Returns variables evaluated in i+1/2 (n-1 dimensions).
 deriv_sigma  --->  Returns numerical derivative O(h²) in sigma coordinates.     
-
 FLOWLINE FUNCTIONS.
 f_bed        --->  Returns the topography in the current step from domain length L.
 f_L          --->  Returns the new grounding line positin L from explicit 
