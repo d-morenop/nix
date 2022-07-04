@@ -927,7 +927,7 @@ int main()
 
     // Viscosity from constant A value. u2 = 0 initialization. \
     // 4.6416e-24, 2.1544e-24. [Pa^-3 s^-1] ==> [Pa^-3 yr^-1]
-    A = 1.0e-26 * sec_year;               
+    A = 4.6416e-24 * sec_year;               
     B = pow(A, ( -1 / n_gln ) );
 
     // We assume a constant viscosity in the first iteration.
@@ -1146,7 +1146,7 @@ int main()
         if (c == 0 || t > a(c))
         {
             cout << "\n t = " << t;
-            cout << "\n dt = " << dt;
+            //cout << "\n dt = " << dt;
 
             // Write solution in nc.
             f_write(c, u1, u2,  H, visc, S, tau_b, beta, tau_d, bed, \
