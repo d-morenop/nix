@@ -120,7 +120,7 @@ double L     = 702.3e3;                    // Grounding line position [m] (1.2e6
 double L_old = 702.3e3;
 double L_new;
 double const t0    = 0.0;                // Starting time [s].
-double const tf    = 10.0;             // 30.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
+double const tf    = 10.0e3;             // 30.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
 double t     = t0;                       // Time initialization [s].
 double t_plot;
 double dt;                               // Time step [s].
@@ -140,7 +140,7 @@ ArrayXd a = ArrayXd::LinSpaced(t_n, t0, tf);      // Time steps in which the sol
 // HIGHLY SENSITIVE TO THE PARTICULAR CHOICE OF dt and n.
 // OUR AIM NOW_ TRY TO ACHIEVE HIGHER N WHILE KEEPING NUMERICALLY STABLE.
 // TRY AN ADAPTATIVE TIMESTEP THAT CONSIDERS THE ERROR IN THE PICARD ITERATION?
-int const n = 100;                     // Number of horizontal points 180. 210, 290, 500, 2000
+int const n = 200;                     // Number of horizontal points 180. 210, 290, 500, 2000
 double const ds = 1.0 / n;               // Normalized spatial resolution.
 double const ds_inv = n;
 
@@ -352,7 +352,7 @@ MatrixXd deriv_sigma(ArrayXd x, ArrayXd y, ArrayXd z,\
 ArrayXd tridiagonal_solver(ArrayXd A, ArrayXd B, ArrayXd C, \
                            ArrayXd F, int n)
 {
-    ArrayXd P(n), Q(n), u(n);
+    ArrayXd P(n), Q(n), x(n);
     double m;
     int j;
     
@@ -375,25 +375,21 @@ ArrayXd tridiagonal_solver(ArrayXd A, ArrayXd B, ArrayXd C, \
         Q(i) = ( F(i) - A(i) * Q(i-1) ) * m;
     }
 
-    // From notes: u(n-1) = Q(n-1).
-    // Boundary condition at the GL on u2.
-    //u(n-1) = u2_bc;       
-    u(n-1) = Q(n-1);      
+    // From notes: u(n-1) = Q(n-1).    
+    x(n-1) = Q(n-1);      
     //cout << "\n u1(n-1) = " << u1(n-1);
     
     // Back substitution (n+1 is essential).
     // i = 2 --> j = n-2 --> u(n-2)
     // i = n --> j = 0   --> u(0)
-
-    for (int i=2; i<n; i++)
+    //for (int i=2; i<n; i++)
+    for (int j = n-2; j>0; --j)
     {
-        j = n - i;
-        u(j) = P(j) * u(j+1) + Q(j);
-        // Ensure positive velocity here?
-        //u(j) = max(0.0, u(j));
+        //j = n - i;
+        x(j) = P(j) * x(j+1) + Q(j);
     }
 
-    return u;
+    return x;
 }
 
 
@@ -459,15 +455,15 @@ ArrayXd f_H_flux(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd sigma, \
     double gamma, L_inv;
 
     L_inv = 1.0 / L;
-    gamma = dt / ( 2.0 * ds * L );
+    gamma = dt / ( ds * L );
 
     // Implicit scheme to avoid numerical instabilities.
     for (int i=1; i<n-1; i++)
     {
         // Tridiagonal vectors.
-        A(i) = u1(i-1) + dL_dt * sigma(i);
+        A(i) = u1(i-1) + 0.5 * sigma(i) * dL_dt;
         B(i) = 1.0 - gamma * ( u1(i) + u1(i-1) );
-        C(i) = u1(i) - dL_dt * sigma(i);
+        C(i) = u1(i) - 0.5 * sigma(i) * dL_dt;
 
         // Inhomogeneous term.
         F(i) = H(i) + S(i) * dt;
@@ -476,11 +472,14 @@ ArrayXd f_H_flux(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd sigma, \
     // Vectors at the boundary.
     A(0) = 0.0;
     B(0) = 1.0 - gamma * u1(0);
-    C(0) = u1(0) - dL_dt * sigma(0);
+    C(0) = u1(0) - 0.5 * sigma(0) * dL_dt;
 
-    A(n-1) = u1(n-2) + dL_dt * sigma(n-1);
-    B(n-1) = 1.0 - gamma * u1(n-1);
+    A(n-1) = u1(n-2) + 0.5 * sigma(n-1) * dL_dt;
+    B(n-1) = 1.0 - gamma * ( u1(n-1) + u1(n-2) );
     C(n-1) = 0.0;
+
+    F(0)   = H(0) + S(0) * dt;
+    F(n-1) = H(n-1) + S(n-1) * dt;
 
     // Discretization factor.
     A = gamma * A;
@@ -490,18 +489,16 @@ ArrayXd f_H_flux(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd sigma, \
     H_now = tridiagonal_solver(A, B, C, F, n);
 
     // Boundary conditons.
-    H_now(0) = H_now(2);
+    H_now(0)   = H_now(2);
+    H_now(n-1) = ( F(n-1) - A(n-1) * H_now(n-2) ) / B(n-1);
+    
+    //H_now(n-1) = ( H(n-1) + dt * S(n-1) - gamma * ( dL_dt + u1(n-2) ) * H_now(n-2) ) / \
+                ( 1.0 - gamma * ( u1(n-1) + u1(n-2) ) );
     //H_now(n-1) = D * ( rho_w / rho );
-    //H_now(n-1) = H(n-2) - abs( H(n-2) - H(n-3) );
+    //H_now(n-1) = min( D * ( rho_w / rho ), H(n-2) );
 
-    //cout << "\n H_now = " << H_now;
-    //cout << "\n u1 = " << H_now;
+    //cout << "\n H_now = " << H_now;   
 
-    // It is now working. JUST ISSUE WITH H_now(n-1)!
-    // Lateral boundary: sigma(n-1) = 1.
-    H_now(n-1) = H(n-1) + dt * ( ds_inv * L_inv * \
-                                 (  dL_dt * ( H(n-1) - H(n-2) ) + \
-                                        - ( q(n-1) - q(n-2) ) ) + S(n-1) );
     return H_now; 
 }
 
@@ -806,10 +803,9 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
 
     double D, u2_bc, d_vis_H, ds_inv_2, L_inv, gamma;
 
-    L_inv = 1.0 / L;
+    L_inv    = 1.0 / L;
     ds_inv_2 = pow(ds_inv, 2);
-    //gamma = 2.0 * ds_inv_2 * pow(L_inv, 2);
-    gamma = 4.0 * ds_inv_2 * pow(L_inv, 2); // Factor 2 difference from Vieli and Payne (2005).
+    gamma    = 4.0 * ds_inv_2 * pow(L_inv, 2); // Factor 2 difference from Vieli and Payne (2005).
 
     // Defined for convenience.
     visc_H = visc * H;
@@ -832,8 +828,8 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
 
     // Derivatives at the boundaries O(x).
     dhds(0)   = 0.5 * ( H(0) + H(1) ) * ( h(1) - h(0) );
-    //dhds(n-1) = 2.0 * H(n-1) * ( h(n-1) - h(n-2) );
     dhds(n-1) = H(n-1) * ( h(n-1) - h(n-2) ); // without a factor 2???
+    //dhds(n-1) = H(n-1) * ( 4.0 * h(n-1) - 3.0 * h(n-2) - h(n-3) ) / 3.0;
 
     // Tridiagonal boundary values. Correct????
     A(0) = 0.0;
@@ -866,7 +862,7 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
     u1 = tridiagonal_solver(A, B, C, F, n);
 
     // Boundary conditions.
-    // Ice divide symmetry x = 0.
+    // Ice divide: symmetry x = 0.
     u1(0)   = - u1(1);
     u1(n-1) = u1(n-2) + ds * u2_bc;
 
@@ -881,7 +877,7 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
     for (int i=1; i<n-1; i++)
     {
         u2(i) = 0.5 * ( u1(i+1) - u1(i-1) );
-    }
+    }   
     u2(0)   = u1(1) - u1(0);
     u2(n-1) = u1(n-1) - u1(n-2);
 
@@ -946,7 +942,7 @@ int main()
 
     // Viscosity from constant A value. u2 = 0 initialization. \
     // 4.6416e-24, 2.1544e-24. [Pa^-3 s^-1] ==> [Pa^-3 yr^-1]
-    A = 1.0e-26 * sec_year;               
+    A = 4.6416e-24 * sec_year;               
     B = pow(A, ( -1 / n_gln ) );
 
     // We assume a constant viscosity in the first iteration.
@@ -999,9 +995,10 @@ int main()
             // ensure convergence. Picard iteration for non-linear viscosity.
             
             // Update basal friction with previous step velocity. Out of Picard iteration?
-            tau_b = C_bed * pow(u1, m);
+            //tau_b = C_bed * pow(u1, m);
+            tau_b = beta * u1;
             // Symmetry.
-            //tau_b(0) = tau_b(1);
+            tau_b(0) = tau_b(1);
 
             // Flux definition. Staggered grid.
             for (int i=0; i<n-1; i++)
@@ -1033,7 +1030,7 @@ int main()
                 u2_bc = u(4,1);
 
                 // Beta definition: tau_b = beta * u.
-                beta    = C_bed * pow( u1, m - 1.0);
+                beta    = C_bed * pow(u1, m - 1.0);
                 beta(0) = beta(1);
 
                 // Current error (vector class required to compute norm). 
@@ -1155,6 +1152,8 @@ int main()
         dt_CFL = 0.01 * ds * L / u1.maxCoeff();  
         //cout << "\n dt_CFL = " << dt_CFL;
         dt     = min(dt_CFL, dt_max);
+        //dt = ds;
+
         //dt = dt_CFL;
         /*if ( t < 5.0e3 )
         {
@@ -1165,7 +1164,7 @@ int main()
         if (c == 0 || t > a(c))
         {
             cout << "\n t = " << t;
-            cout << "\n dt = " << dt;
+            //cout << "\n dt = " << dt;
 
             // Write solution in nc.
             f_write(c, u1, u2,  H, visc, S, tau_b, beta, tau_d, bed, \
@@ -1191,6 +1190,7 @@ int main()
         // Integrate ice thickness forward in time.
         H = f_H_flux(u1, H, S, sigma, dt, ds_inv, n, \
                          L_new, L, L_old, H_c, D, rho, rho_w, dL_dt, bed, q);
+
 
         // Integrate Fourier heat equation.
         /*theta_now = f_theta(theta, u1, H, tau_b, theta_max, kappa, \
