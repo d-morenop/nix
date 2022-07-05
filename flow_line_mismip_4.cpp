@@ -139,7 +139,7 @@ ArrayXd a = ArrayXd::LinSpaced(t_n, t0, tf);      // Time steps in which the sol
 // HIGHLY SENSITIVE TO THE PARTICULAR CHOICE OF dt and n.
 // OUR AIM NOW_ TRY TO ACHIEVE HIGHER N WHILE KEEPING NUMERICALLY STABLE.
 // TRY AN ADAPTATIVE TIMESTEP THAT CONSIDERS THE ERROR IN THE PICARD ITERATION?
-int const n = 200;                     // Number of horizontal points 180. 210, 290, 500, 2000
+int const n = 250;                     // Number of horizontal points 180. 210, 290, 500, 2000
 double const ds = 1.0 / n;               // Normalized spatial resolution.
 double const ds_inv = n;
 
@@ -379,12 +379,8 @@ ArrayXd tridiagonal_solver(ArrayXd A, ArrayXd B, ArrayXd C, \
     //cout << "\n u1(n-1) = " << u1(n-1);
     
     // Back substitution (n+1 is essential).
-    // i = 2 --> j = n-2 --> u(n-2)
-    // i = n --> j = 0   --> u(0)
-    //for (int i=2; i<n; i++)
     for (int j = n-2; j>0; --j)
     {
-        //j = n - i;
         x(j) = P(j) * x(j+1) + Q(j);
     }
 
@@ -448,55 +444,87 @@ double f_L(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd H_c, \
 ArrayXd f_H_flux(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd sigma, \
                     double dt, double ds_inv, int n, double L_new, \
                     double L, double L_old, ArrayXd H_c, double D, \
-                    double rho, double rho_w, double dL_dt, ArrayXd bed, ArrayXd q)
+                    double rho, double rho_w, double dL_dt, \
+                    ArrayXd bed, ArrayXd q, int meth)
 {
     ArrayXd H_now(n), A(n), B(n), C(n), F(n);
     double gamma, L_inv;
 
-    L_inv = 1.0 / L;
-    gamma = dt / ( ds * L );
+    L_inv  = 1.0 / L;
+    ds_inv = 1.0 / ds;
+    gamma  = dt / ( ds * L );
 
-    // Implicit scheme to avoid numerical instabilities.
-    for (int i=1; i<n-1; i++)
+    // Solution to the modified advection equation considering a streched coordinate
+    // system sigma. Two schemes are available, explicit and implicit, noted as
+    // meth = 0, 1 respectively. 
+
+    meth = 0;
+
+    if ( meth == 0 )
     {
-        // Tridiagonal vectors.
-        A(i) = u1(i-1) + 0.5 * sigma(i) * dL_dt;
-        B(i) = 1.0 - gamma * ( u1(i) + u1(i-1) );
-        C(i) = u1(i) - 0.5 * sigma(i) * dL_dt;
+        // Explicit scheme. Centred dH in the sigma_L term.
+        for (int i=1; i<n-1; i++)
+        {
+            // Centred in sigma, upwind in flux.
+            H_now(i) = H(i) + dt * ( ds_inv * L_inv * \
+                                    ( sigma(i) * dL_dt * \
+                                        0.5 * ( H(i+1) - H(i-1) ) + \
+                                            - ( q(i) - q(i-1) ) ) + S(i) );
+        }
+        
+        H_now(0) = H_now(2);
+        //H_now(0) = ( 4.0 * H_now(1) - H_now(2) ) / 3.0;
 
-        // Inhomogeneous term.
-        F(i) = H(i) + S(i) * dt;
+        // Lateral boundary: sigma(n-1) = 1.
+        H_now(n-1) = H(n-1) + dt * ( ds_inv * L_inv * \
+                                    (  dL_dt * ( H(n-1) - H(n-2) ) + \
+                                        - ( q(n-1) - q(n-2) ) ) + S(n-1) );
     }
+    else if ( meth == 1 )
+    {
+        // Implicit scheme.
+        for (int i=1; i<n-1; i++)
+        {
+            // Tridiagonal vectors.
+            A(i) = u1(i-1) + 0.5 * sigma(i) * dL_dt;
+            B(i) = 1.0 - gamma * ( u1(i) + u1(i-1) );
+            C(i) = u1(i) - 0.5 * sigma(i) * dL_dt;
 
-    // Vectors at the boundary.
-    A(0) = 0.0;
-    B(0) = 1.0 - gamma * u1(0);
-    C(0) = u1(0) - 0.5 * sigma(0) * dL_dt;
+            // Inhomogeneous term.
+            F(i) = H(i) + S(i) * dt;
+        }
 
-    A(n-1) = u1(n-2) + 0.5 * sigma(n-1) * dL_dt;
-    B(n-1) = 1.0 - gamma * ( u1(n-1) + u1(n-2) );
-    C(n-1) = 0.0;
+        // Vectors at the boundary.
+        A(0) = 0.0;
+        B(0) = 1.0 - gamma * u1(0);
+        C(0) = u1(0);                  // sigma(0) = 0, (- 0.5 * sigma(0) * dL_dt)
 
-    F(0)   = H(0) + S(0) * dt;
-    F(n-1) = H(n-1) + S(n-1) * dt;
+        A(n-1) = u1(n-2) + 0.5 * sigma(n-1) * dL_dt;
+        B(n-1) = 1.0 - gamma * ( u1(n-1) + u1(n-2) );
+        C(n-1) = 0.0;
 
-    // Discretization factor.
-    A = gamma * A;
-    C = gamma * C;
+        F(0)   = H(0) + S(0) * dt;
+        F(n-1) = H(n-1) + S(n-1) * dt;
 
-    // Tridiagonal solver.
-    H_now = tridiagonal_solver(A, B, C, F, n);
+        // Discretization factor.
+        A = gamma * A;
+        C = gamma * C;
 
-    // Boundary conditons.
-    H_now(0)   = H_now(2);
-    H_now(n-1) = ( F(n-1) - A(n-1) * H_now(n-2) ) / B(n-1);
-    
-    //H_now(n-1) = ( H(n-1) + dt * S(n-1) - gamma * ( dL_dt + u1(n-2) ) * H_now(n-2) ) / \
-                ( 1.0 - gamma * ( u1(n-1) + u1(n-2) ) );
-    //H_now(n-1) = D * ( rho_w / rho );
-    //H_now(n-1) = min( D * ( rho_w / rho ), H(n-2) );
+        // Tridiagonal solver.
+        H_now = tridiagonal_solver(A, B, C, F, n);
 
-    //cout << "\n H_now = " << H_now;   
+        // Boundary conditons.
+        H_now(0)   = H_now(2);
+        H_now(n-1) = ( F(n-1) - A(n-1) * H_now(n-2) ) / B(n-1);
+
+        H_now(n-1) = min( D * ( rho_w / rho ), H_now(n-1) );
+        
+        
+        //H_now(n-1) = D * ( rho_w / rho );
+        //H_now(n-1) = min( D * ( rho_w / rho ), H(n-2) );
+
+        //cout << "\n H_now = " << H_now;   
+    }
 
     return H_now; 
 }
@@ -798,9 +826,9 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
     ArrayXd u2(n), dhds(n), visc_H(n), c1(n), c2(n), h(n), \
             A(n), B(n), C(n), F(n);
 
-    MatrixXd dff(n,1), out(5,n);
+    MatrixXd out(5,n);
 
-    double D, u2_bc, d_vis_H, ds_inv_2, L_inv, gamma;
+    double D, u2_bc, ds_inv_2, L_inv, gamma;
 
     L_inv    = 1.0 / L;
     ds_inv_2 = pow(ds_inv, 2);
@@ -1039,6 +1067,8 @@ int main()
                 error  = c_u1_1.norm() / u1_vec.norm();
                 
                 // New relaxed Picard iteration. Pattyn (2003). 
+                // Necessary to deal with the nonlinear velocity dependence
+                // in both viscosity and beta.
                 if (c_picard > 0)
                 {
                     // Difference in iter i-2.
@@ -1073,16 +1103,13 @@ int main()
                     // New velocity guess based on updated omega.
                     u1 = u1_old_1 + mu * c_u1_1.array();
 
+                    // Update beta with new u1.
+                    beta    = C_bed * pow(u1, m - 1.0);
+                    beta(0) = beta(1);
+
                     // Update viscosity with new u2 field.
                     for (int i=1; i<n-1; i++)
                     {
-                        // Ensure positive velocities here. Potentially negative 
-                        // due to relaxation iteration. 
-                        /*if ( u1(i) < 0.0 )
-                        {
-                            u1(i) = max(u1_old_1(i), u1(i));
-                        }*/
-                        
                         // Centred stencil.
                         u2(i) = 0.5 * ( u1(i+1) - u1(i-1) );
                     }
@@ -1151,6 +1178,7 @@ int main()
         dt_CFL = 0.01 * ds * L / u1.maxCoeff();  
         //cout << "\n dt_CFL = " << dt_CFL;
         dt     = min(dt_CFL, dt_max);
+        dt = dt_max;
         //dt = ds;
 
         //dt = dt_CFL;
@@ -1188,7 +1216,7 @@ int main()
 
         // Integrate ice thickness forward in time.
         H = f_H_flux(u1, H, S, sigma, dt, ds_inv, n, \
-                         L_new, L, L_old, H_c, D, rho, rho_w, dL_dt, bed, q);
+                         L_new, L, L_old, H_c, D, rho, rho_w, dL_dt, bed, q, 0);
 
 
         // Integrate Fourier heat equation.
