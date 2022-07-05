@@ -139,7 +139,7 @@ ArrayXd a = ArrayXd::LinSpaced(t_n, t0, tf);      // Time steps in which the sol
 // HIGHLY SENSITIVE TO THE PARTICULAR CHOICE OF dt and n.
 // OUR AIM NOW_ TRY TO ACHIEVE HIGHER N WHILE KEEPING NUMERICALLY STABLE.
 // TRY AN ADAPTATIVE TIMESTEP THAT CONSIDERS THE ERROR IN THE PICARD ITERATION?
-int const n = 250;                     // Number of horizontal points 180. 210, 290, 500, 2000
+int const n = 200;                     // Number of horizontal points 180. 210, 290, 500, 2000
 double const ds = 1.0 / n;               // Normalized spatial resolution.
 double const ds_inv = n;
 
@@ -374,11 +374,11 @@ ArrayXd tridiagonal_solver(ArrayXd A, ArrayXd B, ArrayXd C, \
         Q(i) = ( F(i) - A(i) * Q(i-1) ) * m;
     }
 
-    // From notes: u(n-1) = Q(n-1).    
+    // From notes: x(n-1) = Q(n-1).    
     x(n-1) = Q(n-1);      
     //cout << "\n u1(n-1) = " << u1(n-1);
     
-    // Back substitution (n+1 is essential).
+    // Back substitution.
     for (int j = n-2; j>0; --j)
     {
         x(j) = P(j) * x(j+1) + Q(j);
@@ -442,7 +442,7 @@ double f_L(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd H_c, \
 
 // First order scheme. New variable sigma.
 ArrayXd f_H_flux(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd sigma, \
-                    double dt, double ds_inv, int n, double L_new, \
+                    double dt, double ds, double ds_inv, int n, double L_new, \
                     double L, double L_old, ArrayXd H_c, double D, \
                     double rho, double rho_w, double dL_dt, \
                     ArrayXd bed, ArrayXd q, int meth)
@@ -451,14 +451,17 @@ ArrayXd f_H_flux(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd sigma, \
     double gamma, L_inv;
 
     L_inv  = 1.0 / L;
-    ds_inv = 1.0 / ds;
-    gamma  = dt / ( ds * L );
+    //ds_inv = 1.0 / ds;
+    gamma  = dt / ( 2.0 * ds * L );
 
     // Solution to the modified advection equation considering a streched coordinate
     // system sigma. Two schemes are available, explicit and implicit, noted as
     // meth = 0, 1 respectively. 
 
-    meth = 0;
+    //  Right now, explicit seems more stable since the 
+    // implicit crasher earlier. However, neither of them is fully successful.
+
+    meth = 1;
 
     if ( meth == 0 )
     {
@@ -486,9 +489,9 @@ ArrayXd f_H_flux(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd sigma, \
         for (int i=1; i<n-1; i++)
         {
             // Tridiagonal vectors.
-            A(i) = u1(i-1) + 0.5 * sigma(i) * dL_dt;
-            B(i) = 1.0 - gamma * ( u1(i) + u1(i-1) );
-            C(i) = u1(i) - 0.5 * sigma(i) * dL_dt;
+            A(i) = - u1(i-1) + sigma(i) * dL_dt;
+            B(i) = 1.0 + gamma * ( u1(i) - u1(i-1) );
+            C(i) = u1(i) - sigma(i) * dL_dt;
 
             // Inhomogeneous term.
             F(i) = H(i) + S(i) * dt;
@@ -496,11 +499,11 @@ ArrayXd f_H_flux(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd sigma, \
 
         // Vectors at the boundary.
         A(0) = 0.0;
-        B(0) = 1.0 - gamma * u1(0);
-        C(0) = u1(0);                  // sigma(0) = 0, (- 0.5 * sigma(0) * dL_dt)
+        B(0) = 1.0 + gamma * u1(0);
+        C(0) = u1(0);                  
 
-        A(n-1) = u1(n-2) + 0.5 * sigma(n-1) * dL_dt;
-        B(n-1) = 1.0 - gamma * ( u1(n-1) + u1(n-2) );
+        A(n-1) = - u1(n-2) + sigma(n-1) * dL_dt;
+        B(n-1) = 1.0 + gamma * ( u1(n-1) - u1(n-2) );
         C(n-1) = 0.0;
 
         F(0)   = H(0) + S(0) * dt;
@@ -517,7 +520,7 @@ ArrayXd f_H_flux(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd sigma, \
         H_now(0)   = H_now(2);
         H_now(n-1) = ( F(n-1) - A(n-1) * H_now(n-2) ) / B(n-1);
 
-        H_now(n-1) = min( D * ( rho_w / rho ), H_now(n-1) );
+        //H_now(n-1) = min( D * ( rho_w / rho ), H_now(n-1) );
         
         
         //H_now(n-1) = D * ( rho_w / rho );
@@ -1018,8 +1021,7 @@ int main()
         else
         {
             // Implicit velocity solver.
-            // The solution from explicit scheme is used as initial guess to 
-            // ensure convergence. Picard iteration for non-linear viscosity.
+            // Picard iteration for non-linear viscosity and beta.
             
             // Update basal friction with previous step velocity. Out of Picard iteration?
             //tau_b = C_bed * pow(u1, m);
@@ -1179,7 +1181,6 @@ int main()
         //cout << "\n dt_CFL = " << dt_CFL;
         dt     = min(dt_CFL, dt_max);
         dt = dt_max;
-        //dt = ds;
 
         //dt = dt_CFL;
         /*if ( t < 5.0e3 )
@@ -1215,7 +1216,7 @@ int main()
         L_new = L + dL_dt * dt;
 
         // Integrate ice thickness forward in time.
-        H = f_H_flux(u1, H, S, sigma, dt, ds_inv, n, \
+        H = f_H_flux(u1, H, S, sigma, dt, ds, ds_inv, n, \
                          L_new, L, L_old, H_c, D, rho, rho_w, dL_dt, bed, q, 0);
 
 
