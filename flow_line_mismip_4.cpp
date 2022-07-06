@@ -119,12 +119,12 @@ double L     = 702.3e3;                    // Grounding line position [m] (1.2e6
 double L_old = 702.3e3;
 double L_new;
 double const t0    = 0.0;                // Starting time [s].
-double const tf    = 10.0e3;             // 30.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
+double const tf    = 25.0e3;             // 30.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
 double t     = t0;                       // Time initialization [s].
 double t_plot;
 double dt;                               // Time step [s].
 double dt_CFL;                           // Courant-Friedrichs-Lewis condition
-double const dt_max = 1.0;               // Maximum time step = 1 years [s].
+double const dt_max = 0.5;               // Maximum time step = 1 years [s].
 double const dt_min = 1.0;
 double const t_eq = 0.0;                 // 20.0. Length of explicit scheme. 
 double const t_bc = 10.0;                // 1.0e3. Implicit scheme spin-up.
@@ -139,7 +139,7 @@ ArrayXd a = ArrayXd::LinSpaced(t_n, t0, tf);      // Time steps in which the sol
 // HIGHLY SENSITIVE TO THE PARTICULAR CHOICE OF dt and n.
 // OUR AIM NOW_ TRY TO ACHIEVE HIGHER N WHILE KEEPING NUMERICALLY STABLE.
 // TRY AN ADAPTATIVE TIMESTEP THAT CONSIDERS THE ERROR IN THE PICARD ITERATION?
-int const n = 200;                     // Number of horizontal points 180. 210, 290, 500, 2000
+int const n = 1000;                     // Number of horizontal points 180. 210, 290, 500, 2000
 double const ds = 1.0 / n;               // Normalized spatial resolution.
 double const ds_inv = n;
 
@@ -461,7 +461,7 @@ ArrayXd f_H_flux(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd sigma, \
     //  Right now, explicit seems more stable since the 
     // implicit crasher earlier. However, neither of them is fully successful.
 
-    meth = 1;
+    meth = 0;
 
     if ( meth == 0 )
     {
@@ -500,6 +500,7 @@ ArrayXd f_H_flux(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd sigma, \
         // Vectors at the boundary.
         A(0) = 0.0;
         B(0) = 1.0 + gamma * u1(0);
+        //B(0) = 1.0 + gamma * ( u1(1) - u1(0) );
         C(0) = u1(0);                  
 
         A(n-1) = - u1(n-2) + sigma(n-1) * dL_dt;
@@ -518,8 +519,14 @@ ArrayXd f_H_flux(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd sigma, \
 
         // Boundary conditons.
         H_now(0)   = H_now(2);
-        H_now(n-1) = ( F(n-1) - A(n-1) * H_now(n-2) ) / B(n-1);
-
+        //H_now(n-1) = ( F(n-1) - A(n-1) * H_now(n-2) ) / B(n-1);
+        H_now(n-1) = H(n-1) + S(n-1) * dt - gamma * ( 2.0 * dL_dt * H_now(n-2) \
+                    - u1(n-2) * H_now(n-2) ) / ( 1.0 + gamma * ( - 2.0 * dL_dt \
+                                                + u1(n-1) - u1(n-2) ) ); 
+        //H_now(n-1) = H(n-1) + S(n-1) * dt - gamma * ( 2.0 * dL_dt * H_now(n-2) \
+                    - u1(n-2) * H_now(n-2) ) / ( 1.0 + gamma * ( - 2.0 * dL_dt \
+                                                - u1(n-2) ) ); 
+        
         //H_now(n-1) = min( D * ( rho_w / rho ), H_now(n-1) );
         
         
@@ -906,6 +913,13 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
     // Centred?
     for (int i=1; i<n-1; i++)
     {
+        // Ensure positive velocity here?
+        if ( u1(i) < 0.0 )
+        {
+            // u1(i) = 0.0; // it creates a peak
+            u1(i) = u1(i+1); // 0.5 factor ?
+        }
+
         u2(i) = 0.5 * ( u1(i+1) - u1(i-1) );
     }   
     u2(0)   = u1(1) - u1(0);
