@@ -139,7 +139,7 @@ ArrayXd a = ArrayXd::LinSpaced(t_n, t0, tf);      // Time steps in which the sol
 // HIGHLY SENSITIVE TO THE PARTICULAR CHOICE OF dt and n.
 // OUR AIM NOW_ TRY TO ACHIEVE HIGHER N WHILE KEEPING NUMERICALLY STABLE.
 // TRY AN ADAPTATIVE TIMESTEP THAT CONSIDERS THE ERROR IN THE PICARD ITERATION?
-int const n = 1000;                     // Number of horizontal points 180. 210, 290, 500, 2000
+int const n = 1000;                     // 750. Number of horizontal points 180. 210, 290, 500, 2000
 double const ds = 1.0 / n;               // Normalized spatial resolution.
 double const ds_inv = n;
 
@@ -175,8 +175,8 @@ double A, B;
 
 // PICARD ITERATION
 double error;                           // Norm of the velocity difference between iterations.
-double const picard_tol = 1.0e-5;       // 1.0e-5. Convergence tolerance within Picard iteration.
-int const n_picard = 20;                // Max number iter. Good results: 10.
+double const picard_tol = 1.0e-4;       // 1.0e-5. Convergence tolerance within Picard iteration.
+int const n_picard = 10;                // Max number iter. Good results: 10, 20.
 int c_picard;                           // Number of Picard iterations.
 double omega, mu;                 
 double alpha;                           // Relaxation method within Picard iteration. 0.5, 0.7
@@ -520,9 +520,11 @@ ArrayXd f_H_flux(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd sigma, \
         // Boundary conditons.
         H_now(0)   = H_now(2);
         //H_now(n-1) = ( F(n-1) - A(n-1) * H_now(n-2) ) / B(n-1);
+        
         H_now(n-1) = H(n-1) + S(n-1) * dt - gamma * ( 2.0 * dL_dt * H_now(n-2) \
                     - u1(n-2) * H_now(n-2) ) / ( 1.0 + gamma * ( - 2.0 * dL_dt \
                                                 + u1(n-1) - u1(n-2) ) ); 
+        
         //H_now(n-1) = H(n-1) + S(n-1) * dt - gamma * ( 2.0 * dL_dt * H_now(n-2) \
                     - u1(n-2) * H_now(n-2) ) / ( 1.0 + gamma * ( - 2.0 * dL_dt \
                                                 - u1(n-2) ) ); 
@@ -913,10 +915,9 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
     // Centred?
     for (int i=1; i<n-1; i++)
     {
-        // Ensure positive velocity here?
+        // Ensure positive velocity here? It solves the problem!
         if ( u1(i) < 0.0 )
         {
-            // u1(i) = 0.0; // it creates a peak
             u1(i) = u1(i+1); // 0.5 factor ?
         }
 
@@ -986,7 +987,7 @@ int main()
 
     // Viscosity from constant A value. u2 = 0 initialization. \
     // 4.6416e-24, 2.1544e-24. [Pa^-3 s^-1] ==> [Pa^-3 yr^-1]
-    A = 4.6416e-24 * sec_year;               
+    A = 1.0e-25 * sec_year;               
     B = pow(A, ( -1 / n_gln ) );
 
     // We assume a constant viscosity in the first iteration.
@@ -1099,21 +1100,18 @@ int main()
                     if (omega <= omega_1 || c_u1_1.norm() == 0.0)
                     {
                         //mu = 2.5; // De Smedt.
-                        //mu = 1.0; // To avoid negative velocities?
-                        mu = 0.7;
+                        mu = 1.0; // To avoid negative velocities?
+                        //mu = 0.7;
                     }
                     else if (omega > omega_1 & omega < omega_2)
                     {
-                        //mu = 1.0; // De Smedt.
-                        //mu = 1.0;
-                        mu = 0.7;
+                        mu = 1.0; // De Smedt.
+                        //mu = 0.7;
                     }
                     else
                     {
-                        //mu = 0.5; // De Smedt.
-                        //mu = 1.0; // Numerically more stable for large n?
-                        //mu = 0.4;
-                        mu = 0.7;
+                        mu = 0.5; // De Smedt.
+                        //mu = 0.7;
                     }
 
                     // New velocity guess based on updated omega.
@@ -1121,7 +1119,7 @@ int main()
 
                     // Update beta with new u1.
                     beta    = C_bed * pow(u1, m - 1.0);
-                    beta(0) = beta(1);
+                    beta(0) = beta(1); // Symmetry
 
                     // Update viscosity with new u2 field.
                     for (int i=1; i<n-1; i++)
