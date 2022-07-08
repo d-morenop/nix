@@ -115,16 +115,16 @@ double const tau_b_min = 30.0e3;             // [Pa]. 42.5e3. Minimum basal fric
 
 
 // DOMAIN DEFINITION.
-double L     = 702.3e3;                    // Grounding line position [m] (1.2e6)
-double L_old = 702.3e3;
+double L     = 479.1e3;                    // Grounding line position [m] (702.3e3;)
+double L_old = 479.1e3;
 double L_new;
 double const t0    = 0.0;                // Starting time [s].
-double const tf    = 25.0e3;             // 30.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
+double const tf    = 25.0e3;             // 25.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
 double t     = t0;                       // Time initialization [s].
 double t_plot;
 double dt;                               // Time step [s].
 double dt_CFL;                           // Courant-Friedrichs-Lewis condition
-double const dt_max = 0.5;               // Maximum time step = 1 years [s].
+double const dt_max = 0.25;               // 0.25. Maximum time step = 0.5 years [s].
 double const dt_min = 1.0;
 double const t_eq = 0.0;                 // 20.0. Length of explicit scheme. 
 double const t_bc = 10.0;                // 1.0e3. Implicit scheme spin-up.
@@ -430,7 +430,10 @@ double f_L(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd H_c, \
     // Purely flotation condition (Following Schoof, 2007).
     // Sign before db/dx is correct. Otherwise, it migrates uphill.
     den = H(n-1) - H(n-2) + ( rho_w / rho ) * ( bed(n-1) - bed(n-2) );
-    //den = 0.5 * ( 4.0 * H(n-1) - 3.0 * H(n-2) - H(n-3) ) \
+
+    // Very sensitive to the thickness slope discretization. It does not
+    // advance enough with the following.
+    //den = 0.5 * ( 3.0 * H(n-1) - 4.0 * H(n-2) + H(n-3) ) \
              + ( rho_w / rho ) * ( bed(n-1) - bed(n-2) );
 
 
@@ -451,7 +454,6 @@ ArrayXd f_H_flux(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd sigma, \
     double gamma, L_inv;
 
     L_inv  = 1.0 / L;
-    //ds_inv = 1.0 / ds;
     gamma  = dt / ( 2.0 * ds * L );
 
     // Solution to the modified advection equation considering a streched coordinate
@@ -485,7 +487,7 @@ ArrayXd f_H_flux(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd sigma, \
     }
     else if ( meth == 1 )
     {
-        // Implicit scheme.
+        // Implicit scheme. REVISE TRIDIAGONAL MATRIX.
         for (int i=1; i<n-1; i++)
         {
             // Tridiagonal vectors.
@@ -868,7 +870,7 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
     // Derivatives at the boundaries O(x).
     dhds(0)   = 0.5 * ( H(0) + H(1) ) * ( h(1) - h(0) );
     dhds(n-1) = H(n-1) * ( h(n-1) - h(n-2) ); // without a factor 2???
-    //dhds(n-1) = H(n-1) * ( 4.0 * h(n-1) - 3.0 * h(n-2) - h(n-3) ) / 3.0;
+    //dhds(n-1) = H(n-1) * 0.5 * ( 3.0 * h(n-1) - 4.0 * h(n-2) + h(n-3) );
 
     // Tridiagonal boundary values. Correct????
     A(0) = 0.0;
@@ -987,7 +989,7 @@ int main()
 
     // Viscosity from constant A value. u2 = 0 initialization. \
     // 4.6416e-24, 2.1544e-24. [Pa^-3 s^-1] ==> [Pa^-3 yr^-1]
-    A = 1.0e-25 * sec_year;               
+    A = 4.6416e-24 * sec_year;               
     B = pow(A, ( -1 / n_gln ) );
 
     // We assume a constant viscosity in the first iteration.
