@@ -7,7 +7,7 @@
 
 // NETCDF PARAMETERS.
 /* This is the name of the data file we will create. */
-#define FILE_NAME "output/mismip/exp3/exp3_1/exp3_1.nc"
+#define FILE_NAME "output/mismip/exp3/exp3_long_4/exp3_long_4.nc"
  
 /* We are writing 1D data, n grid points*/
 #define NDIMS 2
@@ -22,6 +22,7 @@
 #define U1_NAME "u"
 #define U2_NAME "du_dx"
 #define VISC_NAME "visc"
+#define A_NAME "A"
 #define S_NAME "S"
 #define TAU_NAME "tau_b"
 #define BETA_NAME "beta"
@@ -50,6 +51,7 @@
 #define U1_UNITS "m/yr"
 #define U2_UNITS "1/yr"
 #define VISC_UNITS "Pa s"
+#define A_UNITS "Pa^-3 s^-1"
 #define S_UNITS "mm/day"
 #define TAU_UNITS "Pa"
 #define BETA_UNITS "Pa yr / m"
@@ -82,7 +84,7 @@ int retval;
 // SOLUTION SAVED IN .NC FILE: flow_line.nc
 /* IDs for the netCDF file, dimensions, and variables. */
 int ncid, x_dimid, z_dimid, time_dimid;
-int x_varid, z_varid, u1_varid, u2_varid, H_varid, visc_varid, s_varid, \
+int x_varid, z_varid, u1_varid, u2_varid, H_varid, visc_varid, a_varid, s_varid, \
     tau_varid, beta_varid, lmbd_varid, taud_varid, b_varid, L_varid, dt_varid, \
     c_pic_varid, t_varid, mu_varid, omega_varid, u2_bc_varid, u2_dif_varid, \
     picard_error_varid, u2_0_vec_varid, u2_dif_vec_varid, theta_varid, C_bed_varid;
@@ -223,6 +225,9 @@ int f_nc(int N, int N_Z)
     if ((retval = nc_def_var(ncid, PICARD_ERROR_NAME, NC_DOUBLE, NDIMS_0,
                     dimids_0, &picard_error_varid)))
         ERR(retval);
+    if ((retval = nc_def_var(ncid, A_NAME, NC_DOUBLE, NDIMS_0,
+                    dimids_0, &a_varid)))
+        ERR(retval);
 
     if ((retval = nc_def_var(ncid, THETA_NAME, NC_DOUBLE, NDIMS_Z,
                     dimids_z, &theta_varid)))
@@ -296,6 +301,9 @@ int f_nc(int N, int N_Z)
     if ((retval = nc_put_att_text(ncid, picard_error_varid, UNITS,
                     strlen(PICARD_ERROR_UNITS), PICARD_ERROR_UNITS)))
         ERR(retval);
+    if ((retval = nc_put_att_text(ncid, a_varid, UNITS,
+                    strlen(A_UNITS), A_UNITS)))
+        ERR(retval);
 
     if ((retval = nc_put_att_text(ncid, theta_varid, UNITS,
                     strlen(THETA_UNITS), THETA_UNITS)))
@@ -336,7 +344,7 @@ int f_write(int c, ArrayXd u1, ArrayXd u2, ArrayXd H, ArrayXd visc, ArrayXd S, \
             ArrayXd tau_b, ArrayXd beta, ArrayXd tau_d, ArrayXd bed, \
             ArrayXd C_bed, ArrayXd u2_dif_vec, ArrayXd u2_0_vec, \
             double L, double t, double u2_bc, double u2_dif, double error, \
-            double dt, int c_picard, double mu, double omega, ArrayXXd theta)
+            double dt, int c_picard, double mu, double omega, ArrayXXd theta, double A)
 {
     start[0]   = c;
     start_0[0] = c;
@@ -386,6 +394,8 @@ int f_write(int c, ArrayXd u1, ArrayXd u2, ArrayXd H, ArrayXd visc, ArrayXd S, \
     if ((retval = nc_put_vara_double(ncid, mu_varid, start_0, cnt_0, &mu)))
     ERR(retval); // currently mu
     if ((retval = nc_put_vara_double(ncid, omega_varid, start_0, cnt_0, &omega)))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid, a_varid, start_0, cnt_0, &A)))
     ERR(retval);
 
     // 3D variables.

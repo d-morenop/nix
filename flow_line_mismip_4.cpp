@@ -119,7 +119,7 @@ double L     = 479.1e3;                    // Grounding line position [m] (702.3
 double L_old = 479.1e3;
 double L_new;
 double const t0    = 0.0;                // Starting time [s].
-double const tf    = 25.0e3;             // 25.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
+double const tf    = 33.5e4;             // 25.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
 double t     = t0;                       // Time initialization [s].
 double t_plot;
 double dt;                               // Time step [s].
@@ -130,7 +130,7 @@ double const t_eq = 0.0;                 // 20.0. Length of explicit scheme.
 double const t_bc = 10.0;                // 1.0e3. Implicit scheme spin-up.
 //double dt_plot;
 
-int const t_n = 40;                        // Number of output frames. 30.
+int const t_n = 100;                        // Number of output frames. 30.
 
 ArrayXd a = ArrayXd::LinSpaced(t_n, t0, tf);      // Time steps in which the solution is saved. 
 
@@ -392,7 +392,7 @@ ArrayXd tridiagonal_solver(ArrayXd A, ArrayXd B, ArrayXd C, \
 ////////////////////////////////////////////////////
 // Flow line functions.
 
-ArrayXd f_bed(ArrayXd sigma, double L, int n, int exp)
+ArrayXd f_bed(ArrayXd sigma, double L, int n, int mismip)
 {
     ArrayXd bed(n), x_scal(n);
 
@@ -408,9 +408,9 @@ ArrayXd f_bed(ArrayXd sigma, double L, int n, int exp)
     }
     else if (mismip == 3)
     {
-        bed = ( 729.0 - 2148.8 * pow(x_scal, 2) + \
+        bed = 729.0 - 2148.8 * pow(x_scal, 2) + \
                         1031.72 * pow(x_scal, 4) + \
-                        - 151.72 * pow(x_scal, 6) );
+                        - 151.72 * pow(x_scal, 6);
     }
 
     return bed;
@@ -422,8 +422,12 @@ double f_L(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd H_c, \
           double dt, double L, double ds, int n, \
           ArrayXd bed, double rho, double rho_w, ArrayXd q)
 {
-    double num, den, dL_dt, L_new;
+    double num, den, dL_dt, L_new, D_5;
     
+    // Fifth-order asymmetric backward-difference.
+    //D_5 = ( 137.0 * H(n-1) - 300.0 * H(n-2) + 300.0 * H(n-3) + \
+            - 200.0 * H(n-4) + 75.0 * H(n-5) - 12.0 * H(n-6) ) / 60.0;
+
     // Accumulation minus flux. First order.
     num = - L * ds * S(n-1) + ( q(n-1) - q(n-2) );
 
@@ -431,10 +435,13 @@ double f_L(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd H_c, \
     // Sign before db/dx is correct. Otherwise, it migrates uphill.
     den = H(n-1) - H(n-2) + ( rho_w / rho ) * ( bed(n-1) - bed(n-2) );
 
+    // REVISE CALCULATION FOR GL MIGRATION.
+
     // Very sensitive to the thickness slope discretization. It does not
     // advance enough with the following.
-    //den = 0.5 * ( 3.0 * H(n-1) - 4.0 * H(n-2) + H(n-3) ) \
-             + ( rho_w / rho ) * ( bed(n-1) - bed(n-2) );
+    //den = H(n-1) - H(n-2) + ( rho_w / rho ) * \
+            0.5 * ( 3.0 * bed(n-1) - 4.0 * bed(n-2) + bed(n-3) );
+    //den = D_5 + ( rho_w / rho ) * ( bed(n-1) - bed(n-2) );
 
 
     // Grounding line migration.
@@ -459,7 +466,6 @@ ArrayXd f_H_flux(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd sigma, \
     // Solution to the modified advection equation considering a streched coordinate
     // system sigma. Two schemes are available, explicit and implicit, noted as
     // meth = 0, 1 respectively. 
-
     //  Right now, explicit seems more stable since the 
     // implicit crasher earlier. However, neither of them is fully successful.
 
@@ -483,6 +489,9 @@ ArrayXd f_H_flux(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd sigma, \
         // Lateral boundary: sigma(n-1) = 1.
         H_now(n-1) = H(n-1) + dt * ( ds_inv * L_inv * \
                                     (  dL_dt * ( H(n-1) - H(n-2) ) + \
+                                        - ( q(n-1) - q(n-2) ) ) + S(n-1) );
+        //H_now(n-1) = H(n-1) + dt * ( ds_inv * L_inv * \
+                                    (  dL_dt * 0.5 * ( 3.0 * H(n-1) - 4.0 * H(n-2) + H(n-3) ) + \
                                         - ( q(n-1) - q(n-2) ) ) + S(n-1) );
     }
     else if ( meth == 1 )
@@ -887,7 +896,7 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
     C = gamma * C;
 
     // Grounding line sigma = 1 (x = L). u_min is just double 0.0.
-    D = abs( min(u_min, bed(n-1)) );   
+    D = abs( min(0.0, bed(n-1)) );   
 
     // Lateral boundary condition (Greve and Blatter Eq. 6.64).
     //cout << "\n visc(n-1) = " << visc(n-1);
@@ -1008,8 +1017,72 @@ int main()
 
     while (t < tf)
     {
+
+        // EXPERIMENT 3 MISMIP.
+        if ( t <= 3.0e4 )
+        {
+            A = 3.0e-25 * sec_year;
+        }
+        else if ( t > 3.0e4 & t <= 4.5e4 )
+        {
+            A = 2.5e-25 * sec_year;
+        }
+        else if ( t > 4.5e4 & t <= 6.0e4 )
+        {
+            A = 2.0e-25 * sec_year;
+        }
+        else if ( t > 6.0e4 & t <= 7.5e4 )
+        {
+            A = 1.5e-25 * sec_year;
+        }
+        else if ( t > 7.5e4 & t <= 9.0e4 )
+        {
+            A = 1.0e-25 * sec_year;
+        }
+        else if ( t > 9.0e4 & t <= 12.0e4 )
+        {
+            A = 5.0e-26 * sec_year;
+        }
+        else if ( t > 12.0e4 & t <= 15.0e4 )
+        {
+            A = 2.5e-26 * sec_year;
+        } //
+        else if ( t > 15.0e4 & t <= 16.5e4 )
+        {
+            A = 5.0e-26 * sec_year;
+        }
+        else if ( t > 16.5e4 & t <= 18.0e4 )
+        {
+            A = 1.0e-25 * sec_year;
+        }
+        else if ( t > 18.0e4 & t <= 21.0e4 )
+        {
+            A = 1.5e-25 * sec_year;
+        }
+        else if ( t > 21.0e4 & t <= 24.0e4 )
+        {
+            A = 2.0e-25 * sec_year;
+        }
+        else if ( t > 24.0e4 & t <= 27.0e4 )
+        {
+            A = 2.5e-25 * sec_year;
+        }
+        else if ( t > 27.0e4 & t <= 28.5e4 )
+        {
+            A = 3.0e-25 * sec_year;
+        }
+        else if ( t > 28.5e4 )
+        {
+            A = 3.5e-25 * sec_year;
+        }
+        B = pow(A, ( -1 / n_gln ) );
+
+
+
         // Update bedrock with new domain extension L.
-        bed = f_bed(sigma, L, n, 1);
+        // PROBLEM HERE IN EXP3! There is no marine instability.
+        // Intermidiate states different from MISMIP!!!!
+        bed = f_bed(sigma, L, n, 3);
 
         // Friction coefficient from temperaure.
         //C_bed = f_C_bed(theta, theta_max, C_thaw, C_froz, n);
@@ -1051,7 +1124,7 @@ int main()
             {
                 q(i) = u1(i) * 0.5 * ( H(i+1) + H(i) );
             }
-            // GL flux definition (Vieli and Payne 2005).
+            // GL flux definition (Vieli and Payne, 2005).
             q(n-1) = u1(n-1) * H(n-1);
 
 
@@ -1071,7 +1144,7 @@ int main()
                 // Allocate variables.
                 u1    = u.row(0);
                 u2    = u.row(1);
-                tau_d = u.row(2);
+                //tau_d = u.row(2);
                 D     = u(4,0);
                 u2_bc = u(4,1);
 
@@ -1157,7 +1230,7 @@ int main()
                 // Save previous iteration sol. (before NaN encountered).
                 f_write(c, u1, u2,  H, visc, S, tau_b, beta, tau_d, bed, \
                         C_bed, u2_dif_vec, u2_0_vec, L, t, u2_bc, u2_dif, \
-                        error, dt, c_picard, mu, omega, theta);
+                        error, dt, c_picard, mu, omega, theta, A);
 
                 // Close nc file. 
                 if ((retval = nc_close(ncid)))
@@ -1176,7 +1249,7 @@ int main()
                 // Save previous iteration sol. (before NaN encountered).
                 f_write(c, u1_old_1, u2,  H, visc, S, tau_b, beta, tau_d, bed, \
                         C_bed, u2_dif_vec, u2_0_vec, L, t, u2_bc, u2_dif, \
-                        error, dt, c_picard, mu, omega, theta);
+                        error, dt, c_picard, mu, omega, theta, A);
 
                 // Close nc file. 
                 if ((retval = nc_close(ncid)))
@@ -1191,9 +1264,8 @@ int main()
 
         // Update timestep from velocity field.
         // Courant-Friedrichs-Lewis condition (factor 1/2, 3/4).
-        dt_CFL = 0.01 * ds * L / u1.maxCoeff();  
-        //cout << "\n dt_CFL = " << dt_CFL;
-        dt     = min(dt_CFL, dt_max);
+        //dt_CFL = 0.01 * ds * L / u1.maxCoeff();  
+        //dt     = min(dt_CFL, dt_max);
         dt = dt_max;
 
         //dt = dt_CFL;
@@ -1211,13 +1283,12 @@ int main()
             // Write solution in nc.
             f_write(c, u1, u2,  H, visc, S, tau_b, beta, tau_d, bed, \
                     C_bed, u2_dif_vec, u2_0_vec, L, t, u2_bc, u2_dif, \
-                    error, dt, c_picard, mu, omega, theta);
+                    error, dt, c_picard, mu, omega, theta, A);
 
             c = c + 1;
         }  
 
         // Update ice viscosity with new u2 field.
-        //u2 = running_mean(u2, 2, n);
         visc = f_visc(u2, B, n_exp, eps, L, n);
         //filt = gaussian_filter(visc, zeros, 4.0, L, ds, n);
 
@@ -1226,7 +1297,6 @@ int main()
 
         // Update grounding line position with new velocity field.
         dL_dt = f_L(u1, H, S, H_c, dt, L, ds, n, bed, rho, rho_w, q);
-        //cout << "\n dL_dt = " << dL_dt;
         L_new = L + dL_dt * dt;
 
         // Integrate ice thickness forward in time.
