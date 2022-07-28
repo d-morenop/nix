@@ -7,7 +7,7 @@
 
 // NETCDF PARAMETERS.
 /* This is the name of the data file we will create. */
-#define FILE_NAME "output/mismip/exp3/exp3_long_4/exp3_long_4.nc"
+#define FILE_NAME "output/mismip/exp3/exp3_n.250/exp3_n.250.nc"
  
 /* We are writing 1D data, n grid points*/
 #define NDIMS 2

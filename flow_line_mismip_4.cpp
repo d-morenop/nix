@@ -84,8 +84,6 @@ rungeKutta   --->  4th-order Runge-Kutta integration scheme for the SSA stress
 
 // GENERAL PARAMETERS.
 double const sec_year = 3.154e7;              // Seconds in a year.
-double const u_min    = 0.0;
-//double const u_max    = 800.0 / sec_year;
 
 // PHYSICAL CONSTANTS.
 double const u_0   = 150.0 / sec_year;
@@ -98,7 +96,10 @@ double const C_thaw = 7.624e6;                  // 1.75e6 [Pa m^-1/3 s^1/3].
 double const C_froz = 7.624e6;                  // 2.0e6 [Pa m^-1/3 s^1/3].
 
 // GROUNDING LINE.
-double dL_dt;                                   // GL migration [m/yr]. 
+double L     = 479.1e3;                    // Grounding line position [m] (702.3e3;)
+double L_old = 479.1e3;                    // Previous timestep.
+double L_new;                              // New GL position.
+double dL_dt;                              // GL migration [m/yr]. 
 
 // ICE VISCOSITY: f_visc.
 double const n_gln = 3.0;
@@ -111,25 +112,22 @@ double const eps = 1.0e-10;                            // Final: 1.0e-30. Curren
 
 // BASAL FRICTION.
 double const m = 1.0 / 3.0;                  // Friction exponent.
-double const tau_b_min = 30.0e3;             // [Pa]. 42.5e3. Minimum basal friciton value [Pa].
+//double const tau_b_min = 30.0e3;             // [Pa]. 42.5e3. Minimum basal friciton value [Pa].
 
 
-// DOMAIN DEFINITION.
-double L     = 479.1e3;                    // Grounding line position [m] (702.3e3;)
-double L_old = 479.1e3;
-double L_new;
+// SIMULATION PARAMETERS.
 double const t0    = 0.0;                // Starting time [s].
-double const tf    = 33.5e4;             // 25.0e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
+double const tf    = 28.5e4;             // 28.5e4 ,e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
 double t     = t0;                       // Time initialization [s].
-double t_plot;
+//double t_plot;
 double dt;                               // Time step [s].
 double dt_CFL;                           // Courant-Friedrichs-Lewis condition
 double const dt_max = 0.25;               // 0.25. Maximum time step = 0.5 years [s].
 double const dt_min = 1.0;
 double const t_eq = 0.0;                 // 20.0. Length of explicit scheme. 
-double const t_bc = 10.0;                // 1.0e3. Implicit scheme spin-up.
-//double dt_plot;
+//double const t_bc = 10.0;                // 1.0e3. Implicit scheme spin-up.
 
+// OUTPUT DEFINITIONS.
 int const t_n = 100;                        // Number of output frames. 30.
 
 ArrayXd a = ArrayXd::LinSpaced(t_n, t0, tf);      // Time steps in which the solution is saved. 
@@ -137,9 +135,8 @@ ArrayXd a = ArrayXd::LinSpaced(t_n, t0, tf);      // Time steps in which the sol
 
 // COORDINATES.
 // HIGHLY SENSITIVE TO THE PARTICULAR CHOICE OF dt and n.
-// OUR AIM NOW_ TRY TO ACHIEVE HIGHER N WHILE KEEPING NUMERICALLY STABLE.
 // TRY AN ADAPTATIVE TIMESTEP THAT CONSIDERS THE ERROR IN THE PICARD ITERATION?
-int const n = 1000;                     // 750. Number of horizontal points 180. 210, 290, 500, 2000
+int const n = 250;                     // 1000. Number of horizontal points 180. 210, 290, 500, 2000
 double const ds = 1.0 / n;               // Normalized spatial resolution.
 double const ds_inv = n;
 
@@ -170,6 +167,7 @@ double u1_0 = 0.0;                      // Velocity in x0 (i.e., u(x0)).
 double u2_0 = 0.0;                      // Velocity first derivative in x0 (i.e., du/dx(x0)).
 
 // MISMIP EXPERIMENT CHOICE.
+// Following Pattyn et al. (2012) the overdeepening hysterisis uses n = 250.
 int const mismip = 1;
 double A, B;
 
@@ -422,7 +420,7 @@ double f_L(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd H_c, \
           double dt, double L, double ds, int n, \
           ArrayXd bed, double rho, double rho_w, ArrayXd q)
 {
-    double num, den, dL_dt, L_new, D_5;
+    double num, den, dL_dt, D_5;
     
     // Fifth-order asymmetric backward-difference.
     //D_5 = ( 137.0 * H(n-1) - 300.0 * H(n-2) + 300.0 * H(n-3) + \
@@ -453,7 +451,7 @@ double f_L(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd H_c, \
 // First order scheme. New variable sigma.
 ArrayXd f_H_flux(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd sigma, \
                     double dt, double ds, double ds_inv, int n, double L_new, \
-                    double L, double L_old, ArrayXd H_c, double D, \
+                    double L, ArrayXd H_c, double D, \
                     double rho, double rho_w, double dL_dt, \
                     ArrayXd bed, ArrayXd q, int meth)
 {
@@ -469,6 +467,7 @@ ArrayXd f_H_flux(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd sigma, \
     //  Right now, explicit seems more stable since the 
     // implicit crasher earlier. However, neither of them is fully successful.
 
+    // Explicit 0 or implicit 1 solver.
     meth = 0;
 
     if ( meth == 0 )
@@ -687,8 +686,8 @@ Array2d du2_ds(double u_1, double u_2, double dh_dx, double visc,\
 }
 
 
-MatrixXd rungeKutta(double u1_0, double u2_0, double u_min, double u_0, \
-                    ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
+MatrixXd rungeKutta(double u1_0, double u2_0, double u_0, ArrayXd H, \
+                    double ds, double ds_inv, int n, ArrayXd visc, \
                     ArrayXd bed, double rho, double g, double L, double m, \
                     ArrayXd C_bed, double t_eq)
 {
@@ -729,7 +728,7 @@ MatrixXd rungeKutta(double u1_0, double u2_0, double u_min, double u_0, \
 
     // Boundary condition at sigma = 1 (x = L).
     // Following Bassis et al. (2017).
-    D = abs( min(u_min, bed(n-1)) );      // u_min is just double32 0.0.
+    D = abs( min(0.0, bed(n-1)) );      // u_min is just double32 0.0.
 
     // Equivalent (Greve and Blatter 6.64).
     // Original:
@@ -784,7 +783,7 @@ MatrixXd rungeKutta(double u1_0, double u2_0, double u_min, double u_0, \
 
             u_sol = u_sol + pre * (k1 + 2.0 * k2 + 2.0 * k3 + k4);
             
-            u1(i+1) = max(u_min, u_sol(0));
+            u1(i+1) = max(0.0, u_sol(0));
             u2(i+1) = u_sol(1); 
         }
 
@@ -1092,7 +1091,7 @@ int main()
         {
             // First iterations using an explicit scheme RK-4.
             //cout << " \n Runge-Kutta \n ";
-            u = rungeKutta(u1_0, u2_0, u_min, u_0, H, ds, ds_inv, n, \
+            u = rungeKutta(u1_0, u2_0, u_0, H, ds, ds_inv, n, \
                                 visc, bed, rho, g, L, m, C_bed, t_eq);
 
             // Allocate variables.
@@ -1301,7 +1300,7 @@ int main()
 
         // Integrate ice thickness forward in time.
         H = f_H_flux(u1, H, S, sigma, dt, ds, ds_inv, n, \
-                         L_new, L, L_old, H_c, D, rho, rho_w, dL_dt, bed, q, 0);
+                         L_new, L, H_c, D, rho, rho_w, dL_dt, bed, q, 0);
 
 
         // Integrate Fourier heat equation.
