@@ -25,7 +25,7 @@ from subprocess import Popen, PIPE, STDOUT
 
 # User defined directories.
 path_flowline = "/home/dmoreno/c++/git/flowline/"
-path_output   = "/home/dmoreno/c++/git/flowline/output/mismip/exp3/exp3_n.250/"
+path_output   = "/home/dmoreno/c++/flowline/output/mismip/exp3/exp3_n.250_long/"
 
 
 # Create new directory if not existing. Make clean otherwise.
@@ -78,10 +78,10 @@ print('-> Flowline compiled.')
 print('')
 
 print('')
-print('-> Running flowline.')
+print('-> Running flowline:', path_output)
 print('')
     
-# Run flowline in background. Note thatthe  solution is stored in nc file.
+# Run flowline in background. Note that the solution is stored in nc file.
 p = subprocess.Popen(path_output+"flow_line_mismip_4.o &", shell=True, \
                          stdout=f, universal_newlines=True)
 

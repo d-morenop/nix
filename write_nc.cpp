@@ -7,7 +7,8 @@
 
 // NETCDF PARAMETERS.
 /* This is the name of the data file we will create. */
-#define FILE_NAME "output/mismip/exp3/exp3_n.250/exp3_n.250.nc"
+//#define FILE_NAME "output/mismip/exp3/exp3_n.250/exp3_n.250.nc"
+#define FILE_NAME "/home/dmoreno/c++/flowline/output/mismip/exp3/exp3_n.250_long/exp3_n.250_long.nc"
  
 /* We are writing 1D data, n grid points*/
 #define NDIMS 2

@@ -112,18 +112,15 @@ double const eps = 1.0e-10;                            // Final: 1.0e-30. Curren
 
 // BASAL FRICTION.
 double const m = 1.0 / 3.0;                  // Friction exponent.
-//double const tau_b_min = 30.0e3;             // [Pa]. 42.5e3. Minimum basal friciton value [Pa].
-
 
 // SIMULATION PARAMETERS.
 double const t0    = 0.0;                // Starting time [s].
-double const tf    = 28.5e4;             // 28.5e4 ,e3. 5.0e3. 1.0e5. Ending time [yr] * [s/yr]
+double const tf    = 56.5e4;             // 48.0e4 Ending time [yr] * [s/yr]
 double t     = t0;                       // Time initialization [s].
-//double t_plot;
 double dt;                               // Time step [s].
 double dt_CFL;                           // Courant-Friedrichs-Lewis condition
-double const dt_max = 0.25;               // 0.25. Maximum time step = 0.5 years [s].
-double const dt_min = 1.0;
+double const dt_max = 0.1;              // Maximum time step = 0.25 years [s].
+//double const dt_min = 1.0;
 double const t_eq = 0.0;                 // 20.0. Length of explicit scheme. 
 //double const t_bc = 10.0;                // 1.0e3. Implicit scheme spin-up.
 
@@ -182,6 +179,12 @@ double const alpha_max = 1.0;
 double const omega_1 = 0.125 * M_PI;          // De Smedt et al. (2010) Eq. 10.
 double const omega_2 = (19.0 / 20.0) * M_PI;
 
+
+// MISMIP EXPERIMENTS FORCING.
+// Number of steps in the A forcing.
+int const n_s = 21;  // 3, 21
+
+
 // PREPARE VARIABLES.
 ArrayXd H(n);                        // Ice thickness [m].
 ArrayXd u1(n);                       // Velocity [m/s].
@@ -208,6 +211,9 @@ VectorXd u2_vec(n);
 VectorXd c_u1_1(n);                   // Correction vector Picard relaxed iteration.
 VectorXd c_u1_2(n);
 VectorXd c_u1_dif(n);
+
+ArrayXd A_s(n_s);                    // Rarte factor values for MISMIP exp.
+ArrayXd t_s(n_s);                    // Time length for each step of A.
 
 
 //ArrayXd smth(n);                     // Smooth field.
@@ -422,6 +428,7 @@ double f_L(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd H_c, \
 {
     double num, den, dL_dt, D_5;
     
+    // MIT finite difference calculator: https://web.media.mit.edu/~crtaylor/calculator.html
     // Fifth-order asymmetric backward-difference.
     //D_5 = ( 137.0 * H(n-1) - 300.0 * H(n-2) + 300.0 * H(n-3) + \
             - 200.0 * H(n-4) + 75.0 * H(n-5) - 12.0 * H(n-6) ) / 60.0;
@@ -994,7 +1001,7 @@ int main()
     // Constant friction coeff. 7.624e6 [Pa m^-1/3 s^1/3]
     ArrayXd C_bed = ArrayXd::Constant(n, 7.624e6);    // [Pa m^-1/3 s^1/3]
     C_bed = C_bed / pow(sec_year, m);                 // [Pa m^-1/3 yr^1/3]
-
+    
     // Viscosity from constant A value. u2 = 0 initialization. \
     // 4.6416e-24, 2.1544e-24. [Pa^-3 s^-1] ==> [Pa^-3 yr^-1]
     A = 4.6416e-24 * sec_year;               
@@ -1008,79 +1015,57 @@ int main()
     // Implicit initialization.
     beta = ArrayXd::Constant(n, 5.0e3);    // [Pa yr / m]
 
+    // Exp 3 hysteresis forcing.
+    // Rate factor.
+    A_s << 5.0e-25, 4.0e-25, 3.0e-25, 2.5e-25, 2.0e-25, 1.5e-25, 1.0e-25, 5.0e-26, 2.5e-26, 
+           5.0e-26, 1.0e-25, 1.5e-25, 2.0e-25, 2.5e-25, 3.0e-25, 3.5e-25, 4.0e-25, 4.25e-25, 
+           4.5e-25, 4.75e-25, 5.0e-25; 
+
+    // Time length for a certain A value. 3.0e4,
+    t_s << 3.0e4, 6.0e4, 9.0e4, 11.5e4, 14.0e4, 16.5e4, 19.0e4, 21.5e4, 24.0e4, 
+           26.5e4, 29.0e4, 31.5e4, 34.0e4, 36.5e4, 39.0e4, 41.5e4, 44.0e4, 46.5e4, 
+           49.0e4, 51.5e4, 54.0e4;
+
+    /*t_s << 3.0e4, 6.0e4, 9.0e4, 10.5e4, 12.0e4, 13.5e4, 15.0e4, 18.0e4, 21.0e4, 
+           22.5e4, 24.0e4, 27.0e4, 30.0e4, 33.0e4, 34.5e4, 36.0e4, 37.5e4, 39.0e4, 
+           40.5e4, 43.5e4, 46.5e4;*/
+
     //////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////
+
    
+    // Counter to write solution.
     int c = 0;
+
+    // Counter for MISMIP ice factor A forcing.
+    int c_s = 0;
+
+    // Initialize time.
     t  = 0.0;
 
+    // Main loop.
     while (t < tf)
     {
-
         // EXPERIMENT 3 MISMIP.
-        if ( t <= 3.0e4 )
+
+        // Update rate factor value.
+        if ( t <= t_s(c_s) )
         {
-            A = 3.0e-25 * sec_year;
+            A = A_s(c_s) * sec_year;
         }
-        else if ( t > 3.0e4 & t <= 4.5e4 )
+        else
         {
-            A = 2.5e-25 * sec_year;
+            // Ensure we don't exceed time vector lenght.
+            c_s = min(c_s + 1, n_s - 1);
+
+            A = A_s(c_s) * sec_year;
+            //cout << " \n A = " << A;
         }
-        else if ( t > 4.5e4 & t <= 6.0e4 )
-        {
-            A = 2.0e-25 * sec_year;
-        }
-        else if ( t > 6.0e4 & t <= 7.5e4 )
-        {
-            A = 1.5e-25 * sec_year;
-        }
-        else if ( t > 7.5e4 & t <= 9.0e4 )
-        {
-            A = 1.0e-25 * sec_year;
-        }
-        else if ( t > 9.0e4 & t <= 12.0e4 )
-        {
-            A = 5.0e-26 * sec_year;
-        }
-        else if ( t > 12.0e4 & t <= 15.0e4 )
-        {
-            A = 2.5e-26 * sec_year;
-        } //
-        else if ( t > 15.0e4 & t <= 16.5e4 )
-        {
-            A = 5.0e-26 * sec_year;
-        }
-        else if ( t > 16.5e4 & t <= 18.0e4 )
-        {
-            A = 1.0e-25 * sec_year;
-        }
-        else if ( t > 18.0e4 & t <= 21.0e4 )
-        {
-            A = 1.5e-25 * sec_year;
-        }
-        else if ( t > 21.0e4 & t <= 24.0e4 )
-        {
-            A = 2.0e-25 * sec_year;
-        }
-        else if ( t > 24.0e4 & t <= 27.0e4 )
-        {
-            A = 2.5e-25 * sec_year;
-        }
-        else if ( t > 27.0e4 & t <= 28.5e4 )
-        {
-            A = 3.0e-25 * sec_year;
-        }
-        else if ( t > 28.5e4 )
-        {
-            A = 3.5e-25 * sec_year;
-        }
+        
+        // Ice hardness.
         B = pow(A, ( -1 / n_gln ) );
 
-
-
         // Update bedrock with new domain extension L.
-        // PROBLEM HERE IN EXP3! There is no marine instability.
-        // Intermidiate states different from MISMIP!!!!
         bed = f_bed(sigma, L, n, 3);
 
         // Friction coefficient from temperaure.
@@ -1218,7 +1203,7 @@ int main()
         }
 
         // CONSISTENCY CHECK.
-        // Search for NaN or negative velocity values of i > 0.
+        // Search for NaN or negative velocity values at i > 0.
         for (int i=1; i<n; i++)
         {
             if ( u1(i) < 0.0 )
@@ -1245,7 +1230,7 @@ int main()
                 cout << "\n NaN found.";
                 cout << "\n Saving variables in nc file. \n ";
 
-                // Save previous iteration sol. (before NaN encountered).
+                // Save previous iteration solution (before NaN encountered).
                 f_write(c, u1_old_1, u2,  H, visc, S, tau_b, beta, tau_d, bed, \
                         C_bed, u2_dif_vec, u2_0_vec, L, t, u2_bc, u2_dif, \
                         error, dt, c_picard, mu, omega, theta, A);
@@ -1267,17 +1252,11 @@ int main()
         //dt     = min(dt_CFL, dt_max);
         dt = dt_max;
 
-        //dt = dt_CFL;
-        /*if ( t < 5.0e3 )
-        {
-            dt = 1.0;
-        }*/
-
-        // Save solution with desired frequency.
+        // Save solution with desired output frequency.
         if (c == 0 || t > a(c))
         {
             cout << "\n t = " << t;
-            //cout << "\n dt = " << dt;
+            cout << " \n A = " << A;
 
             // Write solution in nc.
             f_write(c, u1, u2,  H, visc, S, tau_b, beta, tau_d, bed, \
@@ -1300,7 +1279,7 @@ int main()
 
         // Integrate ice thickness forward in time.
         H = f_H_flux(u1, H, S, sigma, dt, ds, ds_inv, n, \
-                         L_new, L, H_c, D, rho, rho_w, dL_dt, bed, q, 0);
+                     L_new, L, H_c, D, rho, rho_w, dL_dt, bed, q, 0);
 
 
         // Integrate Fourier heat equation.
@@ -1319,6 +1298,7 @@ int main()
     // Running time (measures wall time).
     auto end     = chrono::high_resolution_clock::now();
     auto elapsed = chrono::duration_cast<chrono::nanoseconds>(end - begin);
+    
     printf("\n Time measured: %.3f seconds.\n", elapsed.count() * 1e-9);
     printf("\n Computational speed: %.3f kyr/hr.\n", \
             60 * 60 * (1.0e-3 * tf) /  (elapsed.count() * 1e-9) );
