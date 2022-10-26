@@ -24,7 +24,7 @@ from subprocess import Popen, PIPE, STDOUT
 
 # User defined directories.
 path_flowline = "/home/dmoren07/c++/git/flowline/"
-path_output   = "/home/dmoren07/c++/flowline/output/mismip/exp3/test2.sbatch/"
+path_output   = "/home/dmoren07/c++/flowline/output/mismip/exp3/test3.sbatch/"
 
 
 # Create new directory if not existing. Make clean otherwise.
@@ -105,7 +105,7 @@ if config == 'brigit':
     # Try changing working directory and then running sbatch there.
     os.chdir(path_output)
     cmd_run = "sbatch submit.sh"
-    print('cmd_run = ', cmd_run)
+    #print('cmd_run = ', cmd_run)
 else:
     cmd_run = path_output+"flow_line_mismip_4.o &"
 

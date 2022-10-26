@@ -1203,7 +1203,33 @@ int main()
         }
 
         // CONSISTENCY CHECK.
-        // Search for NaN or negative velocity values at i > 0.
+        // Search for NaN values.
+
+        // Try avoiding loop:
+        // Count number of true positions in u1.isnan().
+ 
+        if ( u1.isNaN().count() != 0 )
+        {
+            cout << "\n NaN found.";
+            cout << "\n Saving variables in nc file. \n ";
+
+            // Save previous iteration solution (before NaN encountered).
+            f_write(c, u1_old_1, u2,  H, visc, S, tau_b, beta, tau_d, bed, \
+                    C_bed, u2_dif_vec, u2_0_vec, L, t, u2_bc, u2_dif, \
+                    error, dt, c_picard, mu, omega, theta, A);
+
+            // Close nc file. 
+            if ((retval = nc_close(ncid)))
+            ERR(retval);
+            printf("\n *** %s file has been successfully written \n", \
+                    FILE_NAME);
+                
+            // Abort flowline.
+            return 0;
+        }
+        
+
+        /*
         for (int i=1; i<n; i++)
         {
             if ( u1(i) < 0.0 )
@@ -1244,7 +1270,9 @@ int main()
                 // Abort flowline.
                 return 0;
             }
+            
         }
+        */
 
         // Update timestep from velocity field.
         // Courant-Friedrichs-Lewis condition (factor 1/2, 3/4).
