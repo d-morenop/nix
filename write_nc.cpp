@@ -8,8 +8,10 @@
 // NETCDF PARAMETERS.
 /* This is the name of the data file we will create. */
 //#define FILE_NAME "output/mismip/exp3/exp3_n.250/exp3_n.250.nc"
-#define FILE_NAME "/home/dmoreno/c++/flowline/output/mismip/exp3/test3.sbatch/exp3_n.250_long.nc"
+#define FILE_NAME "/home/dmoren07/c++/flowline/output/glacier_ews/m_dot.30.0/flowline.nc"
  
+// path: /home/dmoren07/c++/flowline/output/mismip/exp3/exp3_n.250
+
 /* We are writing 1D data, n grid points*/
 #define NDIMS 2
 #define NDIMS_0 1
@@ -31,6 +33,7 @@
 #define LMBD_NAME "lambda"
 #define B_NAME "b"
 #define L_NAME "L"
+#define DL_DT_NAME "dL_dt"
 #define DT_NAME "dt"
 #define C_PIC_NAME "c_picard"
 #define MU_NAME "mu"
@@ -60,6 +63,7 @@
 #define LMBD_UNITS "dimensionless"
 #define B_UNITS "m/km"
 #define L_UNITS "km"
+#define DL_DT_UNITS "km/yr"
 #define DT_UNITS "yr"
 #define C_PIC_UNITS "dimensionless"
 #define MU_UNITS "dimensionless"
@@ -86,7 +90,7 @@ int retval;
 /* IDs for the netCDF file, dimensions, and variables. */
 int ncid, x_dimid, z_dimid, time_dimid;
 int x_varid, z_varid, u1_varid, u2_varid, H_varid, visc_varid, a_varid, s_varid, \
-    tau_varid, beta_varid, lmbd_varid, taud_varid, b_varid, L_varid, dt_varid, \
+    tau_varid, beta_varid, lmbd_varid, taud_varid, b_varid, L_varid, dL_dt_varid, dt_varid, \
     c_pic_varid, t_varid, mu_varid, omega_varid, u2_bc_varid, u2_dif_varid, \
     picard_error_varid, u2_0_vec_varid, u2_dif_vec_varid, theta_varid, C_bed_varid;
 int dimids[NDIMS];
@@ -202,6 +206,9 @@ int f_nc(int N, int N_Z)
     if ((retval = nc_def_var(ncid, L_NAME, NC_DOUBLE, NDIMS_0,
                     dimids_0, &L_varid)))
         ERR(retval);
+    if ((retval = nc_def_var(ncid, DL_DT_NAME, NC_DOUBLE, NDIMS_0,
+                    dimids_0, &dL_dt_varid)))
+        ERR(retval);
     if ((retval = nc_def_var(ncid, DT_NAME, NC_DOUBLE, NDIMS_0,
                     dimids_0, &dt_varid)))
         ERR(retval);
@@ -278,6 +285,9 @@ int f_nc(int N, int N_Z)
     if ((retval = nc_put_att_text(ncid, L_varid, UNITS,
                     strlen(L_UNITS), L_UNITS)))
         ERR(retval);
+    if ((retval = nc_put_att_text(ncid, dL_dt_varid, UNITS,
+                    strlen(DL_DT_UNITS), DL_DT_UNITS)))
+        ERR(retval);
     if ((retval = nc_put_att_text(ncid, dt_varid, UNITS,
                     strlen(DT_UNITS), DT_UNITS)))
         ERR(retval);
@@ -345,7 +355,8 @@ int f_write(int c, ArrayXd u1, ArrayXd u2, ArrayXd H, ArrayXd visc, ArrayXd S, \
             ArrayXd tau_b, ArrayXd beta, ArrayXd tau_d, ArrayXd bed, \
             ArrayXd C_bed, ArrayXd u2_dif_vec, ArrayXd u2_0_vec, \
             double L, double t, double u2_bc, double u2_dif, double error, \
-            double dt, int c_picard, double mu, double omega, ArrayXXd theta, double A)
+            double dt, int c_picard, double mu, double omega, ArrayXXd theta, \
+            double A, double dL_dt)
 {
     start[0]   = c;
     start_0[0] = c;
@@ -379,6 +390,8 @@ int f_write(int c, ArrayXd u1, ArrayXd u2, ArrayXd H, ArrayXd visc, ArrayXd S, \
 
     // 1D variables.
     if ((retval = nc_put_vara_double(ncid, L_varid, start_0, cnt_0, &L)))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid, dL_dt_varid, start_0, cnt_0, &dL_dt)))
     ERR(retval);
     if ((retval = nc_put_vara_double(ncid, t_varid, start_0, cnt_0, &t)))
     ERR(retval);
