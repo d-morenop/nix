@@ -23,8 +23,8 @@ from subprocess import Popen, PIPE, STDOUT
 
 
 # User defined directories.
-path_flowline = "/home/dmoren07/c++/git/flowline/"
-path_output   = "/home/dmoren07/c++/flowline/output/glacier_ews/m_dot.30.0/"
+path_flowline = "/home/dmoreno/scr/git/flowline/flowline/"
+path_output   = "/home/dmoreno/c++/flowline/output/glacier_ews/test_2/"
 
 
 # Create new directory if not existing. Make clean otherwise.
@@ -55,16 +55,16 @@ shutil.copyfile(path_flowline+'write_nc.cpp', path_output+'write_nc.cpp')
 
 
 # Compilation configuration. ['local', 'iceberg', 'brigit']
-config = 'brigit'
+config = 'foehn'
 
 if config == 'local':
     
     # Compiling command.
     cmd  = "g++ -I /path/to/eigen3/ -o "+path_output+"flow_line.o "+path_output+"flow_line.cpp -lnetcdf"
 
-elif config == 'iceberg':
+elif config == 'foehn':
     
-    # Compiling command.
+    # Compiling command. -std=c++17
     cmd = "g++ -std=c++11 -I /usr/include/eigen3/ -o "+path_output+"flow_line_mismip_4.o "+path_output+"flow_line_mismip_4.cpp -lnetcdf"
 
 elif config == 'brigit':

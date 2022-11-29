@@ -96,8 +96,8 @@ double const C_thaw = 7.624e6;                  // 1.75e6 [Pa m^-1/3 s^1/3].
 double const C_froz = 7.624e6;                  // 2.0e6 [Pa m^-1/3 s^1/3].
 
 // GROUNDING LINE.
-double L     = 479.1e3;                    // Grounding line position [m] (702.3e3;)
-double L_old = 479.1e3;                    // Previous timestep.
+double L     = 50.0e3;                    // Grounding line position [m] (479.1e3)
+double L_old = 50.0e3;                    // Previous timestep. 479.1e3
 double L_new;                              // New GL position.
 double dL_dt;                              // GL migration [m/yr]. 
 
@@ -115,7 +115,7 @@ double const m = 1.0 / 3.0;                  // Friction exponent.
 
 // SIMULATION PARAMETERS.
 double const t0    = 0.0;                // Starting time [s].
-double const tf    = 5.0e3;             // 56.5e4, Ending time [yr] * [s/yr]
+double const tf    = 5.0e4;             // 56.5e4, Ending time [yr] * [s/yr]
 double t     = t0;                       // Time initialization [s].
 double dt;                               // Time step [s].
 double dt_CFL;                           // Courant-Friedrichs-Lewis condition
@@ -149,10 +149,10 @@ ArrayXd zeros = ArrayXd::Zero(n);
 
 // BEDROCK
 // Glacier ews option.
-double const x_1 = 346.0;
-double const x_2 = 350.0;
-double const y_0 = 0.1;
-double const y_p = 90.0e-3;
+double const x_1 = 346.0e3;       // Piece wise function [m].
+double const x_2 = 350.0e3;       // Piece wise function [m].
+double const y_0 = 100.0;         // Initial bedrock elevation (x=0) [m].
+double const y_p = 90.0;          // Peak height [m].
 
 
 // THERMODYNAMICS.
@@ -168,8 +168,8 @@ double u2_bc;                           // Boundary condition on u2 = du1/dx.
 double u2_dif;                          // Difference between analytical and numerical.
 
 // CALVING.
-int const calv = 1;
-double const m_dot = 30.0;              // Mean frontal ablation [m/yr]
+int const calv = 0;
+double const m_dot = 0.0;              // Mean frontal ablation [m/yr]
 
 
 // Runge-Kutta boundary conditions.
@@ -180,7 +180,7 @@ double u2_0 = 0.0;                      // Velocity first derivative in x0 (i.e.
 // Following Pattyn et al. (2012) the overdeepening hysterisis uses n = 250.
 // exp = "mismip_1", "mismip_3", "galcier_ews"
 //int const mismip = 1;
-char const exp = "glacier_ews"
+int experiment = 4;
 double A, B;
 
 // PICARD ITERATION
@@ -411,7 +411,8 @@ ArrayXd tridiagonal_solver(ArrayXd A, ArrayXd B, ArrayXd C, \
 ////////////////////////////////////////////////////
 // Flow line functions.
 
-ArrayXd f_bed(ArrayXd sigma, double L, int n, char exp, double x_1, double x_2)
+ArrayXd f_bed(ArrayXd sigma, double L, int n, int experiment, \
+              double y_0, double x_1, double x_2)
 {
     ArrayXd bed(n), x_scal(n);
 
@@ -421,121 +422,67 @@ ArrayXd f_bed(ArrayXd sigma, double L, int n, char exp, double x_1, double x_2)
 
     // MISMIP experiments bedrock.
     // Inverse sign to get a decreasing bedrock elevation.
-    if (exp == "mismip_1")
+    if (experiment == 1)
     {
         bed = 720.0 - 778.5 * x_scal;
     }
-    else if (exp == "misimip_3")
+    else if (experiment == 3)
     {
         bed = 729.0 - 2148.8 * pow(x_scal, 2) + \
                       1031.72 * pow(x_scal, 4) + \
                     - 151.72 * pow(x_scal, 6);
     }
-    // REVISE THIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    else if (exp = "glacier_ews")
+    else if (experiment = 4)
     {
         // Variables.
         int c_x1 = 0;
         int c_x2 = 0;
+        double y_1, y_2;
         double m_bed = y_p / ( x_2 - x_1 );
 
         // Extension in km.
-        ArrayXd x = ArrayXd::LinSpaced(n, 0.0, 1.0e-3*L); 
+        ArrayXd x = ArrayXd::LinSpaced(n, 0.0, L); 
 
-
+        // Piecewise function
         for (int i=0; i<n; i++)
         {
             // First part.
 		    if ( x(i) <= x_1 )
             {
-                bed(i) = y_0 - 1.5e-3 * x(i)
+                bed(i) = y_0 - 1.5e-3 * x(i);
             }
 		
 		    // Second.
-            else if ( x_tilde(i) >= x_1 and x(i) <= x_2 )
+            else if ( x(i) >= x_1 and x(i) <= x_2 )
+            {
+                // Save index of last point in the previous interval.
+                if ( c_x1 == 0 )
                 {
-                    // Save index of last point in the previous interval.
-                    if ( c_x1 == 0 )
-                    {
-                        y_1  = bed(i-1)
-                        c_x1 = c_x1 + 1	
-                    }
-                    
-                    // Bedrock function.
-                    bed(i) = y_1 + m_bed * ( x(i) - x_1 )
+                    y_1  = bed(i-1);
+                    c_x1 = c_x1 + 1	;
                 }
+                    
+                // Bedrock function.
+                bed(i) = y_1 + m_bed * ( x(i) - x_1 );
+            }
                 
             // Third.
-            else if ( x_tilde(i) > x_2 )
+            else if ( x(i) > x_2 )
             {
                 // Save index of last point in the previous interval.
                 if (c_x2 == 0)
                 {
-                    y_2  = bed(i-1)
-                    c_x2 = c_x2 + 1	
+                    y_2  = bed(i-1);
+                    c_x2 = c_x2 + 1;	
                 }
                     
                 // Bedrock function.
-                bed(i) = y_2 - 5.0e-3 * ( x(i) - x_2 )
+                bed(i) = y_2 - 5.0e-3 * ( x(i) - x_2 );
             } 
 
         }
 
     }
-
-
-
-/*
-# Bedrock.
-	bed = np.empty(n)
-
-	# x_tilde in metres.
-	x_tilde = np.linspace(0, 400.0, n)
-
-	# Horizontal domain extenstion [km].
-	x_1 = 346.0
-	x_2 = 350.0
-
-	# Initial bedrock elevation (x = 0) [km].
-	y_0 = 0.1
-
-	# Peak height [km].
-	y_p = 90.0e-3
-
-	# Intermideiate slope.
-	m_bed = y_p / ( x_2 - x_1 )
-
-	# Counters.
-	c_x1 = 0
-	c_x2 = 0
-
-	for i in range(n):
-
-		# First part.
-		if x_tilde[i] <= x_1:
-			bed[i] = y_0 - 1.5e-3 * x_tilde[i]
-		
-		# Second.
-		elif x_tilde[i] >= x_1 and x_tilde[i] <= x_2:
-			
-			# Save index of last point in the previous interval.
-			if c_x1 == 0:
-				y_1  = bed[i-1]
-				c_x1 = c_x1 + 1	
-			
-			# Bedrock function.
-			bed[i] = y_1 + m_bed * ( x_tilde[i] - x_1 )
-		
-		# Third.
-		elif x_tilde[i] > x_2:
-			# Save index of last point in the previous interval.
-			if c_x2 == 0:
-				y_2  = bed[i-1]
-				c_x2 = c_x2 + 1	
-			
-			# Bedrock function.
-			bed[i] = y_2 - 5.0e-3 * ( x_tilde[i] - x_2 )
-*/
 
     return bed;
 }
@@ -554,7 +501,7 @@ double f_L(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd H_c, \
     // MIT finite difference calculator: https://web.media.mit.edu/~crtaylor/calculator.html
     // den_opt = 4 rises advance/retreat problems.
     num_opt = 1;
-    den_opt = 3;
+    den_opt = 1;
     
     
     // Accumulation minus flux (reverse sign). 
@@ -612,16 +559,14 @@ double f_L(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd H_c, \
 
 // First order scheme. New variable sigma.
 ArrayXd f_H_flux(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd sigma, \
-                    double dt, double ds, double ds_inv, int n, double L_new, \
-                    double L, ArrayXd H_c, double D, \
-                    double rho, double rho_w, double dL_dt, \
-                    ArrayXd bed, ArrayXd q, int meth)
+                 double dt, double ds, double ds_inv, int n, double L_new, \
+                 double L, ArrayXd H_c, double D, double rho, double rho_w, \
+                 double dL_dt, ArrayXd bed, ArrayXd q, int meth)
 {
-    ArrayXd H_now(n), A(n), B(n), C(n), F(n);
-    double gamma, L_inv;
+    // Variables.
+    ArrayXd H_now(n);
 
-    L_inv  = 1.0 / L;
-    gamma  = dt / ( 2.0 * ds * L );
+    double L_inv  = 1.0 / L;
 
     // Solution to the modified advection equation considering a streched coordinate
     // system sigma. Two schemes are available, explicit and implicit, noted as
@@ -634,9 +579,10 @@ ArrayXd f_H_flux(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd sigma, \
     Implicit ---> 1. */ 
     meth = 0;
 
+    // Explicit scheme. Centred dH in the sigma_L term.
     if ( meth == 0 )
     {
-        // Explicit scheme. Centred dH in the sigma_L term.
+        
         for (int i=1; i<n-1; i++)
         {
             // Centred in sigma, upwind in flux.
@@ -657,8 +603,13 @@ ArrayXd f_H_flux(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd sigma, \
         
         
     }
+    // Implicit scheme.
     else if ( meth == 1 )
     {
+        // Variables.
+        ArrayXd A(n), B(n), C(n), F(n);
+        double gamma = dt / ( 2.0 * ds * L );
+
         // Implicit scheme. REVISE TRIDIAGONAL MATRIX.
         for (int i=1; i<n-1; i++)
         {
@@ -766,8 +717,8 @@ ArrayXd f_calv(ArrayXd tau, double D, \
 
 
 ArrayXXd f_theta(ArrayXXd theta, ArrayXd u, ArrayXd H, ArrayXd tau_b, \
-                double theta_max, double kappa, double k, double dt, double G_k, \
-                double ds, double L, int n, int n_z)
+                 double theta_max, double kappa, double k, double dt, double G_k, \
+                 double ds, double L, int n, int n_z)
 {
     MatrixXd theta_now(n,n_z);
     ArrayXd dz(n), dz_2_inv(n), Q_f_k(n);
@@ -1133,13 +1084,11 @@ int main()
         //S(i) = 0.0;
         //S(i)    = 0.30 * pow(sigma(i), 2) ;      // 0.31 * pow(sigma(i), 2)
 
-        // MISMIP EXPERIMENTS.
+        // EXPERIMENTS.
         H(i) = 10.0;             // Initial ice thickness [m].
+        //S(i) = 0.7 * ( 1.0 - pow(sigma(i), 2) );
         S(i) = 0.3;              // Snow accumulation [m/yr].
     }
-    
-    // Units consistency.
-    //S = S / sec_year; 
 
     // Temperature initial conditions (-25ºC).
     //ArrayXXd theta = ArrayXXd::Constant(n, n_z, 248.0);
@@ -1147,10 +1096,10 @@ int main()
 
     //////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////
-    // MISMIP experiments.
+    // Experiments. Christian et al (2022).
 
     // Constant friction coeff. 7.624e6 [Pa m^-1/3 s^1/3]
-    ArrayXd C_bed = ArrayXd::Constant(n, 7.0e6);    // [Pa m^-1/3 s^1/3]
+    ArrayXd C_bed = ArrayXd::Constant(n, 7.0e6);      // [Pa m^-1/3 s^1/3]
     C_bed = C_bed / pow(sec_year, m);                 // [Pa m^-1/3 yr^1/3]
     
     // Viscosity from constant A value. u2 = 0 initialization. \
@@ -1162,24 +1111,8 @@ int main()
     ArrayXd visc = ArrayXd::Constant(n, 1.0e13);    // [Pa s]
     visc = visc / sec_year;                         // [Pa yr]
 
-
     // Implicit initialization.
     beta = ArrayXd::Constant(n, 5.0e3);    // [Pa yr / m]
-
-    // Exp 3 hysteresis forcing.
-    // Rate factor.
-    /*A_s << 5.0e-25, 4.0e-25, 3.0e-25, 2.5e-25, 2.0e-25, 1.5e-25, 1.0e-25, 5.0e-26, 2.5e-26, 
-           5.0e-26, 1.0e-25, 1.5e-25, 2.0e-25, 2.5e-25, 3.0e-25, 3.5e-25, 4.0e-25, 4.25e-25, 
-           4.5e-25, 4.75e-25, 5.0e-25; */
-
-    // Time length for a certain A value. 3.0e4,
-    /*t_s << 3.0e4, 6.0e4, 9.0e4, 11.5e4, 14.0e4, 16.5e4, 19.0e4, 21.5e4, 24.0e4, 
-           26.5e4, 29.0e4, 31.5e4, 34.0e4, 36.5e4, 39.0e4, 41.5e4, 44.0e4, 46.5e4, 
-           49.0e4, 51.5e4, 54.0e4;*/
-
-    /*t_s << 3.0e4, 6.0e4, 9.0e4, 10.5e4, 12.0e4, 13.5e4, 15.0e4, 18.0e4, 21.0e4, 
-           22.5e4, 24.0e4, 27.0e4, 30.0e4, 33.0e4, 34.5e4, 36.0e4, 37.5e4, 39.0e4, 
-           40.5e4, 43.5e4, 46.5e4;*/
 
     //////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////
@@ -1197,30 +1130,9 @@ int main()
     // Main loop.
     while (t < tf)
     {
-        // EXPERIMENT 3 MISMIP.
-
-        // Update rate factor value.
-        /*if ( t <= t_s(c_s) )
-        {
-            A = A_s(c_s) * sec_year;
-        }
-        else
-        {
-            // Ensure we don't exceed time vector lenght.
-            c_s = min(c_s + 1, n_s - 1);
-
-            A = A_s(c_s) * sec_year;
-            //cout << " \n A = " << A;
-        }
-        
-        // Ice hardness.
-        B = pow(A, ( -1 / n_gln ) );*/
 
         // Update bedrock with new domain extension L.
-        bed = f_bed(sigma, L, n, exp);
-
-        // Friction coefficient from temperaure.
-        //C_bed = f_C_bed(theta, theta_max, C_thaw, C_froz, n);
+        bed = f_bed(sigma, L, n, experiment, y_0, x_1, x_2);
 
         // First, explcit scheme. Then, implicit using explicit guess.
         if (t < t_eq)
