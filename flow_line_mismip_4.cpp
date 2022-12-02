@@ -429,7 +429,7 @@ double f_L(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd H_c, \
 ArrayXd f_H_flux(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd sigma, \
                  double dt, double ds, double ds_inv, int n, double L_new, \
                  double L, ArrayXd H_c, double D, double rho, double rho_w, \
-                 double dL_dt, ArrayXd bed, ArrayXd q, int meth)
+                 double dL_dt, ArrayXd bed, ArrayXd q)
 {
     // Variables.
     ArrayXd H_now(n);
@@ -445,9 +445,8 @@ ArrayXd f_H_flux(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd sigma, \
     /* Solver choice:
     Explicit ---> 0.
     Implicit ---> 1. */ 
-    meth = 0;
+    int meth = 0;
     
-
     // Explicit scheme. Centred dH in the sigma_L term.
     if ( meth == 0 )
     {
@@ -968,7 +967,7 @@ int main()
 
 
     // SIMULATION PARAMETERS.
-    int const n   = 500;                             // Number of horizontal points 250, 500, 1000, 2000
+    int const n   = 250;                             // Number of horizontal points 250, 500, 1000, 2000
     int const n_z = 10;                              // Number vertical layers. 10, 20.
     
     double const ds     = 1.0 / n;                   // Normalized spatial resolution.
@@ -1095,24 +1094,21 @@ int main()
 
     // EXPERIMENT. Christian et al (2022).
     // Constant friction coeff. 7.624e6 [Pa m^-1/3 s^1/3]
-    C_bed = ArrayXd::Constant(n, 7.0e6);              // [Pa m^-1/3 s^1/3]
-    C_bed = C_bed / pow(sec_year, m);                 // [Pa m^-1/3 yr^1/3]
+    C_bed = ArrayXd::Constant(n, 7.0e6/ pow(sec_year, m) );    // [Pa m^-1/3 yr^1/3]
+
+    // We assume a constant viscosity in the first iteration. 1.0e13 Pa s.
+    visc = ArrayXd::Constant(n, 1.0e13 / sec_year);            // [Pa yr]
+
+    // Implicit initialization.
+    beta = ArrayXd::Constant(n, 5.0e3);             // [Pa yr / m]
     
     // Viscosity from constant A value. u2 = 0 initialization.
     // 4.6416e-24, 2.1544e-24. [Pa^-3 s^-1] ==> [Pa^-3 yr^-1]
     A = 4.23e-25 * sec_year;               // 4.23e-25
     B = pow(A, ( -1 / n_gln ) );
-
-    // We assume a constant viscosity in the first iteration.
-    visc = ArrayXd::Constant(n, 1.0e13);            // [Pa s]
-    visc = visc / sec_year;                         // [Pa yr]
-
-    // Implicit initialization.
-    beta = ArrayXd::Constant(n, 5.0e3);             // [Pa yr / m]
     
     /////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////
-
 
 
     // Print spatial and time dimensions.
@@ -1165,103 +1161,73 @@ int main()
     // Initialize time.
     t = t0;
 
-    // Main loop.
+    // Time integration.
     while (t < tf)
     {
-
         // Update bedrock with new domain extension L.
         bed = f_bed(L, n, experiment, y_0, y_p, x_1, x_2);
 
         // Update SMB considering new domain extension.
         S = f_acc(sigma, S, L, S_0, S_L, n, x_acc, x_end);
 
-        // First, explcit scheme. Then, implicit using explicit guess.
-        if (t < t_eq)
+        // Implicit velocity solver.
+        // Picard iteration for non-linear viscosity and beta.
+            
+        // Update basal friction with previous step velocity. Out of Picard iteration?
+        tau_b    = beta * u1;
+        tau_b(0) = tau_b(1);    // Symmetry.
+
+        // Flux definition. Staggered grid.
+        for (int i=0; i<n-1; i++)
         {
-            // First iterations using an explicit scheme RK-4.
-            //cout << " \n Runge-Kutta \n ";
-            /*
-            u = rungeKutta(u1_0, u2_0, u_0, H, ds, ds_inv, n, \
-                                visc, bed, rho, rho_w, g, L, m, C_bed, t_eq, tau_b);
+            q(i) = u1(i) * 0.5 * ( H(i+1) + H(i) );
+        }
+            
+        // GL flux definition (Vieli and Payne, 2005).
+        if ( calv == 0 )
+        {
+            q(n-1) = u1(n-1) * H(n-1);
+        } 
+        // Additional calving term (Christian et al., 2022).
+        else if ( calv == 1 )
+        {
+            q(n-1) = ( u1(n-1) + m_dot ) * H(n-1);
+        }
+
+        // Picard initialization.
+        error    = 1.0;
+        c_picard = 0;
+
+        // Picard iteration to solve nonlinearities.
+        while (error > picard_tol & c_picard < n_picard)
+        {
+            // Save previous iteration solution.
+            u1_old_1 = u1;
+
+            // Implicit solver.
+            u = vel_solver(u1, H, ds, ds_inv, n, visc, bed, rho, rho_w, g, L, \
+                            C_bed, tau_b, t, u2_bc, beta, A, n_gln);
 
             // Allocate variables.
             u1    = u.row(0);
             u2    = u.row(1);
-            tau_b = u.row(2);
-            tau_d = u.row(3);
-            D     = u(4,0);
-            u2_bc = u(4,1);
-            u2_dif = u(4,2);
-            u2_0_vec   = u.row(5);
-            u2_dif_vec = u.row(6);
-            */
+            D     = u(2,0);
+            u2_bc = u(2,1);
 
-            //cout << "\n u1 = " << u1;
-        }
-        else
-        {
-            // Implicit velocity solver.
-            // Picard iteration for non-linear viscosity and beta.
-            
-            // Update basal friction with previous step velocity. Out of Picard iteration?
-            //tau_b = C_bed * pow(u1, m);
-            tau_b = beta * u1;
-            // Symmetry.
-            tau_b(0) = tau_b(1);
+            // Beta definition: tau_b = beta * u.
+            beta    = C_bed * pow(u1, m - 1.0);
+            beta(0) = beta(1);
 
-            // Flux definition. Staggered grid.
-            for (int i=0; i<n-1; i++)
-            {
-                q(i) = u1(i) * 0.5 * ( H(i+1) + H(i) );
-            }
-            
-            // GL flux definition (Vieli and Payne, 2005).
-            if ( calv == 0 )
-            {
-                q(n-1) = u1(n-1) * H(n-1);
-            } 
-            // Additional calving term (Christian et al., 2022).
-            else if ( calv == 1 )
-            {
-                q(n-1) = ( u1(n-1) + m_dot ) * H(n-1);
-            }
-            
-            
-
-            // Picard initialization.
-            error    = 1.0;
-            c_picard = 0;
-
-            // Picard iteration to solve nonlinearities.
-            while (error > picard_tol & c_picard < n_picard)
-            {
-                // Save previous iteration solution.
-                u1_old_1 = u1;
-
-                // Implicit solver.
-                u = vel_solver(u1, H, ds, ds_inv, n, visc, bed, rho, rho_w, g, L, \
-                               C_bed, tau_b, t, u2_bc, beta, A, n_gln);
-
-                // Allocate variables.
-                u1    = u.row(0);
-                u2    = u.row(1);
-                D     = u(2,0);
-                u2_bc = u(2,1);
-
-                // Beta definition: tau_b = beta * u.
-                beta    = C_bed * pow(u1, m - 1.0);
-                beta(0) = beta(1);
-
-                // Current error (vector class required to compute norm). 
-                // Eq. 12 (De-Smedt et al., 2010).
-                c_u1_1 = u1 - u1_old_1;
-                u1_vec = u1;
-                error  = c_u1_1.norm() / u1_vec.norm();
+            // Current error (vector class required to compute norm). 
+            // Eq. 12 (De-Smedt et al., 2010).
+            c_u1_1 = u1 - u1_old_1;
+            u1_vec = u1;
+            error  = c_u1_1.norm() / u1_vec.norm();
                 
-                // New relaxed Picard iteration. Pattyn (2003). 
-                // Necessary to deal with the nonlinear velocity dependence
-                // in both viscosity and beta.
-                if (c_picard > 0)
+            // New relaxed Picard iteration. Pattyn (2003). 
+            // Necessary to deal with the nonlinear velocity dependence
+            // in both viscosity and beta.
+            if (c_picard > 0)
                 {
                     // Difference in iter i-2.
                     c_u1_2   = u1_old_1 - u1_old_2;
@@ -1310,18 +1276,17 @@ int main()
                     
                 }
 
-                // Update multistep variables.
-                u1_old_2 = u1_old_1;
+            // Update multistep variables.
+            u1_old_2 = u1_old_1;
 
-                // Number of iterations.
-                c_picard = c_picard + 1;
-            }
+            // Number of iterations.
+            c_picard = c_picard + 1;
         }
+
 
         // CONSISTENCY CHECK.
         // Search for NaN values.
         // Count number of true positions in u1.isnan().
- 
         if ( u1.isNaN().count() != 0 )
         {
             cout << "\n NaN found.";
@@ -1374,7 +1339,7 @@ int main()
 
         // Integrate ice thickness forward in time.
         H = f_H_flux(u1, H, S, sigma, dt, ds, ds_inv, n, \
-                     L_new, L, H_c, D, rho, rho_w, dL_dt, bed, q, 0);
+                     L_new, L, H_c, D, rho, rho_w, dL_dt, bed, q);
 
 
         // Integrate Fourier heat equation.
