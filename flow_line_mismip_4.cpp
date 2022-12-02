@@ -78,174 +78,11 @@ rungeKutta   --->  4th-order Runge-Kutta integration scheme for the SSA stress
 */
 
 
-// WE USE RUNGE-KUTTA FOR EXPLICIT INTEGRATION IN THE FIRST TIME STEP.
-// THEN WE PROCEED WITH AN IMPLICIT SCHEME TO ENSURE BOUNDARY CONDITIONS.
-
-
-// GENERAL PARAMETERS.
-double const sec_year = 3.154e7;              // Seconds in a year.
-
-// PHYSICAL CONSTANTS.
-double const u_0   = 150.0 / sec_year;
-double const g     = 9.8;                    // 9.81
-double const rho   = 900.0;
-double const rho_w = 1000.0;                 // 1028.8
-
-// BEDROCK PARAMETRIZATION: f_C_bed.
-double const C_thaw = 7.624e6;                  // 1.75e6 [Pa m^-1/3 s^1/3].
-double const C_froz = 7.624e6;                  // 2.0e6 [Pa m^-1/3 s^1/3].
-
-// GROUNDING LINE.
-double L     = 50.0e3;                    // Grounding line position [m] (479.1e3)
-double L_old = 50.0e3;                    // Previous timestep. 479.1e3
-double L_new;                              // New GL position.
-double dL_dt;                              // GL migration [m/yr]. 
-
-// ICE VISCOSITY: f_visc.
-double const n_gln = 3.0;
-double const n_exp = (1.0 - n_gln) / n_gln;      // Pattyn.
-
-// VISCOSITY REGULARIZATION TERM.
-// eps is fundamental for GL, velocities, thickness, etc.
-double const eps = 1.0e-10;                            // Final: 1.0e-30. Current 1.0e-7. Yelmo: 1.0e-6. 2.5e-9 good GL but bad H.
-//double const eps = 1.0e-30;                               // 1.0e-7
-
-// BASAL FRICTION.
-double const m = 1.0 / 3.0;                  // Friction exponent.
-
-// SIMULATION PARAMETERS.
-double const t0    = 0.0;                // Starting time [s].
-double const tf    = 5.0e4;             // 56.5e4, Ending time [yr] * [s/yr]
-double t     = t0;                       // Time initialization [s].
-double dt;                               // Time step [s].
-double dt_CFL;                           // Courant-Friedrichs-Lewis condition
-double const dt_max = 0.1;              // Maximum time step = 0.25 years [s].
-//double const dt_min = 1.0;
-double const t_eq = 0.0;                 // 20.0. Length of explicit scheme. 
-//double const t_bc = 10.0;                // 1.0e3. Implicit scheme spin-up.
-
-// OUTPUT DEFINITIONS.
-int const t_n = 100;                        // Number of output frames. 30.
-
-ArrayXd a = ArrayXd::LinSpaced(t_n, t0, tf);      // Time steps in which the solution is saved. 
-
-
-// COORDINATES.
-// HIGHLY SENSITIVE TO THE PARTICULAR CHOICE OF dt and n.
-// TRY AN ADAPTATIVE TIMESTEP THAT CONSIDERS THE ERROR IN THE PICARD ITERATION?
-int const n = 250;                     // 1000. Number of horizontal points 250, 500, 1000, 2000
-double const ds = 1.0 / n;               // Normalized spatial resolution.
-double const ds_inv = n;
-
-int const   n_z = 10;                   // Number vertical layers. 10, 20.
-double const dz = 1.0 / n_z;             // Normalized vertical resolution.
-double const dz_inv = n_z;
-
-ArrayXd sigma = ArrayXd::LinSpaced(n, 0.0, 1.0);    // Dimensionless x-coordinates. 
-
-// Auxiliar definitions.
-ArrayXd zeros = ArrayXd::Zero(n);
-
-
-// BEDROCK
-// Glacier ews option.
-double const x_1 = 346.0e3;       // Piece wise function [m].
-double const x_2 = 350.0e3;       // Piece wise function [m].
-double const y_0 = 100.0;         // Initial bedrock elevation (x=0) [m].
-double const y_p = 90.0;          // Peak height [m].
-
-
-// THERMODYNAMICS.
-double const k = 2.0;              // Thermal conductivity of ice [W / m · ºC].
-double const G = 0.05;             // Geothermal heat flow [W / m^2] = [J / s · m^2].
-double const G_k = G / k;          // [K / m] 
-double const kappa = 1.4e-6;       // Thermal diffusivity of ice [m^2/s].
-double const theta_max = 273.15;   // Max temperature of ice [K].
-
-// LATERAL BOUNDARY CONDITION.
-double D;                               // Depth below the sea level [m].
-double u2_bc;                           // Boundary condition on u2 = du1/dx.
-double u2_dif;                          // Difference between analytical and numerical.
-
-// CALVING.
-int const calv = 0;
-double const m_dot = 0.0;              // Mean frontal ablation [m/yr]
-
-
-// Runge-Kutta boundary conditions.
-double u1_0 = 0.0;                      // Velocity in x0 (i.e., u(x0)).
-double u2_0 = 0.0;                      // Velocity first derivative in x0 (i.e., du/dx(x0)).
-
-// MISMIP EXPERIMENT CHOICE.
-// Following Pattyn et al. (2012) the overdeepening hysterisis uses n = 250.
-// exp = "mismip_1", "mismip_3", "galcier_ews"
-//int const mismip = 1;
-int experiment = 4;
-double A, B;
-
-// PICARD ITERATION
-double error;                           // Norm of the velocity difference between iterations.
-double const picard_tol = 1.0e-4;       // 1.0e-5. Convergence tolerance within Picard iteration.
-int const n_picard = 10;                // Max number iter. Good results: 10, 20.
-int c_picard;                           // Number of Picard iterations.
-double omega, mu;                 
-double alpha;                           // Relaxation method within Picard iteration. 0.5, 0.7
-double const alpha_max = 1.0;
-double const omega_1 = 0.125 * M_PI;          // De Smedt et al. (2010) Eq. 10.
-double const omega_2 = (19.0 / 20.0) * M_PI;
-
-
-// MISMIP EXPERIMENTS FORCING.
-// Number of steps in the A forcing.
-int const n_s = 21;  // 3, 21
-
-
-// PREPARE VARIABLES.
-ArrayXd H(n);                        // Ice thickness [m].
-ArrayXd u1(n);                       // Velocity [m/yr].
-ArrayXd u2(n);                       // Velocity first derivative [1/yr].
-ArrayXd q(n);                        // Ice flux [m²/yr].
-ArrayXd bed(n);                      // Bedrock elevation [m].
-ArrayXd C_bed(n);                    // Friction coefficient [Pa m^-1/3 s^1/3].
-ArrayXd visc(n);                     // Ice viscosity [Pa·s].
-ArrayXd S(n);                        // Surface accumulation equivalent [mm/day].
-ArrayXd H_c(n);                      // Maxium ice thickness permitted at calving front [m].
-ArrayXd u1_plot(n);                  // Saved ice velocity [m/yr]
-ArrayXd u2_plot(n);                  // Saved ice velocity derivative [1/yr]
-ArrayXd tau_b(n);                    // Basal friction [Pa]
-ArrayXd beta(n);                    // Basal friction [Pa m^-1 yr]
-ArrayXd tau_d(n);                    // Driving stress [Pa]
-ArrayXd filt(n);                     // 
-ArrayXd u1_old_1(n);  
-ArrayXd u1_old_2(n);  
-ArrayXd u2_0_vec(n);                 // Ranged sampled of u2_0 for a certain iteration.
-ArrayXd u2_dif_vec(n);               // Difference with analytical BC.
-ArrayXi u1_nan(n);
-VectorXd u1_vec(n); 
-VectorXd u2_vec(n); 
-VectorXd c_u1_1(n);                   // Correction vector Picard relaxed iteration.
-VectorXd c_u1_2(n);
-VectorXd c_u1_dif(n);
-
-ArrayXd A_s(n_s);                    // Rarte factor values for MISMIP exp.
-ArrayXd t_s(n_s);                    // Time length for each step of A.
-
-
-//ArrayXd smth(n);                     // Smooth field.
-//MatrixXd smth(3,n);                // Smooth field.
-MatrixXd u(7,n);                     // Matrix output.
-
-ArrayXXd theta(n,n_z);               // Temperature field [K].
-ArrayXXd theta_now(n,n_z);           // Current temperature field [K].
-//MatrixXd u_old(1,n);                 // Store previous iteration for relaxation.
-
-
-
-
 ////////////////////////////////////////////////////
 ////////////////////////////////////////////////////
 // TOOLS. USEFUL FUNCTIONS.
 
+/*
 ArrayXd gaussian_filter(ArrayXd w, ArrayXd zeros, \
                         double sigma, double L, double ds, int n)
 {
@@ -275,6 +112,7 @@ ArrayXd gaussian_filter(ArrayXd w, ArrayXd zeros, \
 
     return smth;
 }
+*/
 
 ArrayXd running_mean(ArrayXd x, int p, int n)
 {
@@ -411,26 +249,28 @@ ArrayXd tridiagonal_solver(ArrayXd A, ArrayXd B, ArrayXd C, \
 ////////////////////////////////////////////////////
 // Flow line functions.
 
-ArrayXd f_bed(ArrayXd sigma, double L, int n, int experiment, \
-              double y_0, double x_1, double x_2)
+ArrayXd f_bed(double L, int n, int experiment, \
+              double y_0, double y_p, double x_1, double x_2)
 {
-    ArrayXd bed(n), x_scal(n);
+    // Prepare variables.
+    ArrayXd bed(n);
+    ArrayXd x = ArrayXd::LinSpaced(n, 0.0, L); 
 
-    // Same bedrock as Schoof (2007).
-    // sigma = x / L. L in metres!
-    x_scal = sigma * L / 750.0e3; 
 
     // MISMIP experiments bedrock.
+    // Same bedrock as Schoof (2007).
     // Inverse sign to get a decreasing bedrock elevation.
     if (experiment == 1)
     {
-        bed = 720.0 - 778.5 * x_scal;
+        x = x / 750.0e3; 
+        bed = 720.0 - 778.5 * x;
     }
     else if (experiment == 3)
     {
-        bed = 729.0 - 2148.8 * pow(x_scal, 2) + \
-                      1031.72 * pow(x_scal, 4) + \
-                    - 151.72 * pow(x_scal, 6);
+        x = x / 750.0e3; 
+        bed = 729.0 - 2148.8 * pow(x, 2) + \
+                      1031.72 * pow(x, 4) + \
+                    - 151.72 * pow(x, 6);
     }
     else if (experiment = 4)
     {
@@ -440,10 +280,7 @@ ArrayXd f_bed(ArrayXd sigma, double L, int n, int experiment, \
         double y_1, y_2;
         double m_bed = y_p / ( x_2 - x_1 );
 
-        // Extension in km.
-        ArrayXd x = ArrayXd::LinSpaced(n, 0.0, L); 
-
-        // Piecewise function
+        // Piecewise function.
         for (int i=0; i<n; i++)
         {
             // First part.
@@ -453,7 +290,7 @@ ArrayXd f_bed(ArrayXd sigma, double L, int n, int experiment, \
             }
 		
 		    // Second.
-            else if ( x(i) >= x_1 and x(i) <= x_2 )
+            else if ( x(i) >= x_1 && x(i) <= x_2 )
             {
                 // Save index of last point in the previous interval.
                 if ( c_x1 == 0 )
@@ -479,14 +316,46 @@ ArrayXd f_bed(ArrayXd sigma, double L, int n, int experiment, \
                 // Bedrock function.
                 bed(i) = y_2 - 5.0e-3 * ( x(i) - x_2 );
             } 
-
         }
-
     }
 
     return bed;
 }
 
+
+// SMB spatial distribution depends on the position of the ice.
+// It does not follow the ice sheet, but rather there's a certain 
+// value for each position x.
+// REVISE THIS! THE DIFFERENCE IN EXTENSION MIGHT COME FROM HERE!!!!!!!!!
+ArrayXd f_acc(ArrayXd sigma, ArrayXd S, double L, double S_0, \
+              double S_L, int n, double x_acc, double x_end)
+{
+    // Variables
+    ArrayXd x(n); 
+    double delta_smb = S_0 - S_L;
+
+    // Horizontal dimension to define SBM.
+    x = L * sigma;
+
+    // Piecewise function.
+    for (int i=0; i<n; i++)
+    {
+        // First part.
+		if ( x(i) <= x_acc )
+        {
+            S(i) = S_0;
+        }
+		
+		// Second.
+        else if ( x(i) > x_acc && x(i) <= x_end )
+        {
+            //S(i) = S_0 + delta_smb * ( - pow( (sigma(i) - sigma_smb)/(1.0 - sigma_smb), 2) );
+            S(i) = S_0 + delta_smb * ( - pow( (x(i) - x_acc)/(x_end - x_acc), 2) );
+        }
+    }
+
+    return S;
+}
 
 
 double f_L(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd H_c, \
@@ -549,7 +418,6 @@ double f_L(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd H_c, \
         den = D_5 + ( rho_w / rho ) * ( bed(n-1) - bed(n-2) );
     }
 
-
     // Grounding line time derivative.
     dL_dt = num / den;
 
@@ -578,6 +446,7 @@ ArrayXd f_H_flux(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd sigma, \
     Explicit ---> 0.
     Implicit ---> 1. */ 
     meth = 0;
+    
 
     // Explicit scheme. Centred dH in the sigma_L term.
     if ( meth == 0 )
@@ -600,7 +469,6 @@ ArrayXd f_H_flux(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd sigma, \
         H_now(n-1) = H(n-1) + dt * ( ds_inv * L_inv * \
                                         (  dL_dt * ( H(n-1) - H(n-2) ) + \
                                             - ( q(n-1) - q(n-2) ) ) + S(n-1) );
-        
         
     }
     // Implicit scheme.
@@ -699,8 +567,9 @@ ArrayXd f_visc(ArrayXd u2, double B, double n_exp, \
 	return visc;
 }	
 
+/*
 ArrayXd f_calv(ArrayXd tau, double D, \
-               double rho, double rho_w, double g, ArrayXd bed)
+               double rho, double rho_w, double g, ArrayXd bed, int n)
 {
     ArrayXd H_c(n), tau_tilde(n), bed_tilde(n);
 
@@ -714,6 +583,7 @@ ArrayXd f_calv(ArrayXd tau, double D, \
 
     return H_c;
 } 
+*/
 
 
 ArrayXXd f_theta(ArrayXXd theta, ArrayXd u, ArrayXd H, ArrayXd tau_b, \
@@ -804,8 +674,8 @@ Array2d du2_ds(double u_1, double u_2, double dh_dx, double visc,\
 
 MatrixXd rungeKutta(double u1_0, double u2_0, double u_0, ArrayXd H, \
                     double ds, double ds_inv, int n, ArrayXd visc, \
-                    ArrayXd bed, double rho, double g, double L, double m, \
-                    ArrayXd C_bed, double t_eq)
+                    ArrayXd bed, double rho, double rho_w, double g, double L, double m, \
+                    ArrayXd C_bed, double t_eq, ArrayXd tau_b)
 {
     ArrayXd u1(n), u2(n), dhds(n), dvisc_H(n), visc_dot_H(n), \
             c1(n), c2(n), h(n), dH(n), d_visc(n), \
@@ -957,14 +827,14 @@ MatrixXd rungeKutta(double u1_0, double u2_0, double u_0, ArrayXd H, \
 
 
 
-MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
-                    ArrayXd bed, double rho, double g, double L, ArrayXd C_bed, \
-                    ArrayXd tau_b, double t, double u2_RK, ArrayXd beta, double A_ice)
+MatrixXd vel_solver(ArrayXd u1, ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
+                    ArrayXd bed, double rho, double rho_w, double g, double L, ArrayXd C_bed, \
+                    ArrayXd tau_b, double t, double u2_RK, ArrayXd beta, double A_ice, double n_gln)
 {
     ArrayXd u2(n), dhds(n), visc_H(n), c1(n), c2(n), h(n), \
             A(n), B(n), C(n), F(n);
 
-    MatrixXd out(5,n);
+    MatrixXd out(3,n);
 
     double D, u2_bc, ds_inv_2, L_inv, gamma;
 
@@ -996,7 +866,7 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
     dhds(n-1) = H(n-1) * ( h(n-1) - h(n-2) ); // without a factor 2???
     //dhds(n-1) = H(n-1) * 0.5 * ( 3.0 * h(n-1) - 4.0 * h(n-2) + h(n-3) );
 
-    // Tridiagonal boundary values. Correct????
+    // Tridiagonal boundary values. 
     A(0) = 0.0;
     B(0) = - gamma * ( visc_H(0) + visc_H(1) ) - beta(0);
     C(0) = visc_H(1);
@@ -1051,10 +921,9 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
     // Allocate solutions.
     out.row(0) = u1;
     out.row(1) = u2;
-    out.row(2) = F;
-    //out.row(3) = tau_b;
-    out(4,0)   = D;
-    out(4,1)   = u2_bc;
+    //out.row(2) = F;
+    out(2,0)   = D;
+    out(2,1)   = u2_bc;
     
     return out;
 }
@@ -1064,6 +933,189 @@ MatrixXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
 // Driver method
 int main()
 {
+    /////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////
+    // Initialize flowline.
+
+    // GENERAL PARAMETERS.
+    double const sec_year = 3.154e7;                // Seconds in a year.
+
+    // PHYSICAL CONSTANTS.
+    double const u_0   = 150.0 / sec_year;
+    double const g     = 9.81;                      // Gravitational acceleration [m/s²].
+    double const rho   = 917.0;                     // Ice density [kg/m³].
+    double const rho_w = 1028.0;                    // Water denisity [kg/m³].
+
+    // BEDROCK PARAMETRIZATION: f_C_bed.
+    double const C_thaw = 7.624e6;                  // 1.75e6 [Pa m^-1/3 s^1/3].
+    double const C_froz = 7.624e6;                  // 2.0e6 [Pa m^-1/3 s^1/3].
+
+    // GROUNDING LINE.
+    double L = 50.0e3;                              // Grounding line position [m] (479.1e3)
+    double L_new;                                   // New GL position.
+    double dL_dt;                                   // GL migration rate [m/yr]. 
+
+    // ICE VISCOSITY: f_visc.
+    double const n_gln = 3.0;
+    double const n_exp = (1.0 - n_gln) / n_gln;      // Pattyn.
+
+    // VISCOSITY REGULARIZATION TERM.
+    // eps is fundamental for GL, velocities, thickness, etc.
+    double const eps = 1.0e-10;                            
+
+    // BASAL FRICTION.
+    double const m = 1.0 / 3.0;                      // Friction exponent.
+
+
+    // SIMULATION PARAMETERS.
+    int const n   = 500;                             // Number of horizontal points 250, 500, 1000, 2000
+    int const n_z = 10;                              // Number vertical layers. 10, 20.
+    
+    double const ds     = 1.0 / n;                   // Normalized spatial resolution.
+    double const dz     = 1.0 / n_z;                 // Normalized vertical resolution.
+    double const ds_inv = n;
+    double const dz_inv = n_z;
+
+    double const t0   = 0.0;                         // Starting time [yr].
+    double const tf   = 1.5e4;                       // 56.5e4, Ending time [yr].
+    double const dt   = 0.1;                         // Time step [yr].
+    double const t_eq = 0.0;                         // Length of explicit scheme [yr] 
+    double t;                                        // Time variable [yr].
+    
+    // Potential adaptative timestep.
+    // HIGHLY SENSITIVE TO THE PARTICULAR CHOICE OF dt and n.
+    // TRY AN ADAPTATIVE TIMESTEP THAT CONSIDERS THE ERROR IN THE PICARD ITERATIO
+    //double dt_CFL;                           // Courant-Friedrichs-Lewis condition
+    //double const dt_max = 0.1;              // Maximum time step = 0.25 years [s].
+    //double const dt_min = 1.0;
+    
+    // OUTPUT DEFINITIONS.
+    int const t_n = 100;                        // Number of output frames. 30.
+
+    // BEDROCK
+    // Glacier ews option.
+    double const x_1 = 346.0e3;       // Peak beginning [m].
+    double const x_2 = 350.0e3;       // Peak end [m].
+    double const y_0 = 50.0;          // Initial bedrock elevation (x=0) [m].
+    double const y_p = 90.0;          // Peak height [m].
+
+    // SURFACE MASS BALANCE.
+    double const S_0 = 1.0;            // SMB at x = 0 [m/yr]. 0.7
+    double const S_L = -1.4;           // SMB at x = L [m/yr].
+    double const sigma_smb = 0.75;     // Sigma coord. at which decreases begins. []
+    double const x_acc = 250.0e3;       // Position at which accumulation starts decreasing [m].
+    double const x_end = 355.0e3;       // Position at which accumulation is minimum [m].
+
+    // THERMODYNAMICS.
+    double const k = 2.0;              // Thermal conductivity of ice [W / m · ºC].
+    double const G = 0.05;             // Geothermal heat flow [W / m^2] = [J / s · m^2].
+    double const G_k = G / k;          // [K / m] 
+    double const kappa = 1.4e-6;       // Thermal diffusivity of ice [m^2/s].
+    double const theta_max = 273.15;   // Max temperature of ice [K].
+
+    // LATERAL BOUNDARY CONDITION.
+    double D;                               // Depth below the sea level [m].
+    double u2_bc;                           // Boundary condition on u2 = du1/dx.
+    double u2_dif;                          // Difference between analytical and numerical.
+
+    // CALVING.
+    int const calv = 1;
+    double const m_dot = 30.0;              // Mean frontal ablation [m/yr]
+
+
+    // Runge-Kutta boundary conditions.
+    double u1_0 = 0.0;                      // Velocity in x0 (i.e., u(x0)).
+    double u2_0 = 0.0;                      // Velocity first derivative in x0 (i.e., du/dx(x0)).
+
+    // MISMIP EXPERIMENT CHOICE.
+    // Following Pattyn et al. (2012) the overdeepening hysterisis uses n = 250.
+    // exp = "mismip_1", "mismip_3", "galcier_ews"
+    //int const mismip = 1;
+    int experiment = 4;
+    double A, B;
+
+    // PICARD ITERATION
+    double error;                           // Norm of the velocity difference between iterations.
+    double omega;
+    double mu;                              // Relaxation method within Picard iteration. 0.5, 0.7
+    
+    int c_picard;                           // Number of Picard iterations.
+    int const n_picard = 10;                // Max number iter. Good results: 10, 20.
+    
+    double const picard_tol = 1.0e-4;       // 1.0e-5. Convergence tolerance within Picard iteration.
+    double const omega_1 = 0.125 * M_PI;          // De Smedt et al. (2010) Eq. 10.
+    double const omega_2 = (19.0 / 20.0) * M_PI;
+
+
+    // MISMIP EXPERIMENTS FORCING.
+    // Number of steps in the A forcing.
+    int const n_s = 21;  // 3, 21
+
+
+    // PREPARE VARIABLES.
+    ArrayXd H(n);                        // Ice thickness [m].
+    ArrayXd u1(n);                       // Velocity [m/yr].
+    ArrayXd u2(n);                       // Velocity first derivative [1/yr].
+    ArrayXd q(n);                        // Ice flux [m²/yr].
+    ArrayXd bed(n);                      // Bedrock elevation [m].
+    ArrayXd C_bed(n);                    // Friction coefficient [Pa m^-1/3 s^1/3].
+    ArrayXd visc(n);                     // Ice viscosity [Pa·s].
+    ArrayXd S(n);                        // Surface accumulation equivalent [mm/day].
+    ArrayXd H_c(n);                      // Maxium ice thickness permitted at calving front [m].
+    ArrayXd u1_plot(n);                  // Saved ice velocity [m/yr]
+    ArrayXd u2_plot(n);                  // Saved ice velocity derivative [1/yr]
+    ArrayXd tau_b(n);                    // Basal friction [Pa]
+    ArrayXd beta(n);                     // Basal friction [Pa m^-1 yr]
+    ArrayXd tau_d(n);                    // Driving stress [Pa]
+    ArrayXd u1_old_1(n);  
+    ArrayXd u1_old_2(n);  
+    ArrayXd u2_0_vec(n);                 // Ranged sampled of u2_0 for a certain iteration.
+    ArrayXd u2_dif_vec(n);               // Difference with analytical BC.
+    
+    // Vectors to compute norm.
+    VectorXd u1_vec(n); 
+    VectorXd u2_vec(n); 
+    VectorXd c_u1_1(n);                   // Correction vector Picard relaxed iteration.
+    VectorXd c_u1_2(n);
+    VectorXd c_u1_dif(n);
+
+    // MISMIP FORCING.
+    //ArrayXd A_s(n_s);                    // Rarte factor values for MISMIP exp.
+    //ArrayXd t_s(n_s);                    // Time length for each step of A.
+
+    MatrixXd u(3,n);                     // Matrix output.
+
+    ArrayXXd theta(n,n_z);                 // Temperature field [K].
+    //ArrayXXd theta_now(n,n_z);           // Current temperature field [K].
+
+    // Normalised horizontal dimension.
+    ArrayXd sigma = ArrayXd::LinSpaced(n, 0.0, 1.0);      // Dimensionless x-coordinates. 
+    ArrayXd a     = ArrayXd::LinSpaced(t_n, t0, tf);      // Time steps in which the solution is saved. 
+
+
+    // EXPERIMENT. Christian et al (2022).
+    // Constant friction coeff. 7.624e6 [Pa m^-1/3 s^1/3]
+    C_bed = ArrayXd::Constant(n, 7.0e6);              // [Pa m^-1/3 s^1/3]
+    C_bed = C_bed / pow(sec_year, m);                 // [Pa m^-1/3 yr^1/3]
+    
+    // Viscosity from constant A value. u2 = 0 initialization.
+    // 4.6416e-24, 2.1544e-24. [Pa^-3 s^-1] ==> [Pa^-3 yr^-1]
+    A = 4.23e-25 * sec_year;               // 4.23e-25
+    B = pow(A, ( -1 / n_gln ) );
+
+    // We assume a constant viscosity in the first iteration.
+    visc = ArrayXd::Constant(n, 1.0e13);            // [Pa s]
+    visc = visc / sec_year;                         // [Pa yr]
+
+    // Implicit initialization.
+    beta = ArrayXd::Constant(n, 5.0e3);             // [Pa yr / m]
+    
+    /////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////
+
+
+
+    // Print spatial and time dimensions.
     cout << " \n h = " << ds;
     cout << " \n n = " << n;
     cout << " \n tf = " << tf;
@@ -1074,48 +1126,34 @@ int main()
     // Wall time for computational speed.
     auto begin = std::chrono::high_resolution_clock::now();
 
+    // Handy definitions.
+    // Difference in surface mass balance between origigin at terminus.
+    double delta_smb = S_0 - S_L;
+
     // Initilize first iteration values.
     for (int i=0; i<n; i++)
     {
         // Initial ice thickness H0.
         //H(i) = 1.8e3 * (1.0 - pow(sigma(i), 2.5)) + 1.2e3;
 
-        // Surface mass accumulation.
-        //S(i) = 0.0;
-        //S(i)    = 0.30 * pow(sigma(i), 2) ;      // 0.31 * pow(sigma(i), 2)
-
-        // EXPERIMENTS.
-        H(i) = 10.0;             // Initial ice thickness [m].
-        //S(i) = 0.7 * ( 1.0 - pow(sigma(i), 2) );
-        S(i) = 0.3;              // Snow accumulation [m/yr].
+        // Initial ice thickness H0 [m].
+        H(i) = 100.0;         
+        //S(i) = S_0; 
+        
+        // Spatially-dependent surface mass balance.
+        if (sigma(i) < sigma_smb)
+        {
+            S(i) = S_0;
+        }
+        else
+        {
+            S(i) = S_0 + delta_smb * ( - pow( (sigma(i) - sigma_smb)/(1.0 - sigma_smb), 2) );
+        }
+        
     }
 
     // Temperature initial conditions (-25ºC).
     //ArrayXXd theta = ArrayXXd::Constant(n, n_z, 248.0);
-
-
-    //////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////
-    // Experiments. Christian et al (2022).
-
-    // Constant friction coeff. 7.624e6 [Pa m^-1/3 s^1/3]
-    ArrayXd C_bed = ArrayXd::Constant(n, 7.0e6);      // [Pa m^-1/3 s^1/3]
-    C_bed = C_bed / pow(sec_year, m);                 // [Pa m^-1/3 yr^1/3]
-    
-    // Viscosity from constant A value. u2 = 0 initialization. \
-    // 4.6416e-24, 2.1544e-24. [Pa^-3 s^-1] ==> [Pa^-3 yr^-1]
-    A = 4.23e-25 * sec_year;               
-    B = pow(A, ( -1 / n_gln ) );
-
-    // We assume a constant viscosity in the first iteration.
-    ArrayXd visc = ArrayXd::Constant(n, 1.0e13);    // [Pa s]
-    visc = visc / sec_year;                         // [Pa yr]
-
-    // Implicit initialization.
-    beta = ArrayXd::Constant(n, 5.0e3);    // [Pa yr / m]
-
-    //////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////
 
    
     // Counter to write solution.
@@ -1125,22 +1163,26 @@ int main()
     int c_s = 0;
 
     // Initialize time.
-    t  = 0.0;
+    t = t0;
 
     // Main loop.
     while (t < tf)
     {
 
         // Update bedrock with new domain extension L.
-        bed = f_bed(sigma, L, n, experiment, y_0, x_1, x_2);
+        bed = f_bed(L, n, experiment, y_0, y_p, x_1, x_2);
+
+        // Update SMB considering new domain extension.
+        S = f_acc(sigma, S, L, S_0, S_L, n, x_acc, x_end);
 
         // First, explcit scheme. Then, implicit using explicit guess.
         if (t < t_eq)
         {
             // First iterations using an explicit scheme RK-4.
             //cout << " \n Runge-Kutta \n ";
+            /*
             u = rungeKutta(u1_0, u2_0, u_0, H, ds, ds_inv, n, \
-                                visc, bed, rho, g, L, m, C_bed, t_eq);
+                                visc, bed, rho, rho_w, g, L, m, C_bed, t_eq, tau_b);
 
             // Allocate variables.
             u1    = u.row(0);
@@ -1152,6 +1194,7 @@ int main()
             u2_dif = u(4,2);
             u2_0_vec   = u.row(5);
             u2_dif_vec = u.row(6);
+            */
 
             //cout << "\n u1 = " << u1;
         }
@@ -1183,26 +1226,27 @@ int main()
                 q(n-1) = ( u1(n-1) + m_dot ) * H(n-1);
             }
             
+            
 
             // Picard initialization.
             error    = 1.0;
             c_picard = 0;
 
+            // Picard iteration to solve nonlinearities.
             while (error > picard_tol & c_picard < n_picard)
             {
                 // Save previous iteration solution.
                 u1_old_1 = u1;
 
                 // Implicit solver.
-                u = vel_solver(H, ds, ds_inv, n, visc, bed, rho, g, L, \
-                               C_bed, tau_b, t, u2_bc, beta, A);
+                u = vel_solver(u1, H, ds, ds_inv, n, visc, bed, rho, rho_w, g, L, \
+                               C_bed, tau_b, t, u2_bc, beta, A, n_gln);
 
                 // Allocate variables.
                 u1    = u.row(0);
                 u2    = u.row(1);
-                //tau_d = u.row(2);
-                D     = u(4,0);
-                u2_bc = u(4,1);
+                D     = u(2,0);
+                u2_bc = u(2,1);
 
                 // Beta definition: tau_b = beta * u.
                 beta    = C_bed * pow(u1, m - 1.0);
@@ -1302,7 +1346,7 @@ int main()
         // Courant-Friedrichs-Lewis condition (factor 1/2, 3/4).
         //dt_CFL = 0.01 * ds * L / u1.maxCoeff();  
         //dt     = min(dt_CFL, dt_max);
-        dt = dt_max;
+        //dt = dt_max;
 
         // Update grounding line position with new velocity field.
         dL_dt = f_L(u1, H, S, H_c, dt, L, ds, n, bed, rho, rho_w, q);
@@ -1339,8 +1383,7 @@ int main()
         theta = theta_now;*/
 
         // Update multistep variables.
-        L_old = L;
-        L     = L_new;
+        L = L_new;
 
         // Update time.
         t = t + dt;
