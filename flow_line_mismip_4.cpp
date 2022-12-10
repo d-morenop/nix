@@ -349,7 +349,7 @@ ArrayXd f_acc(ArrayXd sigma, ArrayXd S, double L, double S_0, \
 		// Second.
         else if ( x(i) > x_acc && x(i) <= x_end )
         {
-            //S(i) = S_0 + delta_smb * ( - pow( (sigma(i) - sigma_smb)/(1.0 - sigma_smb), 2) );
+            // Parabolic decrease of accumulation from S_0 to zero at x_end.
             S(i) = S_0 + delta_smb * ( - pow( (x(i) - x_acc)/(x_end - x_acc), 2) );
         }
     }
@@ -431,7 +431,7 @@ ArrayXd f_H_flux(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd sigma, \
                  double L, ArrayXd H_c, double D, double rho, double rho_w, \
                  double dL_dt, ArrayXd bed, ArrayXd q)
 {
-    // Variables.
+    // Local variables.
     ArrayXd H_now(n);
 
     double L_inv  = 1.0 / L;
@@ -450,7 +450,6 @@ ArrayXd f_H_flux(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd sigma, \
     // Explicit scheme. Centred dH in the sigma_L term.
     if ( meth == 0 )
     {
-        
         for (int i=1; i<n-1; i++)
         {
             // Centred in sigma, upwind in flux.
@@ -462,7 +461,6 @@ ArrayXd f_H_flux(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd sigma, \
         
         // Symmetry at the ice divide (i = 1).
         H_now(0) = H_now(2);
-        //H_now(0) = ( 4.0 * H_now(1) - H_now(2) ) / 3.0;
         
         // Lateral boundary: sigma(n-1) = 1.
         H_now(n-1) = H(n-1) + dt * ( ds_inv * L_inv * \
@@ -470,10 +468,11 @@ ArrayXd f_H_flux(ArrayXd u1, ArrayXd H, ArrayXd S, ArrayXd sigma, \
                                             - ( q(n-1) - q(n-2) ) ) + S(n-1) );
         
     }
+    
     // Implicit scheme.
     else if ( meth == 1 )
     {
-        // Variables.
+        // Local variables.
         ArrayXd A(n), B(n), C(n), F(n);
         double gamma = dt / ( 2.0 * ds * L );
 
@@ -828,7 +827,7 @@ MatrixXd rungeKutta(double u1_0, double u2_0, double u_0, ArrayXd H, \
 
 MatrixXd vel_solver(ArrayXd u1, ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
                     ArrayXd bed, double rho, double rho_w, double g, double L, ArrayXd C_bed, \
-                    ArrayXd tau_b, double t, double u2_RK, ArrayXd beta, double A_ice, double n_gln)
+                    double t, double u2_RK, ArrayXd beta, double A_ice, double n_gln)
 {
     ArrayXd u2(n), dhds(n), visc_H(n), c1(n), c2(n), h(n), \
             A(n), B(n), C(n), F(n);
@@ -967,7 +966,7 @@ int main()
 
 
     // SIMULATION PARAMETERS.
-    int const n   = 250;                             // Number of horizontal points 250, 500, 1000, 2000
+    int const n   = 1000;                             // Number of horizontal points 250, 500, 1000, 2000
     int const n_z = 10;                              // Number vertical layers. 10, 20.
     
     double const ds     = 1.0 / n;                   // Normalized spatial resolution.
@@ -995,15 +994,16 @@ int main()
     // Glacier ews option.
     double const x_1 = 346.0e3;       // Peak beginning [m].
     double const x_2 = 350.0e3;       // Peak end [m].
-    double const y_0 = 50.0;          // Initial bedrock elevation (x=0) [m].
     double const y_p = 90.0;          // Peak height [m].
+    double const y_0 = 50.0;          // Initial bedrock elevation (x=0) [m].
+    
 
     // SURFACE MASS BALANCE.
     double const S_0 = 1.0;            // SMB at x = 0 [m/yr]. 0.7
     double const S_L = -1.4;           // SMB at x = L [m/yr].
     double const sigma_smb = 0.75;     // Sigma coord. at which decreases begins. []
-    double const x_acc = 250.0e3;       // Position at which accumulation starts decreasing [m].
-    double const x_end = 355.0e3;       // Position at which accumulation is minimum [m].
+    double const x_acc = 250.0e3;      // Position at which accumulation starts decreasing [m].
+    double const x_end = 355.0e3;      // Position at which accumulation is minimum [m].
 
     // THERMODYNAMICS.
     double const k = 2.0;              // Thermal conductivity of ice [W / m · ºC].
@@ -1018,7 +1018,7 @@ int main()
     double u2_dif;                          // Difference between analytical and numerical.
 
     // CALVING.
-    int const calv = 1;
+    int const calv = 0;
     double const m_dot = 30.0;              // Mean frontal ablation [m/yr]
 
 
@@ -1082,6 +1082,7 @@ int main()
     //ArrayXd A_s(n_s);                    // Rarte factor values for MISMIP exp.
     //ArrayXd t_s(n_s);                    // Time length for each step of A.
 
+    // MATRICES.
     MatrixXd u(3,n);                     // Matrix output.
 
     ArrayXXd theta(n,n_z);                 // Temperature field [K].
@@ -1101,6 +1102,7 @@ int main()
 
     // Implicit initialization.
     beta = ArrayXd::Constant(n, 5.0e3);             // [Pa yr / m]
+    u1   = ArrayXd::Constant(n, 1.0);               // [m / yr]
     
     // Viscosity from constant A value. u2 = 0 initialization.
     // 4.6416e-24, 2.1544e-24. [Pa^-3 s^-1] ==> [Pa^-3 yr^-1]
@@ -1123,10 +1125,10 @@ int main()
     auto begin = std::chrono::high_resolution_clock::now();
 
     // Handy definitions.
-    // Difference in surface mass balance between origigin at terminus.
+    // Difference in surface mass balance between origin at terminus.
     double delta_smb = S_0 - S_L;
 
-    // Initilize first iteration values.
+    // Initilize ice thickness and accumulation.
     for (int i=0; i<n; i++)
     {
         // Initial ice thickness H0.
@@ -1137,6 +1139,8 @@ int main()
         //S(i) = S_0; 
         
         // Spatially-dependent surface mass balance.
+        // Here it is referred to the dimensionless extent of the ice sheet (sigma).
+        /*
         if (sigma(i) < sigma_smb)
         {
             S(i) = S_0;
@@ -1145,6 +1149,7 @@ int main()
         {
             S(i) = S_0 + delta_smb * ( - pow( (sigma(i) - sigma_smb)/(1.0 - sigma_smb), 2) );
         }
+        */
         
     }
 
@@ -1169,13 +1174,102 @@ int main()
 
         // Update SMB considering new domain extension.
         S = f_acc(sigma, S, L, S_0, S_L, n, x_acc, x_end);
-
-        // Implicit velocity solver.
-        // Picard iteration for non-linear viscosity and beta.
             
         // Update basal friction with previous step velocity. Out of Picard iteration?
         tau_b    = beta * u1;
-        tau_b(0) = tau_b(1);    // Symmetry.
+        tau_b(0) = tau_b(1);    // Symmetry ice divide.
+
+
+        // TEST WITH VELOCITY SOLVER BEFORE CLCULATING FLUX!
+        // Implicit velocity solver.
+        // Picard iteration for non-linear viscosity and beta.
+        // Picard initialization.
+        error    = 1.0;
+        c_picard = 0;
+
+        while (error > picard_tol & c_picard < n_picard)
+        {
+            // Save previous iteration solution.
+            u1_old_1 = u1;
+
+            // Implicit solver.
+            u = vel_solver(u1, H, ds, ds_inv, n, visc, bed, rho, rho_w, g, L, \
+                           C_bed, t, u2_bc, beta, A, n_gln);
+
+            // Allocate variables.
+            u1    = u.row(0);
+            u2    = u.row(1);
+            D     = u(2,0);
+            u2_bc = u(2,1);
+
+            // Beta definition: tau_b = beta * u.
+            beta    = C_bed * pow(u1, m - 1.0);
+            beta(0) = beta(1);
+
+            // Current error (vector class required to compute norm). 
+            // Eq. 12 (De-Smedt et al., 2010).
+            c_u1_1 = u1 - u1_old_1;
+            u1_vec = u1;
+            error  = c_u1_1.norm() / u1_vec.norm();
+                
+            // New relaxed Picard iteration. Pattyn (2003). 
+            // Necessary to deal with the nonlinear velocity dependence
+            // in both viscosity and beta.
+            if (c_picard > 0)
+                {
+                    // Difference in iter i-2.
+                    c_u1_2   = u1_old_1 - u1_old_2;
+                    c_u1_dif = c_u1_1 - c_u1_2;
+                    
+                    omega = acos( c_u1_1.dot(c_u1_2) / \
+                                 ( c_u1_1.norm() * c_u1_2.norm() ) );
+                    
+
+                    // De Smedt et al. (2010). Eq. 10.
+                    if (omega <= omega_1 || c_u1_1.norm() == 0.0)
+                    {
+                        //mu = 2.5; // De Smedt.
+                        mu = 1.0; // To avoid negative velocities?
+                        //mu = 0.7;
+                    }
+                    else if (omega > omega_1 & omega < omega_2)
+                    {
+                        mu = 1.0; // De Smedt.
+                        //mu = 0.7;
+                    }
+                    else
+                    {
+                        mu = 0.5; // De Smedt.
+                        //mu = 0.7;
+                    }
+
+                    // New velocity guess based on updated omega.
+                    u1 = u1_old_1 + mu * c_u1_1.array();
+
+                    // Update beta with new u1.
+                    beta    = C_bed * pow(u1, m - 1.0);
+                    beta(0) = beta(1); // Symmetry
+
+                    // Update viscosity with new u2 field.
+                    for (int i=1; i<n-1; i++)
+                    {
+                        // Centred stencil.
+                        u2(i) = 0.5 * ( u1(i+1) - u1(i-1) );
+                    }
+                    u2(0)   = u1(1) - u1(0);
+                    u2(n-1) = u1(n-1) - u1(n-2);
+
+                    u2 = abs(u2) / (ds * L);
+                    visc = f_visc(u2, B, n_exp, eps, L, n);
+                    
+                }
+
+            // Update multistep variables.
+            u1_old_2 = u1_old_1;
+
+            // Number of iterations.
+            c_picard = c_picard + 1;
+        }
 
         // Flux definition. Staggered grid.
         for (int i=0; i<n-1; i++)
@@ -1189,16 +1283,21 @@ int main()
             q(n-1) = u1(n-1) * H(n-1);
         } 
         // Additional calving term (Christian et al., 2022).
+        // This seems ok, but there's something missing because our terminus 
+        // is too retreated!
         else if ( calv == 1 )
         {
             q(n-1) = ( u1(n-1) + m_dot ) * H(n-1);
         }
 
+        
+        /*
+        // Implicit velocity solver.
+        // Picard iteration for non-linear viscosity and beta.
         // Picard initialization.
         error    = 1.0;
         c_picard = 0;
 
-        // Picard iteration to solve nonlinearities.
         while (error > picard_tol & c_picard < n_picard)
         {
             // Save previous iteration solution.
@@ -1282,7 +1381,7 @@ int main()
             // Number of iterations.
             c_picard = c_picard + 1;
         }
-
+        */
 
         // CONSISTENCY CHECK.
         // Search for NaN values.
