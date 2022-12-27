@@ -24,7 +24,7 @@ from subprocess import Popen, PIPE, STDOUT
 
 # User defined directories.
 path_flowline = "/home/dmoreno/scr/git/flowline/flowline/"
-path_output   = "/home/dmoreno/c++/flowline/output/glacier_ews/q.after.solver/"
+path_output   = "/home/dmoreno/c++/flowline/output/glacier_ews/S_erf_n/n.1000/"
 
 
 # Create new directory if not existing. Make clean otherwise.
