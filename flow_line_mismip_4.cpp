@@ -400,13 +400,10 @@ ArrayXd f_acc(ArrayXd sigma, ArrayXd S, double L, double S_0, \
     else
     {
         // Error function from Christian et al. (2022)
-        //S = S_0 + 0.5 * delta_smb * ( 1.0 + erf((x - x_end) / x_sca) );
-
         for (int i=0; i<n; i++)
         {
             S(i) = S_0 + 0.5 * delta_smb * ( 1.0 + erf((x(i) - x_end) / x_sca) );
         }
-
 
         // Piecewise function.
         /*
@@ -486,14 +483,20 @@ ArrayXd f_q(ArrayXd u1, ArrayXd H, double H_f,double t, double t_eq, double D, \
             //q(n-1) = ( u1(n-2) + ( H_f / H(n-1) ) * m_dot ) * H(n-1);
 
             // Ice flux at GL computed on the ice thickness grid. Schoof (2007).
-            //q(n-1) = H(n-1) * 0.5 * ( u1(n-1) + u1(n-2) + ( H_f / H(n-1) ) * m_dot );
+            q(n-1) = H(n-1) * 0.5 * ( u1(n-1) + u1(n-2) + ( H_f / H(n-1) ) * m_dot );
 
             // Previous grid points as the grid is staggered. Correct extension!!
             // It does not go beyond peak if n = 1000.
-            q(n-1) = H(n-1) * 0.5 * ( u1(n-2) + u1(n-3) + ( H_f / H(n-1) ) * m_dot );
+            //q(n-1) = H(n-1) * 0.5 * ( u1(n-2) + u1(n-3) + ( H_f / H(n-1) ) * m_dot );
 
             // GL too advanced for n = 500.
             //q(n-1) = H_f * 0.5 * ( u1(n-1) + u1(n-2) + m_dot );
+
+            // GL too advanced for n = 500.
+            //q(n-1) = H_f * ( u1(n-1) + m_dot );
+
+            // GL too advanced for n = 500.
+            q(n-1) = H_f * ( u1(n-2) + m_dot );
         }
     }
 
@@ -1103,7 +1106,7 @@ int main()
 
 
     // SIMULATION PARAMETERS.
-    int const n   = 1000;                             // Number of horizontal points 250, 500, 1000, 1500
+    int const n   = 200;                             // Number of horizontal points 250, 500, 1000, 1500
     int const n_z = 10;                              // Number vertical layers. 10, 20.
     
     double const ds     = 1.0 / n;                   // Normalized spatial resolution.
