@@ -69,7 +69,6 @@ def stochastic_noise(t, tf, dt, sigm_ocn, sigm_smb, tau_ocn, tau_smb):
     phase_half = 1j * 2.0 * np.pi * rand(l_freq)
     phase_all  = 1j * 2.0 * np.pi * rand(N)
 
-
     # Prepare variable.
     phase = np.zeros(N, dtype='complex_')
 
@@ -99,7 +98,7 @@ def stochastic_noise(t, tf, dt, sigm_ocn, sigm_smb, tau_ocn, tau_smb):
 
 
 # Options.
-save_nc   = False
+save_nc   = True
 overwrite = True
 
 # Path and file name to write solution.
@@ -158,15 +157,16 @@ if save_nc == True:
 
     # A netCDF group is basically a directory or folder within the netCDF dataset. 
     # This allows you to organize data as you would in a unix file system.
-    noise_grp = f.createGroup('Noise')
+    #noise_grp = f.createGroup('Noise')
 
     # Dimensions. If unlimitted: noise_ocn_grp.createDimension('time', None)
-    noise_grp.createDimension('time', N)
+    #noise_grp.createDimension('time', N)
+    f.createDimension('time', N)
 
     # Create variables. Ex: tempgrp.createVariable('Noise_ocn', 'f4', ('time', 'lon', 'lat', 'z')).
-    time = noise_grp.createVariable('Time', np.float64, ('time'))
-    noise_ocn_nc = noise_grp.createVariable('Noise_ocn', np.float64, ('time'))
-    noise_smb_nc = noise_grp.createVariable('Noise_smb', np.float64, ('time'))
+    time = f.createVariable('Time', np.float64, ('time'))
+    noise_ocn_nc = f.createVariable('Noise_ocn', np.float64, ('time'))
+    noise_smb_nc = f.createVariable('Noise_smb', np.float64, ('time'))
 
     # Pass data into variables. Just real part of complex noise values.
     time[:] = t

@@ -24,7 +24,8 @@ from subprocess import Popen, PIPE, STDOUT
 
 # User defined directories.
 path_flowline = "/home/dmoreno/scr/git/flowline/flowline/"
-path_output   = "/home/dmoreno/c++/flowline/output/glacier_ews/S_erf_H_f_n-2/n.0200/"
+path_output   = "/home/dmoreno/c++/flowline/output/glacier_ews/test/"
+path_input    = "/home/dmoreno/c++/flowline/output/glacier_ews/"
 
 
 # Create new directory if not existing. Make clean otherwise.
@@ -52,6 +53,8 @@ else:
 # Copy main script and write_nc to the output folder for compilation therein.
 shutil.copyfile(path_flowline+'flow_line_mismip_4.cpp', path_output+'flow_line_mismip_4.cpp')
 shutil.copyfile(path_flowline+'write_nc.cpp', path_output+'write_nc.cpp')
+shutil.copyfile(path_flowline+'read_nc.cpp', path_output+'read_nc.cpp')
+shutil.copyfile(path_input+'noise.nc', path_output+'noise.nc')
 
 
 # Compilation configuration. ['local', 'iceberg', 'brigit']
@@ -108,6 +111,7 @@ if config == 'brigit':
     #print('cmd_run = ', cmd_run)
 else:
     cmd_run = path_output+"flow_line_mismip_4.o &"
+
 
 # Run flowline model.
 p = subprocess.Popen(cmd_run, shell=True, \
