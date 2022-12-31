@@ -11,7 +11,7 @@ using namespace Eigen;
 using namespace std;
 
 #include "write_nc.cpp"
-#include "read_nc.cpp"
+//#include "read_nc.cpp"
 
 // TEST BRANCH UNIT_YEARS.
 
@@ -1129,6 +1129,9 @@ int main()
     double const dt_max = 2.0;                       // Maximum time step [yr]. 
     double const rel = 0.7;                          // Relaxation between interations [0,1]. 0.5
     
+    // INPUT DEFINITIONS.   
+    int N = 10000;                                   // Number of time points in BC (input from noise.nc in glacier_ews).
+
     // OUTPUT DEFINITIONS.
     int const t_n = 100;                             // Number of output frames. 30.
 
@@ -1213,7 +1216,8 @@ int main()
     ArrayXd u1_old_2(n);  
     ArrayXd u2_0_vec(n);                 // Ranged sampled of u2_0 for a certain iteration.
     ArrayXd u2_dif_vec(n);               // Difference with analytical BC.
-    ArrayXd noise_ocn(n);
+    
+    ArrayXd noise_ocn(N);
     
     // Vectors to compute norm.
     VectorXd u1_vec(n); 
@@ -1268,13 +1272,13 @@ int main()
     cout << " \n n = " << n;
     cout << " \n tf = " << tf;
 
+    // Call nc read function.
+    noise_ocn = f_nc_read(N);
+    cout << "\n noise_ocn = " << noise_ocn;
 
     // Call nc write function.
     f_nc(n, n_z);
 
-    // Call nc read function.
-    cout << "\n up to here";
-    //f_nc_read(n);
 
     // Wall time for computational speed.
     auto begin = std::chrono::high_resolution_clock::now();

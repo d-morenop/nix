@@ -11,14 +11,14 @@
 /* Handle errors by printing an error message and exiting with a
  * non-zero status. */
 //#define ERR_READ(e) {printf("Error: %s\n", nc_strerror(e)); return 2;}
- 
+
 int f_nc_read(int N)
 {
     /* This will be the netCDF ID for the file and data variable. */
     int ncid, varid;
 
     //ArrayXd noise_ocn(N);
-    double data_in[N];
+    double noise_ocn(N);
 
     /* Loop indexes, and error handling. */
     int retval;
@@ -33,7 +33,7 @@ int f_nc_read(int N)
         ERR(retval);
 
     /* Read the data. */
-    if ((retval = nc_get_var_double(ncid, varid, &data_in[0])))
+    if ((retval = nc_get_var_double(ncid, varid, &noise_ocn(0))))
         ERR(retval);
 
     /* Close the file, freeing all resources. */

@@ -9,6 +9,9 @@
 /* This is the name of the data file we will create. */
 //#define FILE_NAME "output/mismip/exp3/exp3_n.250/exp3_n.250.nc"
 #define FILE_NAME "/home/dmoreno/c++/flowline/output/glacier_ews/test/flowline.nc"
+#define FILE_NAME_READ "/home/dmoreno/c++/flowline/output/glacier_ews/test/noise.nc"
+
+
 
 // path: /home/dmoren07/c++/flowline/output/mismip/exp3/exp3_n.250
 
@@ -417,4 +420,34 @@ int f_write(int c, ArrayXd u1, ArrayXd u2, ArrayXd H, ArrayXd visc, ArrayXd S, \
     ERR(retval);
 
     return c;
+}
+
+
+// Function to read nc file and load it to vairabe.
+ArrayXd f_nc_read(int N)
+{
+    /* This will be the netCDF ID for the file and data variable. */
+    int ncid, varid;
+
+    //ArrayXd noise_ocn(N);
+    ArrayXd data_in(N);
+
+    /* Loop indexes, and error handling. */
+    int retval;
+
+    // Avoid int function.
+    nc_open(FILE_NAME_READ, NC_NOWRITE, &ncid);
+
+    /* Get the varid of the data variable, based on its name. */
+    nc_inq_varid(ncid, "Noise_ocn", &varid);
+
+    /* Read the data. */
+    nc_get_var_double(ncid, varid, &data_in(0));
+
+    /* Close the file, freeing all resources. */
+    nc_close(ncid);
+
+    printf("*** SUCCESS reading example file %s!\n", FILE_NAME_READ);
+    
+    return data_in;
 }

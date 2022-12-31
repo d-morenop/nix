@@ -98,7 +98,8 @@ def stochastic_noise(t, tf, dt, sigm_ocn, sigm_smb, tau_ocn, tau_smb):
 
 
 # Options.
-save_nc   = True
+read_nc   = True
+save_nc   = False
 overwrite = True
 
 # Path and file name to write solution.
@@ -190,6 +191,17 @@ if save_nc == True:
 
     # Close dataset.
     f.close()
+
+# Read nc file to check.
+if read_nc == True:
+
+    # Open nc file.
+    g = nc4.Dataset(path+file_name,'r')
+    
+    # Read variables.
+    noise_ocn = g.variables["Noise_ocn"][:]
+    noise_smb = g.variables["Noise_smb"][:]
+
 
 
 
