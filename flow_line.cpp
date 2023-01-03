@@ -10,7 +10,7 @@
 using namespace Eigen;
 using namespace std;
 
-#include "write_nc.cpp"
+#include "read-write_nc.cpp"
 //#include "read_nc.cpp"
 
 // TEST BRANCH UNIT_YEARS.
