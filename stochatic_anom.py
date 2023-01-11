@@ -8,10 +8,10 @@ Created on Wed Dec 28 12:01:22 2022
 This scripts creates frontal ablation and SMB time series with varying degrees
 and types of persistence. Based on Christian et al. (2022). Assumed that dt = 1 year.
 
-The idea is to save the data in a external file that will be read by the flowline
-as a boundary condition. 
+The idea is to save the data in a external file that will be read by the flowline 
+model as a boundary condition. 
 
-Note: flow line time step may be shorter than 1 year (adaptative), we can further 
+Note: the flowline time step may be shorter than 1 year (adaptative), we can further 
 interpolate as the file is read or simpy take the same values within a given time step. 
 
 Netcdf documentation for python:
@@ -81,7 +81,7 @@ def stochastic_noise(t, tf, dt, sigm_ocn, sigm_smb, tau_ocn, tau_smb):
     P_r2_smb = np.concatenate( [P_smb, np.flip( P_smb[0:int(np.floor(0.5*N))] ) ] )
     
     # Include identical random phase.
-    # Christian et al. (2022) uses hal, why?! The time series then has a minimum
+    # Christian et al. (2022) uses half, why?! The time series then has a minimum
     # halfway on its lenght.
     #P_rand_ocn = P_r2_ocn * np.exp(phase)
     P_rand_ocn = P_r2_ocn * np.exp(phase_all)
@@ -116,6 +116,7 @@ t  = dt * np.linspace(0, N, N)
 tau_ocn = 10.0   # [yr]
 tau_smb = 1.5    # [yr]
 
+# Maximum variability in frontal ablation and SMB (standard deviation).
 sigm_ocn = 12.0  # [m/yr]
 sigm_smb = 0.4   # [m/yr]
 

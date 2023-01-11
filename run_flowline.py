@@ -24,7 +24,7 @@ from subprocess import Popen, PIPE, STDOUT
 
 # User defined directories.
 path_flowline = "/home/dmoreno/scr/git/flowline/flowline/"
-path_output   = "/home/dmoreno/c++/flowline/output/glacier_ews/test/"
+path_output   = "/home/dmoreno/c++/flowline/output/glacier_ews/test.smb/"
 path_input    = "/home/dmoreno/c++/flowline/output/glacier_ews/"
 
 
@@ -51,9 +51,8 @@ else:
     
 
 # Copy main script and write_nc to the output folder for compilation therein.
-shutil.copyfile(path_flowline+'flow_line_mismip_4.cpp', path_output+'flow_line_mismip_4.cpp')
-shutil.copyfile(path_flowline+'write_nc.cpp', path_output+'write_nc.cpp')
-shutil.copyfile(path_flowline+'read_nc.cpp', path_output+'read_nc.cpp')
+shutil.copyfile(path_flowline+'flow_line.cpp', path_output+'flow_line.cpp')
+shutil.copyfile(path_flowline+'read-write_nc.cpp', path_output+'read-write_nc.cpp')
 shutil.copyfile(path_input+'noise.nc', path_output+'noise.nc')
 
 
@@ -68,12 +67,12 @@ if config == 'local':
 elif config == 'foehn':
     
     # Compiling command. -std=c++17
-    cmd = "g++ -std=c++11 -I /usr/include/eigen3/ -o "+path_output+"flow_line_mismip_4.o "+path_output+"flow_line_mismip_4.cpp -lnetcdf"
+    cmd = "g++ -std=c++11 -I /usr/include/eigen3/ -o "+path_output+"flow_line.o "+path_output+"flow_line.cpp -lnetcdf"
 
 elif config == 'brigit':
     
     # Compiling command.
-    cmd = "g++ -std=c++11 -I/opt/ohpc/pub/libs/gnu8/impi/netcdf/4.6.3/include/ -I/usr/include/eigen3/ -L/opt/ohpc/pub/libs/gnu8/impi/netcdf/4.6.3/lib/ -lnetcdf -o "+path_output+"flow_line_mismip_4.o "+path_output+"flow_line_mismip_4.cpp"
+    cmd = "g++ -std=c++11 -I/opt/ohpc/pub/libs/gnu8/impi/netcdf/4.6.3/include/ -I/usr/include/eigen3/ -L/opt/ohpc/pub/libs/gnu8/impi/netcdf/4.6.3/lib/ -lnetcdf -o "+path_output+"flow_line.o "+path_output+"flow_line.cpp"
     
     # In Brigit, we need a submit.sh file to send job to the queue.
     shutil.copyfile(path_flowline+'submit.sh', path_output+'submit.sh')
@@ -110,7 +109,7 @@ if config == 'brigit':
     cmd_run = "sbatch submit.sh"
     #print('cmd_run = ', cmd_run)
 else:
-    cmd_run = path_output+"flow_line_mismip_4.o &"
+    cmd_run = path_output+"flow_line.o &"
 
 
 # Run flowline model.

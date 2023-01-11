@@ -8,7 +8,7 @@
 // NETCDF PARAMETERS.
 /* This is the name of the data file we will create. */
 //#define FILE_NAME "output/mismip/exp3/exp3_n.250/exp3_n.250.nc"
-#define FILE_NAME "/home/dmoreno/c++/flowline/output/glacier_ews/test/flowline.nc"
+#define FILE_NAME "/home/dmoreno/c++/flowline/output/glacier_ews/test.smb/flowline.nc"
 #define FILE_NAME_READ "/home/dmoreno/c++/flowline/output/glacier_ews/test/noise.nc"
 
 
@@ -424,13 +424,14 @@ int f_write(int c, ArrayXd u1, ArrayXd u2, ArrayXd H, ArrayXd visc, ArrayXd S, \
 
 
 // Function to read nc file and load it to vairabe.
-ArrayXd f_nc_read(int N)
+ArrayXXd f_nc_read(int N)
 {
     /* This will be the netCDF ID for the file and data variable. */
-    int ncid, varid;
+    int ncid, varid_ocn, varid_smb;
 
     //ArrayXd noise_ocn(N);
-    ArrayXd data_in(N);
+    //ArrayXd data_in(N);
+    ArrayXXd data_in(2,N);
 
     /* Loop indexes, and error handling. */
     int retval;
@@ -439,10 +440,13 @@ ArrayXd f_nc_read(int N)
     nc_open(FILE_NAME_READ, NC_NOWRITE, &ncid);
 
     /* Get the varid of the data variable, based on its name. */
-    nc_inq_varid(ncid, "Noise_ocn", &varid);
+    nc_inq_varid(ncid, "Noise_ocn", &varid_ocn);
+    nc_inq_varid(ncid, "Noise_smb", &varid_smb);
 
     /* Read the data. */
-    nc_get_var_double(ncid, varid, &data_in(0));
+    //nc_get_var_double(ncid, varid, &data_in(0));
+    nc_get_var_double(ncid, varid_ocn, &data_in(0,0));
+    nc_get_var_double(ncid, varid_smb, &data_in(1,0));
 
     /* Close the file, freeing all resources. */
     nc_close(ncid);

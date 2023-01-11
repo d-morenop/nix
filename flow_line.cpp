@@ -376,17 +376,47 @@ ArrayXd f_bed(double L, int n, int experiment, \
 }
 
 
+Array2d f_bc(ArrayXXd noise, ArrayXd t_vec, double dt_noise, \
+             int N, double t, double dt, int n)
+{
+    Array2d noise_now;
+    int idx;
+
+    for (int i=0; i<N-1; i++)
+    {
+        // Time frame closest to current flowline time since
+        // dt_flowline != dt_stochastic.
+        // This can be further imporoved by including interpolation.
+        if ( abs(t_vec(i) - t) < abs(t_vec(i+1) - t) )
+        {
+            // Save current index for next calls.
+            idx = i;
+
+            // Load stochastic term given current time.
+            noise_now(0) = noise(0,i);              // Ocean.
+            noise_now(1) = noise(1,i);              // SMB.
+
+            // Exit loop if condition is met.
+            break;
+        }
+    }
+
+    return noise_now;
+}
+
+
 // SMB spatial distribution depends on the position of the ice.
 // It does not follow the ice sheet, but rather there's a certain 
 // value for each position x.
-ArrayXd f_acc(ArrayXd sigma, ArrayXd S, double L, double S_0, \
-              double S_L, double x_sca, int n, double x_acc, \
-              double x_end, double t, double t_eq)
+
+ArrayXd f_acc(ArrayXd sigma, double L, ArrayXd S, double S_0, \
+              double x_mid, double x_sca, double x_varmid, \
+              double x_varsca, double dlta_smb, double var_mult, \
+              double smb_stoch, double t, double t_eq, int n)
 {
     // Variables
     ArrayXd x(n); 
-    //double delta_smb = S_0 - S_L;
-    double delta_smb = - 4.0;
+    double var_pattern;
 
     // Horizontal dimension to define SBM.
     x = L * sigma;
@@ -397,46 +427,34 @@ ArrayXd f_acc(ArrayXd sigma, ArrayXd S, double L, double S_0, \
         S = ArrayXd::Constant(n, S_0);
     }
     
-    // After equilibration, spatially dependent.
+    // After equilibration, spatially dependent and potential stochastic term.
     else
     {
         // Error function from Christian et al. (2022)
         for (int i=0; i<n; i++)
         {
-            S(i) = S_0 + 0.5 * delta_smb * ( 1.0 + erf((x(i) - x_end) / x_sca) );
-        }
+            // No stochastic variability.
+            //S(i) = S_0 + 0.5 * dlta_smb * ( 1.0 + erf((x(i) - x_mid) / x_sca) );
 
-        // Piecewise function.
-        /*
-        for (int i=0; i<n; i++)
-        {
-            // First part.
-            if ( x(i) <= x_acc )
-            {
-                S(i) = S_0;
-            }
+            // SMB stochastic variability sigmoid.
+            var_pattern = var_mult + ( 1.0 - var_mult ) * 0.5 + \
+                          ( 1.0 + erf((x(i) - x_varmid) / x_varsca) );
             
-            // Second.
-            else if ( x(i) > x_acc && x(i) <= x_end )
-            {
-                // Parabolic decrease of accumulation from S_0 to S_L at x_end.
-                S(i) = S_0 + delta_smb * ( - pow( (x(i) - x_acc)/(x_end - x_acc), 2) );
-            }
+            // Total SMB: stochastic sigmoid (smb_stoch * var_pattern) + deterministic sigmoid.
+            S(i) = smb_stoch * var_pattern + S_0 + \
+                   0.5 * dlta_smb * ( 1.0 + erf((x(i) - x_mid) / x_sca) );
         }
-        */
     }
     
-
     return S;
 }
 
 
-ArrayXd f_q(ArrayXd u1, ArrayXd H, double H_f,double t, double t_eq, double D, \
+ArrayXd f_q(ArrayXd u1, ArrayXd H, double H_f, double t, double t_eq, double D, \
                double rho, double rho_w, double m_dot, int calving_meth, int n)
 {
     // Local variables.
     ArrayXd q(n);
-
 
     // Flux defined on velocity grid. Staggered grid.
     for (int i=0; i<n-1; i++)
@@ -468,7 +486,8 @@ ArrayXd f_q(ArrayXd u1, ArrayXd H, double H_f,double t, double t_eq, double D, \
             // Schoof (2007).
             //q(n-1) = H(n-1) * 0.5 * ( u1(n-1) + u1(n-2) );
         }
-        // Calving for t > t_eq.
+        
+        // Calving after equilibration.
         else
         {
             // Prefactor to account for thickness difference in last grid point.
@@ -484,7 +503,7 @@ ArrayXd f_q(ArrayXd u1, ArrayXd H, double H_f,double t, double t_eq, double D, \
             //q(n-1) = ( u1(n-2) + ( H_f / H(n-1) ) * m_dot ) * H(n-1);
 
             // Ice flux at GL computed on the ice thickness grid. Schoof (2007).
-            q(n-1) = H(n-1) * 0.5 * ( u1(n-1) + u1(n-2) + ( H_f / H(n-1) ) * m_dot );
+            //q(n-1) = H(n-1) * 0.5 * ( u1(n-1) + u1(n-2) + ( H_f / H(n-1) ) * m_dot );
 
             // Previous grid points as the grid is staggered. Correct extension!!
             // It does not go beyond peak if n = 1000.
@@ -494,10 +513,10 @@ ArrayXd f_q(ArrayXd u1, ArrayXd H, double H_f,double t, double t_eq, double D, \
             //q(n-1) = H_f * 0.5 * ( u1(n-1) + u1(n-2) + m_dot );
 
             // GL too advanced for n = 500.
-            //q(n-1) = H_f * ( u1(n-1) + m_dot );
+            q(n-1) = H_f * ( u1(n-1) + m_dot );
 
             // GL too advanced for n = 500.
-            q(n-1) = H_f * ( u1(n-2) + m_dot );
+            //q(n-1) = H_f * ( u1(n-2) + m_dot );
         }
     }
 
@@ -1089,7 +1108,6 @@ int main()
 
     // GROUNDING LINE.
     double L = 50.0e3;                              // Grounding line position [m] (479.1e3)
-    //double L_new;                                   // New GL position.
     double dL_dt;                                   // GL migration rate [m/yr]. 
     int const dL_dt_num_opt = 1;                    // GL migration numerator discretization opt.
     int const dL_dt_den_opt = 1;                    // GL migration denominator discretization opt.
@@ -1107,7 +1125,7 @@ int main()
 
 
     // SIMULATION PARAMETERS.
-    int const n   = 200;                             // Number of horizontal points 250, 500, 1000, 1500
+    int const n   = 275;                             // Number of horizontal points 250, 500, 1000, 1500
     int const n_z = 10;                              // Number vertical layers. 10, 20.
     
     double const ds     = 1.0 / n;                   // Normalized spatial resolution.
@@ -1116,7 +1134,7 @@ int main()
     double const dz_inv = n_z;
 
     double const t0   = 0.0;                         // Starting time [yr].
-    double const tf   = 1.0e3;                       // 1.0e4, Ending time [yr]. 1.0e4.
+    double const tf   = 5.0e4;                       // 1.0e4, Ending time [yr]. 1.0e4.
     double t;                                        // Time variable [yr].
 
     // TIME STEPING. Quite sensitive (use fixed dt in case of doubt).
@@ -1130,7 +1148,8 @@ int main()
     double const rel = 0.7;                          // Relaxation between interations [0,1]. 0.5
     
     // INPUT DEFINITIONS.   
-    int N = 10000;                                   // Number of time points in BC (input from noise.nc in glacier_ews).
+    int const N = 10000;                                   // Number of time points in BC (input from noise.nc in glacier_ews).
+    double const dt_noise = 1.0;                           // Assumed time step in stochastic_anom.py 
 
     // OUTPUT DEFINITIONS.
     int const t_n = 100;                             // Number of output frames. 30.
@@ -1143,14 +1162,17 @@ int main()
     double const y_0 = 70.0;                         // Initial bedrock elevation (x=0) [m].
     
     // SURFACE MASS BALANCE.
-    // For S_0 = 1.4, the x_gl goes beyond the peak. Christian et al. use 0.7 to get the same x_gl.
-    double const S_0 = 0.7;                          // SMB at x = 0     [m/yr]. 0.8
-    double const S_L = 1.4;                          // SMB at x = x_end [m/yr]. -1.4
-    double const delta_smb = -4.0;                   // Difference between interior and terminus SMB [m/yr]. 
-    double const sigma_smb = 0.75;                   // Sigma coord. at which decreases begins. []
-    double const x_acc = 300.0e3;                    // Position at which accumulation starts decreasing [m]. 300.0, 355.0
-    double const x_end = 365.0e3;                    // Position of middle of SMB sigmoid  [m]. 365.0, 375.0
-    double const x_sca = 4.0e4;                      // Length scale of area where SMB changing. [m]
+    double const S_0      = 0.7;                     // SMB at x = 0 (for equilibration) [m/yr].
+    double const dlta_smb = -4.0;                    // Difference between interior and terminus SMB [m/yr]. 
+    double const x_acc    = 300.0e3;                 // Position at which accumulation starts decreasing [m]. 300.0, 355.0
+    double const x_mid    = 3.5e5;                   // Position of middle of SMB sigmoid  [m]. 365.0, 375.0
+    double const x_sca    = 4.0e4;                   // Length scale of area where SMB changing. [m]
+    double const x_varmid = 2.0e5;                   // Position of middle of SMB variability sigmoid [m].
+    double const x_varsca = 8.0e4;                   // Length scale of area where SMB varaibility changing. [m]
+    double const var_mult = 0.25;                    // Factor by which inland variability is less than max.
+    double m_stoch;
+    double smb_stoch;
+
 
     // THERMODYNAMICS.
     int const thermodynamics = 0;                    // Apply thermodynamic solver at each time step.
@@ -1217,7 +1239,10 @@ int main()
     ArrayXd u2_0_vec(n);                 // Ranged sampled of u2_0 for a certain iteration.
     ArrayXd u2_dif_vec(n);               // Difference with analytical BC.
     
-    ArrayXd noise_ocn(N);
+    // Stochasticmatrices and vectors.
+    ArrayXXd noise(2,N);                            // Matrix to allocate stochastic BC.
+    Array2d noise_now;                              // Two-entry vector with current stochastic noise.
+    ArrayXd t_vec = ArrayXd::LinSpaced(N, 0.0, N);  // Time vector with dt_noise time step.
     
     // Vectors to compute norm.
     VectorXd u1_vec(n); 
@@ -1273,8 +1298,8 @@ int main()
     cout << " \n tf = " << tf;
 
     // Call nc read function.
-    noise_ocn = f_nc_read(N);
-    cout << "\n noise_ocn = " << noise_ocn;
+    noise = f_nc_read(N);
+    //cout << "\n noise_ocn = " << noise;
 
     // Call nc write function.
     f_nc(n, n_z);
@@ -1292,20 +1317,7 @@ int main()
         // Initial ice thickness H0 [m].
         H(i) = 100.0;         
         //S(i) = S_0; 
-        
-        // Spatially-dependent surface mass balance.
-        // Here it is referred to the dimensionless extent of the ice sheet (sigma).
-        /*
-        if (sigma(i) < sigma_smb)
-        {
-            S(i) = S_0;
-        }
-        else
-        {
-            S(i) = S_0 + delta_smb * ( - pow( (sigma(i) - sigma_smb)/(1.0 - sigma_smb), 2) );
-        }
-        */
-        
+
     }
 
    
@@ -1325,14 +1337,21 @@ int main()
         // Update bedrock with new domain extension L.
         bed = f_bed(L, n, experiment, y_0, y_p, x_1, x_2);
 
-        // Update SMB considering new domain extension.
-        S = f_acc(sigma, S, L, S_0, S_L, x_sca, n, x_acc, x_end, t, t_eq);
+        // Update time-dependent boundary conditions after equilibration.
+        // Christian's spin-up also considers stochastic anmalies?
+        noise_now = f_bc(noise, t_vec, dt_noise, N, t, dt, n);
+        m_stoch   = noise_now(0);
+        smb_stoch = noise_now(1);
+
+        // Update SMB considering new domain extension and current stochastic term.
+        S = f_acc(sigma, L, S, S_0, x_mid, x_sca, x_varmid, \
+                  x_varsca, dlta_smb, var_mult, smb_stoch, t, t_eq , n);
+
             
         // Update basal friction with previous step velocity. Out of Picard iteration?
         tau_b    = beta * u1;
         tau_b(0) = tau_b(1);    // Symmetry ice divide. tau_b(0) = tau_b(1); 
 
-        
         // Picard initialization.
         error    = 1.0;
         c_picard = 0;
@@ -1425,11 +1444,10 @@ int main()
 
         // Ice flux calcultion. Flotation thickness H_f.
         H_f = D * ( rho_w / rho );
-        q   = f_q(u1, H, H_f, t, t_eq, D, rho, rho_w, m_dot, calving_meth, n);
+        q   = f_q(u1, H, H_f, t, t_eq, D, rho, rho_w, m_stoch, calving_meth, n);
 
         
-        // CONSISTENCY CHECK.
-        // Search for NaN values.
+        // CONSISTENCY CHECK. Search for NaN values.
         // Count number of true positions in u1.isnan().
         if ( u1.isNaN().count() != 0 )
         {
@@ -1454,7 +1472,6 @@ int main()
         // Update grounding line position with new velocity field.
         L_out = f_L(H, q, S, bed, dt, L, ds, n, rho, rho_w, \
                     dL_dt_num_opt, dL_dt_den_opt);
-        
         L     = L_out(0);
         dL_dt = L_out(1);
 
@@ -1494,7 +1511,6 @@ int main()
         // Update timestep and current time.
         dt_out = f_dt(error, picard_tol, dt_meth, t, dt, \
                       t_eq, dt_min, dt_max, dt_CFL, rel);
-
         t  = dt_out(0);
         dt = dt_out(1);
 
