@@ -8,8 +8,8 @@
 // NETCDF PARAMETERS.
 /* This is the name of the data file we will create. */
 //#define FILE_NAME "output/mismip/exp3/exp3_n.250/exp3_n.250.nc"
-#define FILE_NAME "/home/dmoreno/c++/flowline/output/glacier_ews/test.smb/flowline.nc"
-#define FILE_NAME_READ "/home/dmoreno/c++/flowline/output/glacier_ews/test/noise.nc"
+#define FILE_NAME "/home/dmoreno/c++/flowline/output/glacier_ews/n.350.smb_sigm.ocn.12.0_H_mean/flowline.nc"
+#define FILE_NAME_READ "/home/dmoreno/c++/flowline/output/glacier_ews/noise_sigm_ocn.12.0.nc"
 
 
 
@@ -49,12 +49,15 @@
 #define C_BED_NAME "C_bed"
 #define U2_DIF_VEC_NAME "u2_dif_vec"
 #define U2_0_VEC_NAME "u2_0_vec"
+#define M_STOCH_NAME "m_stoch"
+#define SMB_STOCH_NAME "smb_stoch"
 #define UNITS "units"
  
 /* For the units attributes. */
 #define H_UNITS "m"
 #define X_UNITS "m"
 #define Z_UNITS "m"
+#define T_UNITS "yr"
 #define U1_UNITS "m/yr"
 #define U2_UNITS "1/yr"
 #define VISC_UNITS "Pa s"
@@ -79,6 +82,8 @@
 #define C_BED_UNITS "Pa m^-1/3 yr^1/3"
 #define U2_DIF_VEC_UNITS "1/yr"
 #define U2_0_VEC_UNITS "1/yr"
+#define M_STOCH_UNITS "m/yr"
+#define SMB_STOCH_UNITS "m/yr"
 
 /* Handle errors by printing an error message and exiting with a
  * non-zero status. */
@@ -95,7 +100,8 @@ int ncid, x_dimid, z_dimid, time_dimid;
 int x_varid, z_varid, u1_varid, u2_varid, H_varid, visc_varid, a_varid, s_varid, \
     tau_varid, beta_varid, lmbd_varid, taud_varid, b_varid, L_varid, dL_dt_varid, dt_varid, \
     c_pic_varid, t_varid, mu_varid, omega_varid, u2_bc_varid, u2_dif_varid, \
-    picard_error_varid, u2_0_vec_varid, u2_dif_vec_varid, theta_varid, C_bed_varid;
+    picard_error_varid, u2_0_vec_varid, u2_dif_vec_varid, theta_varid, C_bed_varid, \
+    m_stoch_varid, smb_stoch_varid;
 int dimids[NDIMS];
 
 // For the 0D plots (append the current length of domain L)
@@ -131,7 +137,6 @@ int f_nc(int N, int N_Z)
         ERR(retval);
     if ((retval = nc_def_dim(ncid, TIME_NAME, NC_UNLIMITED, &time_dimid)))
         ERR(retval);
-
         
     /* Define the coordinate variables. We will only define coordinate
         variables for x and z. Ordinarily we would need to provide
@@ -239,6 +244,12 @@ int f_nc(int N, int N_Z)
     if ((retval = nc_def_var(ncid, A_NAME, NC_DOUBLE, NDIMS_0,
                     dimids_0, &a_varid)))
         ERR(retval);
+    if ((retval = nc_def_var(ncid, M_STOCH_NAME, NC_DOUBLE, NDIMS_0,
+                    dimids_0, &m_stoch_varid)))
+        ERR(retval);
+    if ((retval = nc_def_var(ncid, SMB_STOCH_NAME, NC_DOUBLE, NDIMS_0,
+                    dimids_0, &smb_stoch_varid)))
+        ERR(retval);
 
     if ((retval = nc_def_var(ncid, THETA_NAME, NC_DOUBLE, NDIMS_Z,
                     dimids_z, &theta_varid)))
@@ -318,6 +329,12 @@ int f_nc(int N, int N_Z)
     if ((retval = nc_put_att_text(ncid, a_varid, UNITS,
                     strlen(A_UNITS), A_UNITS)))
         ERR(retval);
+    if ((retval = nc_put_att_text(ncid, m_stoch_varid, UNITS,
+                    strlen(M_STOCH_UNITS), M_STOCH_UNITS)))
+        ERR(retval);
+    if ((retval = nc_put_att_text(ncid, smb_stoch_varid, UNITS,
+                    strlen(SMB_STOCH_UNITS), SMB_STOCH_UNITS)))
+        ERR(retval);
 
     if ((retval = nc_put_att_text(ncid, theta_varid, UNITS,
                     strlen(THETA_UNITS), THETA_UNITS)))
@@ -359,7 +376,7 @@ int f_write(int c, ArrayXd u1, ArrayXd u2, ArrayXd H, ArrayXd visc, ArrayXd S, \
             ArrayXd C_bed, ArrayXd u2_dif_vec, ArrayXd u2_0_vec, \
             double L, double t, double u2_bc, double u2_dif, double error, \
             double dt, int c_picard, double mu, double omega, ArrayXXd theta, \
-            double A, double dL_dt)
+            double A, double dL_dt, double m_stoch, double smb_stoch)
 {
     start[0]   = c;
     start_0[0] = c;
@@ -414,6 +431,10 @@ int f_write(int c, ArrayXd u1, ArrayXd u2, ArrayXd H, ArrayXd visc, ArrayXd S, \
     ERR(retval);
     if ((retval = nc_put_vara_double(ncid, a_varid, start_0, cnt_0, &A)))
     ERR(retval);
+    if ((retval = nc_put_vara_double(ncid, m_stoch_varid, start_0, cnt_0, &m_stoch)))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid, smb_stoch_varid, start_0, cnt_0, &smb_stoch)))
+    ERR(retval);
 
     // 3D variables.
     if ((retval = nc_put_vara_double(ncid, theta_varid, start_z, cnt_z, &theta(0,0))))
@@ -429,9 +450,13 @@ ArrayXXd f_nc_read(int N)
     /* This will be the netCDF ID for the file and data variable. */
     int ncid, varid_ocn, varid_smb;
 
-    //ArrayXd noise_ocn(N);
-    //ArrayXd data_in(N);
-    ArrayXXd data_in(2,N);
+    // Number of variables.
+    int n_var = 2;
+
+    // Allocate variables.
+    ArrayXXd data(n_var,N);
+    ArrayXd noise_ocn(N);
+    ArrayXd noise_smb(N);
 
     /* Loop indexes, and error handling. */
     int retval;
@@ -444,14 +469,20 @@ ArrayXXd f_nc_read(int N)
     nc_inq_varid(ncid, "Noise_smb", &varid_smb);
 
     /* Read the data. */
-    //nc_get_var_double(ncid, varid, &data_in(0));
-    nc_get_var_double(ncid, varid_ocn, &data_in(0,0));
-    nc_get_var_double(ncid, varid_smb, &data_in(1,0));
+    nc_get_var_double(ncid, varid_ocn, &noise_ocn(0));
+    nc_get_var_double(ncid, varid_smb, &noise_smb(0));
+
+    // Allocate in output variable.
+    data.row(0) = noise_ocn;
+    data.row(1) = noise_smb;
+
+    //nc_get_var_double(ncid, varid_ocn, &data_in(0,0));
+    //nc_get_var_double(ncid, varid_smb, &data_in(1,0));
 
     /* Close the file, freeing all resources. */
     nc_close(ncid);
 
     printf("*** SUCCESS reading example file %s!\n", FILE_NAME_READ);
     
-    return data_in;
+    return data;
 }

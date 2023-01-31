@@ -381,25 +381,27 @@ Array2d f_bc(ArrayXXd noise, ArrayXd t_vec, double dt_noise, \
 {
     Array2d noise_now;
     int idx;
-
-    for (int i=0; i<N-1; i++)
+    
+    // This can be further improved by including interpolation.
+    for (int i=0; i<N-1; i++) 
     {
         // Time frame closest to current flowline time since
         // dt_flowline != dt_stochastic.
-        // This can be further imporoved by including interpolation.
         if ( abs(t_vec(i) - t) < abs(t_vec(i+1) - t) )
         {
-            // Save current index for next calls.
             idx = i;
-
-            // Load stochastic term given current time.
-            noise_now(0) = noise(0,i);              // Ocean.
-            noise_now(1) = noise(1,i);              // SMB.
-
-            // Exit loop if condition is met.
             break;
         }
+        
+        // Last index if condition is never met.
+        else
+        {
+            idx = N - 1;
+        }
     }
+
+    // Load stochastic term given current time index.
+    noise_now = noise.col(idx);
 
     return noise_now;
 }
@@ -409,25 +411,25 @@ Array2d f_bc(ArrayXXd noise, ArrayXd t_vec, double dt_noise, \
 // It does not follow the ice sheet, but rather there's a certain 
 // value for each position x.
 
-ArrayXd f_acc(ArrayXd sigma, double L, ArrayXd S, double S_0, \
+ArrayXd f_smb(ArrayXd sigma, double L, double S_0, \
               double x_mid, double x_sca, double x_varmid, \
               double x_varsca, double dlta_smb, double var_mult, \
-              double smb_stoch, double t, double t_eq, int n)
+              double smb_stoch, double t, double t_eq, int n, int stoch)
 {
     // Variables
-    ArrayXd x(n); 
-    double var_pattern;
+    ArrayXd x(n), S(n); 
+    double stoch_pattern, smb_determ;
 
     // Horizontal dimension to define SBM.
     x = L * sigma;
 
     // Start with constant accumulation value for smoothness.
-    if ( t < t_eq )
+    if ( t < t_eq || stoch == 0)
     {
         S = ArrayXd::Constant(n, S_0);
     }
     
-    // After equilibration, spatially dependent and potential stochastic term.
+    // After equilibration, spatially dependent and potentially stochastic term.
     else
     {
         // Error function from Christian et al. (2022)
@@ -437,12 +439,14 @@ ArrayXd f_acc(ArrayXd sigma, double L, ArrayXd S, double S_0, \
             //S(i) = S_0 + 0.5 * dlta_smb * ( 1.0 + erf((x(i) - x_mid) / x_sca) );
 
             // SMB stochastic variability sigmoid.
-            var_pattern = var_mult + ( 1.0 - var_mult ) * 0.5 + \
-                          ( 1.0 + erf((x(i) - x_varmid) / x_varsca) );
+            stoch_pattern = var_mult + ( 1.0 - var_mult ) * 0.5 * \
+                            ( 1.0 + erf((x(i) - x_varmid) / x_varsca) );
+
+            // Deterministic SMB sigmoid.
+            smb_determ = S_0 + 0.5 * dlta_smb * ( 1.0 + erf((x(i) - x_mid) / x_sca) );
             
-            // Total SMB: stochastic sigmoid (smb_stoch * var_pattern) + deterministic sigmoid.
-            S(i) = smb_stoch * var_pattern + S_0 + \
-                   0.5 * dlta_smb * ( 1.0 + erf((x(i) - x_mid) / x_sca) );
+            // Total SMB: stochastic sigmoid + deterministic sigmoid.
+            S(i) = smb_stoch * stoch_pattern + smb_determ;
         }
     }
     
@@ -455,6 +459,7 @@ ArrayXd f_q(ArrayXd u1, ArrayXd H, double H_f, double t, double t_eq, double D, 
 {
     // Local variables.
     ArrayXd q(n);
+    double H_mean;
 
     // Flux defined on velocity grid. Staggered grid.
     for (int i=0; i<n-1; i++)
@@ -494,8 +499,8 @@ ArrayXd f_q(ArrayXd u1, ArrayXd H, double H_f, double t, double t_eq, double D, 
             // GL is defined in the last velocity grid point.
             // H(n-1) is not precisely H_f so we need a correction factor.
             
-            // Successful MISMIP experiments but GL too retreated compared
-            // to Christian et al. (2022).
+            // Successful MISMIP experiments but GL 
+            //too retreated compared to Christian et al. (2022).
             //q(n-1) = ( u1(n-1) + ( H_f / H(n-1) ) * m_dot ) * H(n-1);
 
             // This seems to work as Christian et al. (2022).
@@ -503,20 +508,32 @@ ArrayXd f_q(ArrayXd u1, ArrayXd H, double H_f, double t, double t_eq, double D, 
             //q(n-1) = ( u1(n-2) + ( H_f / H(n-1) ) * m_dot ) * H(n-1);
 
             // Ice flux at GL computed on the ice thickness grid. Schoof (2007).
+            // Too retreated
             //q(n-1) = H(n-1) * 0.5 * ( u1(n-1) + u1(n-2) + ( H_f / H(n-1) ) * m_dot );
 
+            // Ice flux at GL computed on the ice thickness grid. Schoof (2007).
+            // Mean.
+            // Works for stochastic! A more retreatesd ice sheet.
+            //H_mean = 0.5 * ( H(n-1) + H_f ); 
+            //q(n-1) = H_mean * 0.5 * ( u1(n-1) + u1(n-2) + ( H_f / H_mean ) * m_dot );
+            //q(n-1) = H_mean * 0.5 * ( u1(n-1) + u1(n-2) + m_dot );
+
             // Previous grid points as the grid is staggered. Correct extension!!
-            // It does not go beyond peak if n = 1000.
-            //q(n-1) = H(n-1) * 0.5 * ( u1(n-2) + u1(n-3) + ( H_f / H(n-1) ) * m_dot );
+            // Good results for stochastic with n = 350.
+            q(n-1) = H(n-1) * 0.5 * ( u1(n-2) + u1(n-3) + ( H_f / H(n-1) ) * m_dot );
 
             // GL too advanced for n = 500.
             //q(n-1) = H_f * 0.5 * ( u1(n-1) + u1(n-2) + m_dot );
 
-            // GL too advanced for n = 500.
-            q(n-1) = H_f * ( u1(n-1) + m_dot );
+            // Slightly retreated.
+            //q(n-1) = H_mean * ( u1(n-1) + m_dot );
 
             // GL too advanced for n = 500.
             //q(n-1) = H_f * ( u1(n-2) + m_dot );
+
+            // H_n.
+            // Too retreated.
+            //q(n-1) = H(n-1) * ( u1(n-1) + m_dot );
         }
     }
 
@@ -716,22 +733,63 @@ ArrayXd f_dhdx(ArrayXd dH, ArrayXd b, int n)
 }
 
 
-ArrayXd f_visc(ArrayXd u2, double B, double n_exp, \
-                double eps, double L, int n)
+ArrayXd f_visc(ArrayXd u2, ArrayXXd theta, double theta_act, \
+               Array2d Q_act, Array2d A_0, double R, double B, double n_exp, \
+               double eps, double t_eq, int n, int thermodynamics)
 {
     ArrayXd u2_eps(n), visc(n); 
+    
 
-    // u2 comes from derivation of u1 (u2 > 0).
+    if (thermodynamics == 1 && t > t_eq)
+    {
+        ArrayXXd A(n,n_z), B(n,n_z);
+        ArrayXd B_bar(n);
 
-    // Regularitazion term to avoid division by 0. 
-    u2_eps = u2 + eps;
+        // Calculate temperature-dependent rate factor if thermodynamics is switched on.
+        // Arrhenius law A(T,p) equivalent to A(T').
+        // Eq. 4.15 and 6.54 (Greve and Blatter, 2009).
+        for (int i=1; i<n; i++)
+        {
+            for (int j=1; j<n_z; j++)
+            {
+                if ( theta(i,j) < theta_act )
+                {
+                    A(i,j) = A_0(0) * exp(- Q_act(0) / (R * theta(i,j)) );
+                }
+                else
+                {
+                    A(i,j) = A_0(1) * exp(- Q_act(1) / (R * theta(i,j)) );
+                }
 
-    // n_exp = (1-n)/n
-    visc = 0.5 * B * pow(u2_eps, n_exp);
-    //cout << "\n visc = " << visc * sec_year;
+            }
+        }
 
-    // Constant viscosity experiment:
-    //visc = ArrayXd::Constant(n, 0.5e17); // 1.0e15, 0.5e17
+        // Associated rate factor.
+        B = pow(A, ( -1 / n_gln ) );
+
+        // Vertical average from base to H.
+        B_bar = B.rowwise().mean();
+
+        // Regularitazion term to avoid division by 0. 
+        u2_eps = u2 + eps;
+
+        // Exponent n_exp = (1-n)/n
+        visc = 0.5 * B_bar * pow(u2_eps, n_exp);
+
+    }
+    
+    else
+    {
+        // Regularitazion term to avoid division by 0. 
+        u2_eps = u2 + eps;
+
+        // n_exp = (1-n)/n
+        visc = 0.5 * B * pow(u2_eps, n_exp);
+        //cout << "\n visc = " << visc * sec_year;
+
+        // Constant viscosity experiment:
+        //visc = ArrayXd::Constant(n, 0.5e17); // 1.0e15, 0.5e17
+    }
     
 	return visc;
 }	
@@ -746,6 +804,7 @@ ArrayXXd f_theta(ArrayXXd theta, ArrayXd u, ArrayXd H, ArrayXd tau_b, \
 
     double dx_inv;
  
+    // Evenly-spaced vertical grid.
     dz       = H / n_z;
     dz_2_inv = 1.0 / pow(dz, 2);
     dx_inv   = 1.0 / (ds * L);
@@ -765,9 +824,9 @@ ArrayXXd f_theta(ArrayXXd theta, ArrayXd u, ArrayXd H, ArrayXd tau_b, \
         and prescribed theta (-20ºC) at the surface.
         // We add friciton heat contribution Q_f_k.
         theta_now(i,0)     = theta_now(i,1) + dz(i) * ( G_k + Q_f_k(i) ); 
-        theta_now(i,n_z-1) = 248.0;
+        theta_now(i,n_z-1) = 253.0;
 
-        // Pressure melting point as the uppder bound.
+        // Pressure melting point as the upper bound.
         theta_now(i,0) = min(theta_now(i,0), theta_max);
     }
     // OPTIMIZE THIS!!!!!!!!
@@ -954,7 +1013,7 @@ MatrixXd rungeKutta(double u1_0, double u2_0, double u_0, ArrayXd H, \
         u2_dif_vec(c) = u2_dif_now;
         u2_0_vec(c)   = u2_0;
 
-        c = c + 1;
+        ++c;
     }
 
     // Update shear stress from current velocity.
@@ -1125,7 +1184,7 @@ int main()
 
 
     // SIMULATION PARAMETERS.
-    int const n   = 275;                             // Number of horizontal points 250, 500, 1000, 1500
+    int const n   = 350;                             // 600. Number of horizontal points 250, 500, 1000, 1500
     int const n_z = 10;                              // Number vertical layers. 10, 20.
     
     double const ds     = 1.0 / n;                   // Normalized spatial resolution.
@@ -1134,22 +1193,23 @@ int main()
     double const dz_inv = n_z;
 
     double const t0   = 0.0;                         // Starting time [yr].
-    double const tf   = 5.0e4;                       // 1.0e4, Ending time [yr]. 1.0e4.
+    double const tf   = 2.0e4;                       // 5.0e4, Ending time [yr]. 1.0e4.
     double t;                                        // Time variable [yr].
 
     // TIME STEPING. Quite sensitive (use fixed dt in case of doubt).
-    int const dt_meth = 1;                           // Time-stepping method. Fixed, 0; adapt, 1.
+    // For stochastic perturbations. dt = 0.1 and n = 250.
+    int const dt_meth = 0;                           // Time-stepping method. Fixed, 0; adapt, 1.
     double dt;                                       // Time step [yr].
     double dt_CFL;                                   // Courant-Friedrichs-Lewis condition [yr].
     double dt_tilde;                                 // New timestep. 
     double const t_eq = 0.2 * tf;                    // Length of equilibration time [yr] .
-    double const dt_min = 0.1;                       // Minimum time step [yr]. 
+    double const dt_min = 0.1;                       // Minimum time step [yr]. 0.1
     double const dt_max = 2.0;                       // Maximum time step [yr]. 
     double const rel = 0.7;                          // Relaxation between interations [0,1]. 0.5
     
     // INPUT DEFINITIONS.   
-    int const N = 10000;                                   // Number of time points in BC (input from noise.nc in glacier_ews).
-    double const dt_noise = 1.0;                           // Assumed time step in stochastic_anom.py 
+    int const N = 20000;                             // Number of time points in BC (input from noise.nc in glacier_ews).
+    double const dt_noise = 1.0;                     // Assumed time step in stochastic_anom.py 
 
     // OUTPUT DEFINITIONS.
     int const t_n = 100;                             // Number of output frames. 30.
@@ -1162,6 +1222,7 @@ int main()
     double const y_0 = 70.0;                         // Initial bedrock elevation (x=0) [m].
     
     // SURFACE MASS BALANCE.
+    double int stoch = 0;                            // Stochastic SBM.
     double const S_0      = 0.7;                     // SMB at x = 0 (for equilibration) [m/yr].
     double const dlta_smb = -4.0;                    // Difference between interior and terminus SMB [m/yr]. 
     double const x_acc    = 300.0e3;                 // Position at which accumulation starts decreasing [m]. 300.0, 355.0
@@ -1181,6 +1242,12 @@ int main()
     double const G_k = G / k;                        // [K / m] 
     double const kappa = 1.4e-6;                     // Thermal diffusivity of ice [m^2/s].
     double const theta_max = 273.15;                 // Max temperature of ice [K].
+    double const theta_act = 263.15;                 // Threshold temperature for the two regimes in activation energy [K]
+    double const R = 8.314e-3;                       // Universal gas constant [kJ / K mol]
+    
+    Array2d Q_act << 60.0, 139.0;                    // Activation energies [kJ/mol].
+    Array2d A_0 << 3.985e-13, 1.916e3;               // Pre-exponential constants [Pa^-3 s^-1]
+    A_0 = A_0 * sec_year:                            // [Pa^-3 s^-1] --> [Pa^-3 yr^-1]
 
     // AVECTION EQUATION.
     int const H_meth = 0;                              // Solver scheme: 0, explicit; 1, implicit.
@@ -1338,14 +1405,18 @@ int main()
         bed = f_bed(L, n, experiment, y_0, y_p, x_1, x_2);
 
         // Update time-dependent boundary conditions after equilibration.
-        // Christian's spin-up also considers stochastic anmalies?
-        noise_now = f_bc(noise, t_vec, dt_noise, N, t, dt, n);
-        m_stoch   = noise_now(0);
+        // Christian's spin-up also considers stochastic anomalies?
+        //noise_now = f_bc(noise, t_vec, dt_noise, N, t, dt, n);
+        // Lower bound of zero in m to avoid numerical issues.
+        noise_now = noise.col(floor(t));
+        m_stoch   = max(0.0, noise_now(0)); 
         smb_stoch = noise_now(1);
 
+        //m_stoch = m_dot;
+
         // Update SMB considering new domain extension and current stochastic term.
-        S = f_acc(sigma, L, S, S_0, x_mid, x_sca, x_varmid, \
-                  x_varsca, dlta_smb, var_mult, smb_stoch, t, t_eq , n);
+        S = f_smb(sigma, L, S_0, x_mid, x_sca, x_varmid, \
+                  x_varsca, dlta_smb, var_mult, smb_stoch, t, t_eq , n, stoch);
 
             
         // Update basal friction with previous step velocity. Out of Picard iteration?
@@ -1438,11 +1509,11 @@ int main()
             // Update multistep variables.
             u1_old_2 = u1_old_1;
 
-            // Number of iterations.
-            c_picard = c_picard + 1;
+            // Update number of iterations.
+            ++c_picard;
         }
 
-        // Ice flux calcultion. Flotation thickness H_f.
+        // Ice flux calculation. Flotation thickness H_f.
         H_f = D * ( rho_w / rho );
         q   = f_q(u1, H, H_f, t, t_eq, D, rho, rho_w, m_stoch, calving_meth, n);
 
@@ -1457,7 +1528,8 @@ int main()
             // Save previous iteration solution (before NaN encountered).
             f_write(c, u1_old_1, u2,  H, visc, S, tau_b, beta, tau_d, bed, \
                     C_bed, u2_dif_vec, u2_0_vec, L, t, u2_bc, u2_dif, \
-                    error, dt, c_picard, mu, omega, theta, A, dL_dt);
+                    error, dt, c_picard, mu, omega, theta, A, dL_dt, \
+                    m_stoch, smb_stoch);
 
             // Close nc file. 
             if ((retval = nc_close(ncid)))
@@ -1483,13 +1555,18 @@ int main()
             // Write solution in nc.
             f_write(c, u1, u2,  H, visc, S, tau_b, beta, tau_d, bed, \
                     C_bed, u2_dif_vec, u2_0_vec, L, t, u2_bc, u2_dif, \
-                    error, dt, c_picard, mu, omega, theta, A, dL_dt);
+                    error, dt, c_picard, mu, omega, theta, A, dL_dt, \
+                    m_stoch, smb_stoch);
 
-            c = c + 1;
+            ++c;
         }  
 
         // Update ice viscosity with new u2 field.
-        visc = f_visc(u2, B, n_exp, eps, L, n);
+        //f_visc(ArrayXd u2, ArrayXXd theta, double Q_act, double R, \
+               double B, double n_exp, double eps, double L, \
+               int n, int thermodynamics)
+        visc = f_visc(u2, theta, theta_act, A_0, Q_act, R, B, \
+                      n_exp, eps, t_eq, n, thermodynamics);
 
         // Integrate ice thickness forward in time.
         H = f_H(u1, H, S, sigma, dt, ds, ds_inv, n, \
