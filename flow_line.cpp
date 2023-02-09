@@ -735,11 +735,11 @@ ArrayXd f_dhdx(ArrayXd dH, ArrayXd b, int n)
 
 ArrayXd f_visc(ArrayXd u2, ArrayXXd theta, double theta_act, \
                Array2d Q_act, Array2d A_0, double n_gln, double R, double B, double n_exp, \
-               double eps, double t, double t_eq, int n, int n_z, int visc_therm)
+               double eps, double t, double t_eq, double sec_year, int n, int n_z, int visc_therm)
 {
     ArrayXd u2_eps(n), visc(n); 
     
-
+    // Temperature dependent viscosity.
     if (visc_therm == 1 && t > t_eq)
     {
         ArrayXXd A(n,n_z), B(n,n_z);
@@ -748,9 +748,9 @@ ArrayXd f_visc(ArrayXd u2, ArrayXXd theta, double theta_act, \
         // Calculate temperature-dependent rate factor if thermodynamics is switched on.
         // Arrhenius law A(T,p) equivalent to A(T').
         // Eq. 4.15 and 6.54 (Greve and Blatter, 2009).
-        for (int i=1; i<n; i++)
+        for (int i=0; i<n; i++)
         {
-            for (int j=1; j<n_z; j++)
+            for (int j=0; j<n_z; j++)
             {
                 // Rate factor. We consider two temperature regimes (Greve and Blatter, 2009).
                 if ( theta(i,j) < theta_act )
@@ -761,14 +761,15 @@ ArrayXd f_visc(ArrayXd u2, ArrayXXd theta, double theta_act, \
                 {
                     A(i,j) = A_0(1) * exp(- Q_act(1) / (R * theta(i,j)) );
                 }
-
             }
         }
 
-        // Associated rate factor.
+        //cout << "\n A = " << A / sec_year;
+
+        // Associated rate factor. A: [Pa^-3 yr^-1]
         B = pow(A, ( -1 / n_gln ) );
 
-        // Vertical average from base to H.
+        // Vertically averaged B.
         B_bar = B.rowwise().mean();
 
         // Regularitazion term to avoid division by 0. 
@@ -778,7 +779,7 @@ ArrayXd f_visc(ArrayXd u2, ArrayXXd theta, double theta_act, \
         visc = 0.5 * B_bar * pow(u2_eps, n_exp);
 
         // Avoid singularity???????
-        visc(1) = visc(0);
+        //visc(1) = visc(0);
 
     }
     
@@ -789,7 +790,6 @@ ArrayXd f_visc(ArrayXd u2, ArrayXXd theta, double theta_act, \
 
         // n_exp = (1-n)/n
         visc = 0.5 * B * pow(u2_eps, n_exp);
-        //cout << "\n visc = " << visc * sec_year;
 
         // Constant viscosity experiment:
         //visc = ArrayXd::Constant(n, 0.5e17); // 1.0e15, 0.5e17
@@ -817,21 +817,20 @@ ArrayXd f_C_bed(ArrayXd C_ref, ArrayXXd theta, double t, double t_eq, double the
                 C_bed(i) = C_ref(i);
             }
 
-            // Reduction by a factor of 2 if we approach melting.
+            // Reduction by a given factor as we approach melting.
             else
             {
-                C_bed(i) = 0.1 * C_ref(i);
+                C_bed(i) = 0.25 * C_ref(i);
             }
         }
         
-
         // Normalized basal temperature with pressure melting point [0,1].
         //theta_norm = abs( theta.block(0,0,n,1) - theta_frz ) / abs(theta_max - theta_frz);
         //C_bed      = C_thw * theta_norm + C_frz * ( 1.0 - theta_norm );
 
     }
 
-    // Friction given by reference value.
+    // Friction coefficient given by reference value.
     else 
     {
         C_bed = C_ref;
@@ -1313,14 +1312,14 @@ int main()
     double const T_air = 253.15;                     // BC: prescribed air temperature.
     
 
-     // BEDROCK PARAMETRIZATION: f_C_bed.
-    int const fric_therm = 0;                       // Coupled friction + thermodynamics.
+    // BEDROCK PARAMETRIZATION: f_C_bed.
+    int const fric_therm = 1;                        // Temperature-dependent friction.
     double const theta_frz = 268.15;
     double const C_frz = 7.624e6 / pow(sec_year, m); // Frozen friction coeff. [Pa m^-1/3 yr^1/3]
     double const C_thw = 0.5 * C_frz;                // Thawed friction coeff. [Pa m^-1/3 yr^1/3]
 
     // REVISE UNITS HERE!!!
-    int const visc_therm = 1;                        // Temperature dependent viscosity.
+    int const visc_therm = 1;                        // Temperature-dependent viscosity.
     Array2d Q_act, A_0; 
     Q_act << 60.0, 139.0;                            // Activation energies [kJ/mol].
     Q_act = 1.0e3 * Q_act;                           // [kJ/mol] --> [J/mol] 
@@ -1393,7 +1392,7 @@ int main()
     
     // Vectors to compute norm.
     VectorXd u1_vec(n); 
-    VectorXd u2_vec(n); 
+    //VectorXd u2_vec(n); 
     VectorXd c_u1_1(n);                   // Correction vector Picard relaxed iteration.
     VectorXd c_u1_2(n);
     VectorXd c_u1_dif(n);
@@ -1421,7 +1420,7 @@ int main()
     C_ref = ArrayXd::Constant(n, 7.624e6/ pow(sec_year, m) );    // [Pa m^-1/3 yr^1/3] 7.0e6
 
     // We assume a constant viscosity in the first iteration. 1.0e13 Pa s.
-    visc = ArrayXd::Constant(n, 1.0e12 / sec_year);            // [Pa yr]
+    visc = ArrayXd::Constant(n, 1.0e9 / sec_year);            // [Pa yr]
 
     // Implicit initialization.
     beta = ArrayXd::Constant(n, 5.0e3);             // [Pa yr / m]
@@ -1451,7 +1450,7 @@ int main()
     cout << " \n tf = " << tf;
 
     // Call nc read function.
-    noise = f_nc_read(N);
+    //noise = f_nc_read(N);
     //cout << "\n noise_ocn = " << noise;
 
     // Call nc write function.
@@ -1599,7 +1598,7 @@ int main()
 
                 u2 = abs(u2) / (ds * L);
                 visc = f_visc(u2, theta, theta_act, Q_act, A_0, n_gln, R, B, \
-                              n_exp, eps, t, t_eq, n, n_z, visc_therm);
+                              n_exp, eps, t, t_eq, sec_year, n, n_z, visc_therm);
                 
             }
 
@@ -1660,7 +1659,7 @@ int main()
 
         // Update ice viscosity with new u2 field.
         visc = f_visc(u2, theta, theta_act, Q_act, A_0, n_gln, R, B, \
-                      n_exp, eps, t, t_eq, n, n_z, visc_therm);
+                      n_exp, eps, t, t_eq, sec_year, n, n_z, visc_therm);
 
         // Integrate ice thickness forward in time.
         H = f_H(u1, H, S, sigma, dt, ds, ds_inv, n, \
