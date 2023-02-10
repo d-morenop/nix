@@ -798,8 +798,8 @@ ArrayXd f_visc(ArrayXd u2, ArrayXXd theta, double theta_act, \
 	return visc;
 }	
 
-ArrayXd f_C_bed(ArrayXd C_ref, ArrayXXd theta, double t, double t_eq, double theta_max, \
-                double theta_frz, double C_frz, double C_thw, int fric_therm, int n)
+ArrayXd f_C_bed(ArrayXd C_ref, ArrayXXd theta, ArrayXd H, double t, double t_eq, double theta_max, \
+                double theta_frz, double C_frz, double C_thw, double rho, double g, int fric_therm, int n)
 {
     ArrayXd C_bed(n), theta_norm(n);
 
@@ -830,6 +830,16 @@ ArrayXd f_C_bed(ArrayXd C_ref, ArrayXXd theta, double t, double t_eq, double the
 
     }
 
+    // Overburden pressure of ice. C_bed = N.
+    // Seems to be too high, arbitrary factor 0.001 !!!!!!!???
+    else if (fric_therm == 2 && t > t_eq)
+    {
+        C_bed = 0.001 * rho * g * H;
+
+        // g in m/s² --> m/yr^2 SOMETHING MIGHT BE WRONG HERE!
+        //C_bed = 0.001 * rho * g * H * pow(sec_year, 2);
+    }
+
     // Friction coefficient given by reference value.
     else 
     {
@@ -843,20 +853,21 @@ ArrayXd f_C_bed(ArrayXd C_ref, ArrayXXd theta, double t, double t_eq, double the
 ArrayXXd f_theta(ArrayXXd theta, ArrayXd u1, ArrayXd H, ArrayXd tau_b, ArrayXd Q_fric, \
                  ArrayXd sigma, double theta_max, double T_air, double kappa, double k, \
                  double dt, double G_k, double ds, double L, \
-                 double dL_dt, double t, double t_eq, int n, int n_z)
+                 double dL_dt, double t, double t_eq, ArrayXd u_z, int n, int n_z)
 {
     MatrixXd theta_now(n,n_z);
-    ArrayXd dz(n), dz_2_inv(n), Q_f_k(n);
+    ArrayXd dz(n), dz_inv(n), dz_2_inv(n), Q_f_k(n);
 
     double dx_inv;
  
-    // Evenly-spaced vertical grid.
+    // Evenly-spaced vertical grid, though x-dependency via ice thickness.
     dz       = H / n_z;
-    dz_2_inv = 1.0 / pow(dz, 2);
+    dz_inv   = 1.0 / dz;
+    dz_2_inv = pow(dz_inv, 2);
     dx_inv   = 1.0 / (ds * L);
 
     // Frictional heat units. // [Pa m yr^-1] = [J yr^-1 m^-2] = [W m^-2] => [K / m]
-    Q_f_k = Q_fric / k;      // [Pa m s^-1] = [J s^-1 m^-2] = [W m^-2] => [K / m]
+    Q_f_k = Q_fric / k;     
     
     // Zero frictional heat test.
     //Q_f_k = ArrayXd::Zero(n);
@@ -879,17 +890,42 @@ ArrayXXd f_theta(ArrayXXd theta, ArrayXd u1, ArrayXd H, ArrayXd tau_b, ArrayXd Q
 
                 // Horizontal advection. Correction for sigma coord.
                 // We have not considered the stagerred grid yet.
-                theta_now(i,j) = theta(i,j) + dt * ( kappa * dz_2_inv(i) * \
+                //theta_now(i,j) = theta(i,j) + dt * ( kappa * dz_2_inv(i) * \
                                 ( theta(i,j+1) - 2.0 * theta(i,j) + theta(i,j-1) ) + \
                                 ( sigma(i) * dL_dt - u1(i) ) * \
                                 ( theta(i,j) - theta(i-1,j) ) * dx_inv );
+
+                // Constant prescribed vertical advection.
+                // account for sigma coordinate correction?
+                // For u_z < 0 we need an opposite discretization scheme in theta.
+                theta_now(i,j) = theta(i,j) + dt * ( kappa * dz_2_inv(i) * \
+                                ( theta(i,j+1) - 2.0 * theta(i,j) + theta(i,j-1) ) + \
+                                ( sigma(i) * dL_dt - u1(i) ) * \
+                                ( theta(i,j) - theta(i-1,j) ) * dx_inv + \
+                                ( theta(i,j+1) - theta(i,j) ) * ( - u_z(i) ) * dz_inv(i) );
+
+
+                // Pressure melting point as the upper bound.
+                theta_now(i,j) = min(theta_now(i,j), theta_max);
             }
             
             // Boundary conditions. Geothermal heat flow at the base \
             and prescribed T_air at the surface.
             // We add friciton heat contribution Q_f_k.
-            theta_now(i,0)     = theta_now(i,1) + dz(i) * ( G_k + Q_f_k(i) ); 
-            //theta_now(i,0)     = 268.0;
+            //theta_now(i,0) = theta_now(i,1) + dz(i) * ( G_k + Q_f_k(i) ); 
+
+            // Geothermal heatflux and advection contribution??
+            theta_now(i,0) = theta_now(i,1) + dz(i) * ( G_k + Q_f_k(i) ) + \
+                             ( sigma(i) * dL_dt - u1(i) ) * \
+                             ( theta(i,0) - theta(i-1,0) ) * dx_inv; 
+
+            // u_z(z=0) = 0 right??
+            //theta_now(i,0) = theta_now(i,1) + dz(i) * ( G_k + Q_f_k(i) ) + \
+                             ( sigma(i) * dL_dt - u1(i) ) * \
+                             ( theta(i,0) - theta(i-1,0) ) * dx_inv + \
+                             ( theta(i,1) - theta(i,0) ) * ( - u_z(i) ) * dz_inv(i); 
+
+            // Surface.
             theta_now(i,n_z-1) = T_air;
 
             // Pressure melting point as the upper bound.
@@ -906,7 +942,6 @@ ArrayXXd f_theta(ArrayXXd theta, ArrayXd u1, ArrayXd H, ArrayXd tau_b, ArrayXd Q
         
         // Boundary condition at x = 0.
         theta_now(0,0)     = theta_now(0,1) + dz(0) * G_k; 
-        //theta_now(0,0)     = 268.0; 
         theta_now(0,n_z-1) = T_air;
         theta_now(0,0)     = min(theta_now(0,0), theta_max);
 
@@ -1102,6 +1137,8 @@ MatrixXd rungeKutta(double u1_0, double u2_0, double u_0, ArrayXd H, \
     
     return out;
 }
+
+
 
 
 
@@ -1309,7 +1346,9 @@ int main()
     double const theta_max = 273.15;                 // Max temperature of ice [K].
     double const theta_act = 263.15;                 // Threshold temperature for the two regimes in activation energy [K]
     double const R = 8.314;                          // Universal gas constant [J / K mol]
-    double const T_air = 253.15;                     // BC: prescribed air temperature.
+    double const T_air = 243.15;                     // BC: prescribed air temperature. 253.15
+    double const u_z_min = -2.0;                       // Prescribed vertical advection in theta. 0.0
+    double const u_z_max = 0.0;                       // Prescribed vertical advection in theta. 5.0
     
 
     // BEDROCK PARAMETRIZATION: f_C_bed.
@@ -1319,7 +1358,7 @@ int main()
     double const C_thw = 0.5 * C_frz;                // Thawed friction coeff. [Pa m^-1/3 yr^1/3]
 
     // REVISE UNITS HERE!!!
-    int const visc_therm = 1;                        // Temperature-dependent viscosity.
+    int const visc_therm = 0;                        // Temperature-dependent viscosity.
     Array2d Q_act, A_0; 
     Q_act << 60.0, 139.0;                            // Activation energies [kJ/mol].
     Q_act = 1.0e3 * Q_act;                           // [kJ/mol] --> [J/mol] 
@@ -1384,6 +1423,7 @@ int main()
     ArrayXd u1_old_2(n);  
     ArrayXd u2_0_vec(n);                 // Ranged sampled of u2_0 for a certain iteration.
     ArrayXd u2_dif_vec(n);               // Difference with analytical BC.
+    ArrayXd u_z(n);
     
     // Stochasticmatrices and vectors.
     ArrayXXd noise(2,N);                            // Matrix to allocate stochastic BC.
@@ -1438,6 +1478,9 @@ int main()
     H = ArrayXd::Constant(n, 10.0);
     S = ArrayXd::Constant(n, 0.3);
 
+    // Initialize vertical velocity (only x-dependency).
+    u_z = ArrayXd::LinSpaced(n, u_z_min, u_z_max);
+
     
     
     /////////////////////////////////////////////////////////////////////////////////
@@ -1491,8 +1534,9 @@ int main()
         bed = f_bed(L, n, experiment, y_0, y_p, x_1, x_2);
 
         // Friction coefficient.
-        C_bed = f_C_bed(C_ref, theta, t, t_eq, theta_max, \
-                        theta_frz, C_frz, C_thw, fric_therm, n);
+        // Use C_ref = rho_i * g * H instead to account for the mass loss!
+        C_bed = f_C_bed(C_ref, theta, H, t, t_eq, theta_max, \
+                        theta_frz, C_frz, C_thw, rho, g, fric_therm, n);
 
         // Stochastic configuration. 
         // Update time-dependent boundary conditions after equilibration.
@@ -1671,7 +1715,7 @@ int main()
         {
             // Integrate Fourier heat equation.
             theta = f_theta(theta, u1, H, tau_b, Q_fric, sigma, theta_max, T_air, kappa, \
-                            k, dt, G_k, ds, L, dL_dt, t, t_eq, n, n_z);
+                            k, dt, G_k, ds, L, dL_dt, t, t_eq, u_z, n, n_z);
         }
 
         // Courant-Friedrichs-Lewis condition.

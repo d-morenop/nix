@@ -4,14 +4,6 @@
 Created on Thu Jun 30 13:23:54 2022
 
 @author: dmoreno
-"""
-
-import os
-import subprocess
-import sys
-import shutil
-from subprocess import Popen, PIPE, STDOUT
-
 
 # PYTHON SCRIPT TO COMPILE AND RUN THE FLOWLINE MODEL.
 # This script copies flowline.cpp and its dependencies to a desired folder
@@ -21,10 +13,19 @@ from subprocess import Popen, PIPE, STDOUT
 # 
 # Daniel Moreno Parada (danielm@ucm.es).
 
+"""
+
+import os
+import subprocess
+import sys
+import shutil
+from subprocess import Popen, PIPE, STDOUT
+
+
 
 # User defined directories.
 path_flowline = "/home/dmoreno/scr/git/flowline/flowline/"
-path_output   = "/home/dmoreno/c++/flowline/output/thermodynamics/therm.on.fric.off/"
+path_output   = "/home/dmoreno/c++/flowline/output/thermodynamics/therm.on.fric.N.uz/"
 path_input    = "/home/dmoreno/c++/flowline/output/glacier_ews/"
 
 
