@@ -8,7 +8,7 @@
 // NETCDF PARAMETERS.
 /* This is the name of the data file we will create. */
 //#define FILE_NAME "output/mismip/exp3/exp3_n.250/exp3_n.250.nc"
-#define FILE_NAME "/home/dmoreno/c++/flowline/output/thermodynamics/therm.on.fric.N.uz/flowline.nc"
+#define FILE_NAME "/home/dmoreno/c++/flowline/output/thermodynamics/therm.on.fric.N.wmin.-0.25.cf.0.25.nz.20/flowline.nc"
 #define FILE_NAME_READ "/home/dmoreno/c++/flowline/output/glacier_ews/noise_sigm_ocn.12.0.nc"
 
 

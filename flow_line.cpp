@@ -853,7 +853,7 @@ ArrayXd f_C_bed(ArrayXd C_ref, ArrayXXd theta, ArrayXd H, double t, double t_eq,
 ArrayXXd f_theta(ArrayXXd theta, ArrayXd u1, ArrayXd H, ArrayXd tau_b, ArrayXd Q_fric, \
                  ArrayXd sigma, double theta_max, double T_air, double kappa, double k, \
                  double dt, double G_k, double ds, double L, \
-                 double dL_dt, double t, double t_eq, ArrayXd u_z, int n, int n_z)
+                 double dL_dt, double t, double t_eq, ArrayXd w, int n, int n_z)
 {
     MatrixXd theta_now(n,n_z);
     ArrayXd dz(n), dz_inv(n), dz_2_inv(n), Q_f_k(n);
@@ -895,14 +895,14 @@ ArrayXXd f_theta(ArrayXXd theta, ArrayXd u1, ArrayXd H, ArrayXd tau_b, ArrayXd Q
                                 ( sigma(i) * dL_dt - u1(i) ) * \
                                 ( theta(i,j) - theta(i-1,j) ) * dx_inv );
 
-                // Constant prescribed vertical advection.
+                // Prescribed vertical advection.
                 // account for sigma coordinate correction?
-                // For u_z < 0 we need an opposite discretization scheme in theta.
+                // Since w < 0 we need an opposite discretization scheme in theta.
                 theta_now(i,j) = theta(i,j) + dt * ( kappa * dz_2_inv(i) * \
                                 ( theta(i,j+1) - 2.0 * theta(i,j) + theta(i,j-1) ) + \
                                 ( sigma(i) * dL_dt - u1(i) ) * \
                                 ( theta(i,j) - theta(i-1,j) ) * dx_inv + \
-                                ( theta(i,j+1) - theta(i,j) ) * ( - u_z(i) ) * dz_inv(i) );
+                                ( theta(i,j+1) - theta(i,j) ) * ( - w(i) ) * dz_inv(i) );
 
 
                 // Pressure melting point as the upper bound.
@@ -919,11 +919,11 @@ ArrayXXd f_theta(ArrayXXd theta, ArrayXd u1, ArrayXd H, ArrayXd tau_b, ArrayXd Q
                              ( sigma(i) * dL_dt - u1(i) ) * \
                              ( theta(i,0) - theta(i-1,0) ) * dx_inv; 
 
-            // u_z(z=0) = 0 right??
+            // w(z=0) = 0 right??
             //theta_now(i,0) = theta_now(i,1) + dz(i) * ( G_k + Q_f_k(i) ) + \
                              ( sigma(i) * dL_dt - u1(i) ) * \
                              ( theta(i,0) - theta(i-1,0) ) * dx_inv + \
-                             ( theta(i,1) - theta(i,0) ) * ( - u_z(i) ) * dz_inv(i); 
+                             ( theta(i,1) - theta(i,0) ) * ( - w(i) ) * dz_inv(i); 
 
             // Surface.
             theta_now(i,n_z-1) = T_air;
@@ -1142,6 +1142,50 @@ MatrixXd rungeKutta(double u1_0, double u2_0, double u_0, ArrayXd H, \
 
 
 
+ArrayXXd vel_diva(ArrayXXd u_z, ArrayXd u1, ArrayXd H, ArrayXd tau_b, \
+                  ArrayXd beta, ArrayXd bed, int n_z, int n)
+{
+    ArrayXXd eta_z(n,n_z);
+    ArrayXd h(n), dz(n), z(n_z);
+
+    dz = H / n_z;
+
+    // Surface elevation.
+    h = bed + H;
+
+    //z = ArrayXd::LinSpaced(n_z, )
+    
+
+    // DIVA solver following Lipscomb.
+
+    // 1. Start with current guess for the velocity field
+    // 1.1. Compute viscosity dependent on z. eta(z)
+    // ( h(i) - (j * dz + bed(i)) )
+    for (int i=0; i<n; i++)
+    {
+        for (int j=0; j<n_z; j++)
+        {
+            eta_z(i,j) = tau_b(i) * ( H(i) - j * dz ) / ( u_z(i,j) * H(i) )
+        }
+    }
+
+    // Define useful integrals.
+
+    // Surface velocity.
+    u_s = u1 * ( 1.0 + beta * F_int(1) );
+
+    // Depth-averaged mean velocity.
+    u_bar = u1 * ( 1.0 + beta * F_int(2) );
+
+    // Depth-averaged mean viscosity.
+    eta_bar = eta_z.rowwise().mean();
+
+
+    return u_z;
+}
+
+
+
 MatrixXd vel_solver(ArrayXd u1, ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc, \
                     ArrayXd bed, double rho, double rho_w, double g, double L, ArrayXd C_bed, \
                     double t, double u2_RK, ArrayXd beta, double A_ice, double n_gln)
@@ -1287,7 +1331,7 @@ int main()
 
     // SIMULATION PARAMETERS.
     int const n   = 250;                             // 600. Number of horizontal points 350, 500, 1000, 1500
-    int const n_z = 10;                              // Number vertical layers. 10, 20.
+    int const n_z = 20;                              // Number vertical layers. 10, 20.
     
     double const ds     = 1.0 / n;                   // Normalized spatial resolution.
     double const dz     = 1.0 / n_z;                 // Normalized vertical resolution.
@@ -1338,6 +1382,8 @@ int main()
 
 
     // THERMODYNAMICS.
+    // Vertical advection is the key to obtain oscillations.
+    // It provides with a feedback to cool down the ice base and balance frictional heat.
     int const thermodynamics = 1;                    // Apply thermodynamic solver at each time step.
     double const k = 2.0;                            // Thermal conductivity of ice [W / m · ºC].
     double const G = 0.05;                           // Geothermal heat flow [W / m^2] = [J / s · m^2].
@@ -1347,8 +1393,8 @@ int main()
     double const theta_act = 263.15;                 // Threshold temperature for the two regimes in activation energy [K]
     double const R = 8.314;                          // Universal gas constant [J / K mol]
     double const T_air = 243.15;                     // BC: prescribed air temperature. 253.15
-    double const u_z_min = -2.0;                       // Prescribed vertical advection in theta. 0.0
-    double const u_z_max = 0.0;                       // Prescribed vertical advection in theta. 5.0
+    double const w_min = -0.25;                    // Prescribed vertical advection at x=0 in theta. 0.0
+    double const w_max = 0.0;                      // Prescribed vertical advection at x=L in theta. 5.0
     
 
     // BEDROCK PARAMETRIZATION: f_C_bed.
@@ -1423,7 +1469,7 @@ int main()
     ArrayXd u1_old_2(n);  
     ArrayXd u2_0_vec(n);                 // Ranged sampled of u2_0 for a certain iteration.
     ArrayXd u2_dif_vec(n);               // Difference with analytical BC.
-    ArrayXd u_z(n);
+    ArrayXd w(n);
     
     // Stochasticmatrices and vectors.
     ArrayXXd noise(2,N);                            // Matrix to allocate stochastic BC.
@@ -1479,7 +1525,8 @@ int main()
     S = ArrayXd::Constant(n, 0.3);
 
     // Initialize vertical velocity (only x-dependency).
-    u_z = ArrayXd::LinSpaced(n, u_z_min, u_z_max);
+    //w = ArrayXd::LinSpaced(n, w_min, w_max);
+    w = ArrayXd::Constant(n, w_min);
 
     
     
@@ -1715,7 +1762,7 @@ int main()
         {
             // Integrate Fourier heat equation.
             theta = f_theta(theta, u1, H, tau_b, Q_fric, sigma, theta_max, T_air, kappa, \
-                            k, dt, G_k, ds, L, dL_dt, t, t_eq, u_z, n, n_z);
+                            k, dt, G_k, ds, L, dL_dt, t, t_eq, w, n, n_z);
         }
 
         // Courant-Friedrichs-Lewis condition.
