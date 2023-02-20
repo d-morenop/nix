@@ -8,7 +8,7 @@
 // NETCDF PARAMETERS.
 /* This is the name of the data file we will create. */
 //#define FILE_NAME "output/mismip/exp3/exp3_n.250/exp3_n.250.nc"
-#define FILE_NAME "/home/dmoreno/c++/flowline/output/diva/test.SSA/flowline.nc"
+#define FILE_NAME "/home/dmoreno/c++/flowline/output/diva/test.diva/flowline.nc"
 #define FILE_NAME_READ "/home/dmoreno/c++/flowline/output/glacier_ews/noise_sigm_ocn.12.0.nc"
 
 
@@ -25,9 +25,11 @@
  
 /* Variable names. */
 #define H_NAME "H"
-#define U1_NAME "u"
-#define U2_NAME "du_dx"
+#define U_BAR_NAME "u_bar"
+#define U_B_NAME "ub"
+#define U_X_BAR_NAME "u_x"
 #define VISC_NAME "visc"
+#define VISC_BAR_NAME "visc_bar"
 #define A_NAME "A"
 #define S_NAME "S"
 #define TAU_NAME "tau_b"
@@ -59,9 +61,11 @@
 #define X_UNITS "m"
 #define Z_UNITS "m"
 #define T_UNITS "yr"
-#define U1_UNITS "m/yr"
-#define U2_UNITS "1/yr"
+#define U_BAR_UNITS "m/yr"
+#define U_B_UNITS "m/yr"
+#define U_X_UNITS "1/yr"
 #define VISC_UNITS "Pa s"
+#define VISC_BAR_UNITS "Pa s"
 #define A_UNITS "Pa^-3 s^-1"
 #define S_UNITS "mm/day"
 #define TAU_UNITS "Pa"
@@ -99,7 +103,7 @@ int retval;
 // SOLUTION SAVED IN .NC FILE: flow_line.nc
 /* IDs for the netCDF file, dimensions, and variables. */
 int ncid, x_dimid, z_dimid, time_dimid;
-int x_varid, z_varid, u1_varid, u2_varid, H_varid, visc_varid, a_varid, s_varid, \
+int x_varid, z_varid, u_bar_varid, ub_varid, u_x_varid, H_varid, visc_varid, visc_bar_varid, a_varid, s_varid, \
     tau_varid, beta_varid, lmbd_varid, taud_varid, b_varid, L_varid, dL_dt_varid, dt_varid, \
     c_pic_varid, t_varid, mu_varid, omega_varid, u2_bc_varid, u2_dif_varid, \
     picard_error_varid, u2_0_vec_varid, u2_dif_vec_varid, theta_varid, C_bed_varid, Q_fric_varid, \
@@ -173,17 +177,23 @@ int f_nc(int N, int N_Z)
     dimids_z[1] = z_dimid;
         
     /* Define the netCDF variables */
-    if ((retval = nc_def_var(ncid, U1_NAME, NC_DOUBLE, NDIMS,
-                    dimids, &x_varid)))
+    if ((retval = nc_def_var(ncid, U_BAR_NAME, NC_DOUBLE, NDIMS,
+                    dimids, &u_bar_varid)))
         ERR(retval);
-    if ((retval = nc_def_var(ncid, U2_NAME, NC_DOUBLE, NDIMS,
-                    dimids, &u2_varid)))
+    if ((retval = nc_def_var(ncid, U_B_NAME, NC_DOUBLE, NDIMS,
+                    dimids, &ub_varid)))
+        ERR(retval);
+    if ((retval = nc_def_var(ncid, U_X_BAR_NAME, NC_DOUBLE, NDIMS,
+                    dimids, &u_x_varid)))
         ERR(retval);
     if ((retval = nc_def_var(ncid, H_NAME, NC_DOUBLE, NDIMS,
                     dimids, &H_varid)))
         ERR(retval);
     if ((retval = nc_def_var(ncid, VISC_NAME, NC_DOUBLE, NDIMS,
                     dimids, &visc_varid)))
+        ERR(retval);
+    if ((retval = nc_def_var(ncid, VISC_BAR_NAME, NC_DOUBLE, NDIMS,
+                    dimids, &visc_bar_varid)))
         ERR(retval);
     if ((retval = nc_def_var(ncid, S_NAME, NC_DOUBLE, NDIMS,
                     dimids, &s_varid)))
@@ -261,17 +271,23 @@ int f_nc(int N, int N_Z)
         ERR(retval);
 
     /* Assign units attributes to the netCDF variables. */
-    if ((retval = nc_put_att_text(ncid, x_varid, UNITS,
-                    strlen(U1_UNITS), U1_UNITS)))
+    if ((retval = nc_put_att_text(ncid, u_bar_varid, UNITS,
+                    strlen(U_BAR_UNITS), U_BAR_UNITS)))
         ERR(retval);
-    if ((retval = nc_put_att_text(ncid, u2_varid, UNITS,
-                    strlen(U2_UNITS), U2_UNITS)))
+    if ((retval = nc_put_att_text(ncid, ub_varid, UNITS,
+                    strlen(U_B_UNITS), U_B_UNITS)))
+        ERR(retval);
+    if ((retval = nc_put_att_text(ncid, u_x_varid, UNITS,
+                    strlen(U_X_UNITS), U_X_UNITS)))
         ERR(retval);
     if ((retval = nc_put_att_text(ncid, H_varid, UNITS,
                     strlen(H_UNITS), H_UNITS)))
         ERR(retval);
     if ((retval = nc_put_att_text(ncid, visc_varid, UNITS,
                     strlen(VISC_UNITS), VISC_UNITS)))
+        ERR(retval);
+    if ((retval = nc_put_att_text(ncid, visc_bar_varid, UNITS,
+                    strlen(VISC_BAR_UNITS), VISC_BAR_UNITS)))
         ERR(retval);
     if ((retval = nc_put_att_text(ncid, s_varid, UNITS,
                     strlen(S_UNITS), S_UNITS)))
@@ -379,25 +395,27 @@ int f_nc(int N, int N_Z)
 }
 
 
-int f_write(int c, ArrayXd u1, ArrayXd u2, ArrayXd H, ArrayXd visc, ArrayXd S, \
+int f_write(int c, ArrayXd u_bar, ArrayXd ub, ArrayXd u_x, ArrayXd H, ArrayXd visc_bar, ArrayXd S, \
             ArrayXd tau_b, ArrayXd beta, ArrayXd tau_d, ArrayXd bed, \
             ArrayXd C_bed, ArrayXd Q_fric, ArrayXd u2_dif_vec, ArrayXd u2_0_vec, \
             double L, double t, double u2_bc, double u2_dif, double error, \
             double dt, int c_picard, double mu, double omega, ArrayXXd theta, \
-            double A, double dL_dt, double m_stoch, double smb_stoch)
+            ArrayXXd visc, double A, double dL_dt, double m_stoch, double smb_stoch)
 {
     start[0]   = c;
     start_0[0] = c;
     start_z[0] = c;
 
     // 2D variables.
-    if ((retval = nc_put_vara_double(ncid, x_varid, start, cnt, &u1(0))))
+    if ((retval = nc_put_vara_double(ncid, u_bar_varid, start, cnt, &u_bar(0))))
     ERR(retval);
-    if ((retval = nc_put_vara_double(ncid, u2_varid, start, cnt, &u2(0))))
+    if ((retval = nc_put_vara_double(ncid, ub_varid, start, cnt, &ub(0))))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid, u_x_varid, start, cnt, &u_x(0))))
     ERR(retval);
     if ((retval = nc_put_vara_double(ncid, H_varid, start, cnt, &H(0))))
     ERR(retval);
-    if ((retval = nc_put_vara_double(ncid, visc_varid, start, cnt, &visc(0))))
+    if ((retval = nc_put_vara_double(ncid, visc_bar_varid, start, cnt, &visc_bar(0))))
     ERR(retval);
     if ((retval = nc_put_vara_double(ncid, s_varid, start, cnt, &S(0))))
     ERR(retval);
@@ -448,6 +466,8 @@ int f_write(int c, ArrayXd u1, ArrayXd u2, ArrayXd H, ArrayXd visc, ArrayXd S, \
 
     // 3D variables.
     if ((retval = nc_put_vara_double(ncid, theta_varid, start_z, cnt_z, &theta(0,0))))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid, visc_varid, start_z, cnt_z, &visc(0,0))))
     ERR(retval);
 
     return c;
