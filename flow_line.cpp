@@ -953,8 +953,8 @@ ArrayXXd f_visc(ArrayXXd u, ArrayXXd theta, ArrayXXd visc, ArrayXd H, ArrayXd ta
                 double eps, double t, double t_eq, double sec_year, \
                 int n, int n_z, int vel_meth, int visc_therm)
 {
-    ArrayXXd out(n,n_z+2);
-    ArrayXd u_x(n), visc_bar(n);
+    ArrayXXd out(n,3*n_z+1), u_x_diva(n,n_z), u_z(n,n_z), strain_diva(n,n_z);
+    ArrayXd u_x(n), strain(n), visc_bar(n), visc_H_inv(n);
 
     // Constant viscosity experiment.
     if ( vel_meth == 0 )
@@ -963,26 +963,11 @@ ArrayXXd f_visc(ArrayXXd u, ArrayXXd theta, ArrayXXd visc, ArrayXd H, ArrayXd ta
         
         // Vertically-averaged viscosity.
         visc_bar = visc.rowwise().mean();
-
-        // Horizontal derivatives.
-        for (int i=1; i<n-1; i++)
-        {
-            u_x(i) = 0.5 * ( u_bar(i+1) - u_bar(i-1) );
-        }
-
-        // Boundary derivatives.
-        u_x(0)   = u_bar(1) - u_bar(0);
-        u_x(n-1) = u_bar(n-1) - u_bar(n-2);
-
-        // Sctreched coordinate system.
-        u_x = abs(u_x) / (ds * L);
     }
 
     // SSA solver
     else if ( vel_meth == 1 )
     {
-        ArrayXd strain(n);
-
         // Horizontal derivatives.
         for (int i=1; i<n-1; i++)
         {
@@ -1003,17 +988,14 @@ ArrayXXd f_visc(ArrayXXd u, ArrayXXd theta, ArrayXXd visc, ArrayXd H, ArrayXd ta
         // With just SSA, visc = visc_bar since they're both arrays.
         visc_bar = 0.5 * B * pow(strain, n_exp);
 
-        // Constant viscosity experiment:
-        //visc = ArrayXd::Constant(n, 0.5e17); // 1.0e15, 0.5e17
     }
 
     // DIVA solver.
-    // SOLVE INCONSISTENCY HERE SINCE u_x IS DECLARED AT THE 
-    // BEGINNING WITH DIFFERENT DIMENSIONS.
     else if ( vel_meth == 2 )
     {
-        ArrayXXd strain(n,n_z), u_x(n,n_z), u_z(n,n_z); 
-        
+        // Handy definition.
+        //visc_H_inv = 1.0 / ( visc.colwise() * H );
+
         // Vertical shear stress du/dz from Eq. 36 Lipscomb et al.
         for (int i=0; i<n; i++)
         {
@@ -1028,28 +1010,43 @@ ArrayXXd f_visc(ArrayXXd u, ArrayXXd theta, ArrayXXd visc, ArrayXd H, ArrayXd ta
         {
             for (int j=0; j<n_z; j++)
             {
-                u_x(i,j) = 0.5 * ( u(i+1,j) - u(i-1,j) );
+                u_x_diva(i,j) = 0.5 * ( u(i+1,j) - u(i-1,j) );
+                //u_x(i) = 0.5 * ( u_bar(i+1) - u_bar(i-1) );
             }
         }
 
         // Boundary derivatives.
-        u_x.row(0)   = u.row(1) - u.row(0);
-        u_x.row(n-1) = u.row(n-1) - u.row(n-2);
+        u_x_diva.row(0)   = u.row(1) - u.row(0);
+        u_x_diva.row(n-1) = u.row(n-1) - u.row(n-2);
+        //u_x(0)   = u_bar(1) - u_bar(0);
+        //u_x(n-1) = u_bar(n-1) - u_bar(n-2);
 
         // Sigma coordinates transformation. Avoid abs since there's power 2 later.
-        u_x = abs(u_x) / (ds * L);
+        u_x_diva = abs(u_x_diva) / (ds * L);
+        //u_x = abs(u_x) / (ds * L);
 
+        // Constant ice rate factor A.
         if (visc_therm == 0 || t <= t_eq)
         {
             // Regularitazion term to avoid division by 0. 
-            strain = pow(u_x,2) + 0.25 * pow(u_z,2) + eps;
+            //strain_diva = pow(u_x_diva,2) + 0.25 * pow(u_z,2) + eps;
+            
+            // ABSOLUTE VALUE IN U_Z AS WELL?????????
+            // IN LIPSCOMB, THEY USE u_bar_x instead!
+            //strain_diva = u_x_diva + 0.25 * u_z + eps;
+            
+            // Like this instead?
+            strain_diva = pow(u_x_diva,2) + 0.25 * pow(u_z,2) + pow(eps,2);
+
+            n_exp = 0.5 * n_exp;
 
             // Exponent n_exp = (1-n)/n
-            visc = 0.5 * B * pow(strain, n_exp);
+            // WE GET NAN HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            visc = 0.5 * B * pow(strain_diva, n_exp);
             
         }
         
-        // Temperature dependent viscosity.
+        // Temperature dependent viscosity through A(T).
         else if (visc_therm == 1 && t > t_eq)
         {
             ArrayXXd A(n,n_z), B(n,n_z);
@@ -1095,13 +1092,17 @@ ArrayXXd f_visc(ArrayXXd u, ArrayXXd theta, ArrayXXd visc, ArrayXd H, ArrayXd ta
 
         // Vertically-averaged viscosity.
         visc_bar = visc.rowwise().mean();
+
+        // Vertically-averaged u_x.
+        //u_x = u_x_diva.rowwise().mean();
     }
 
 
     // Allocate output variables.
-    out.block(0,0,n,n_z)   = visc;
-    out.block(0,n_z,n,1)   = visc_bar;
-    out.block(0,n_z+1,n,1) = u_x;
+    out.block(0,0,n,n_z)       = visc;
+    out.block(0,n_z,n,1)       = visc_bar;
+    out.block(0,n_z+1,n,n_z)   = u_x_diva;
+    out.block(0,2*n_z+1,n,n_z) = u_z;
 
     return out;
 }	
@@ -1296,11 +1297,12 @@ Array2d du2_ds(double u_1, double u_2, double dh_dx, double visc,\
 
 
 
-ArrayXd F_int(ArrayXXd visc, ArrayXd H, ArrayXd dz, int n_int, int n_z, int n)
+ArrayXd F_int(ArrayXXd visc, ArrayXd H, ArrayXd dz, int n_int, int n_z_int, int n)
 {
     ArrayXd F = ArrayXd::Zero(n);
 
     // Useful integral defined as Arthern et al. (2015).
+    /*
     for (int i=0; i<n; i++)
     {
         for (int j=0; j<n_z; j++)
@@ -1308,24 +1310,40 @@ ArrayXd F_int(ArrayXXd visc, ArrayXd H, ArrayXd dz, int n_int, int n_z, int n)
             F(i) = F(i) + dz(i) * pow( ( H(i) - j * dz(i) ) / H(i) , n_int) / visc(i,j);
         }
     }
+    */
+
+    // Useful integral defined as Arthern et al. (2015).
+    // Here we can set vertical integration up to a desired level n_z.
+    int j = 0;
+
+    // Avoid loop if z_level is 0.
+    if ( n_z_int =! 0 )
+    {
+        for (int i=0; i<n; i++)
+        {
+            while ( j < n_z_int )
+            {
+                F(i) = F(i) + dz(i) * pow( ( H(i) - j * dz(i) ) / H(i) , n_int) / visc(i,j);
+                j++;
+            }
+        }
+    }
+
 
     return F;
 }
 
 
-ArrayXXd f_fric(ArrayXd u_bar, ArrayXd C_bed, ArrayXXd visc, \
+ArrayXXd f_u(ArrayXd u_bar, ArrayXd C_bed, ArrayXXd visc, \
                ArrayXd H, ArrayXd dz, double sec_year, double m, int vel_meth, int n_z, int n)
 {
-    ArrayXXd out(n,4);
-    ArrayXd beta(n), ub(n), F_2(n), tau_b(n), Q_fric(n);
+    ArrayXXd out(n,n_z+4), u(n,n_z);
+    ArrayXd beta(n), ub(n), F_2(n), F_1(n), tau_b(n), Q_fric(n);
     
 
     // For constant visc or SSA, ub = u_bar.
     if ( vel_meth == 0 || vel_meth == 1 )
     {
-        // Definition.
-        //ub = u_bar;
-
         // Beta definition. New beta from ub.
         beta = C_bed * pow(u_bar, m - 1.0);
     }
@@ -1346,6 +1364,24 @@ ArrayXXd f_fric(ArrayXd u_bar, ArrayXd C_bed, ArrayXXd visc, \
         // DIVA solver requires an effective beta.
         F_2  = F_int(visc, H, dz, 2, n_z, n);
         beta = beta / ( 1.0 + beta * F_2 );
+
+        // Now we can compute u(x,z) from beta and visc.
+        for (int j=0; j<n_z; j++)
+        {
+            // Integral only up to current vertical level j.
+            F_1 = F_int(visc, H, dz, 1, j, n);
+
+            // 2D velocity field (Eq. 29 Lipscomb et al., 2019).
+            // Try to avoid loop over i.
+            //u.col(j) = ub * ( 1.0 + beta ) * F_1;
+            
+            for (int i=0; i<n; i++)
+            {
+                // 2D velocity field (Eq. 29 Lipscomb et al., 2019).
+                u(i,j) = ub(i) * ( 1.0 + beta(i) ) * F_1(i);
+            }
+        }    
+
     }
     
     // Impose ice divide boundary condition.
@@ -1365,6 +1401,7 @@ ArrayXXd f_fric(ArrayXd u_bar, ArrayXd C_bed, ArrayXXd visc, \
     out.col(1) = tau_b;
     out.col(2) = Q_fric;
     out.col(3) = ub;
+    out.block(0,4,n,n_z) = u;
     
     return out;
 }
@@ -1501,11 +1538,11 @@ int main()
     double const ds_inv = n;
 
     double const t0   = 0.0;                         // Starting time [yr].
-    double const tf   = 10.0e3;                       // 2.0e4, Ending time [yr]. 1.0e4.
+    double const tf   = 1.0e2;                       // 2.0e4, Ending time [yr]. 1.0e4.
     double t;                                        // Time variable [yr].
 
     // VELOCITY SOLVER.
-    int const vel_meth = 2;                           // Vel solver choice: 0 = cte, 1 = SSA, 2 = DIVA.
+    int const vel_meth = 2;                          // Vel solver choice: 0 = cte, 1 = SSA, 2 = DIVA.
 
     // TIME STEPING. Quite sensitive (use fixed dt in case of doubt).
     // For stochastic perturbations. dt = 0.1 and n = 250.
@@ -1654,10 +1691,12 @@ int main()
     // MATRICES.
     ArrayXXd sol(2,n);                     // Matrix output.
     ArrayXXd u(n,n_z);                     // Full velocity u(x,z) [m/yr].  
-    ArrayXXd visc_all(n,n_z+2);            // Output ice viscosity function [Pa·s]. 
+    ArrayXXd u_z(n,n_z);              // Full horizontal velderivative [1/yr]
+    ArrayXXd u_x_diva(n,n_z);
+    ArrayXXd visc_all(n,3*n_z+1);            // Output ice viscosity function [Pa·s]. (n,n_z+2)
     ArrayXXd visc(n,n_z);                  // Ice viscosity [Pa·s]. 
     ArrayXXd theta(n,n_z);                 // Temperature field [K].
-    ArrayXXd fric_all(n,4);                // Basal friction output.
+    ArrayXXd fric_all(n,n_z+4);                // Basal friction output.(n,4)
     
 
     // Function outputs.
@@ -1801,7 +1840,7 @@ int main()
             u_x_bc = sol(1,1);
             
             // Beta with new ub (calculated from u_bar).
-            fric_all = f_fric(u_bar, C_bed, visc, H, dz, sec_year, m, vel_meth, n_z, n);
+            fric_all = f_u(u_bar, C_bed, visc, H, dz, sec_year, m, vel_meth, n_z, n);
             beta  = fric_all.col(0);
             
             // Current error (vector class required to compute norm). 
@@ -1846,10 +1885,11 @@ int main()
                 u_bar = u_bar_old_1 + mu * c_u_bar_1.array();
 
                 // Update beta with new ub (calculated from u_bar).
-                fric_all = f_fric(u_bar, C_bed, visc, H, dz, sec_year, m, vel_meth, n_z, n);
+                fric_all = f_u(u_bar, C_bed, visc, H, dz, sec_year, m, vel_meth, n_z, n);
                 
                 beta  = fric_all.col(0);
                 tau_b = fric_all.col(1);
+                u     = fric_all.block(0,4,n,n_z);
 
                 visc_all = f_visc(u, theta, visc, H, tau_b, u_bar, dz, \
                                     theta_act, ds, L, Q_act, A_0, n_gln, R, B, n_exp, \
@@ -1879,7 +1919,7 @@ int main()
             // Save previous iteration solution (before NaN encountered).
             f_write(c, u_bar_old_1, ub, u_x, H, visc_bar, S, tau_b, beta, tau_d, bed, \
                     C_bed, Q_fric, u2_dif_vec, u2_0_vec, L, t, u_x_bc, u2_dif, \
-                    error, dt, c_picard, mu, omega, theta, visc, A, dL_dt, \
+                    error, dt, c_picard, mu, omega, theta, visc, u_z, u_x_diva, A, dL_dt, \
                     m_stoch, smb_stoch);
 
             // Close nc file. 
@@ -1892,10 +1932,19 @@ int main()
             return 0;
         }
         
+        // Allocate output variables.
+        /*
+        out.block(0,0,n,n_z)       = visc;
+        out.block(0,n_z,n,1)       = visc_bar;
+        out.block(0,n_z+1,n,n_z)   = u_x_diva;
+        out.block(0,2*n_z+1,n,n_z) = u_z;
+        */
+
         // Allocate variables from converged solution.
-        Q_fric = fric_all.col(2);
-        ub     = fric_all.col(3);
-        u_x    = visc_all.block(0,n_z+1,n,1);
+        Q_fric   = fric_all.col(2);
+        ub       = fric_all.col(3);
+        u_x_diva = visc_all.block(0,n_z+1,n,n_z);
+        u_z      = visc_all.block(0,2*n_z+1,n,n_z);
         
         // Ice flux calculation. Flotation thickness H_f.
         H_f = D * ( rho_w / rho );
@@ -1915,7 +1964,7 @@ int main()
             // Write solution in nc.
             f_write(c, u_bar, ub, u_x, H, visc_bar, S, tau_b, beta, tau_d, bed, \
                     C_bed, Q_fric, u2_dif_vec, u2_0_vec, L, t, u_x_bc, u2_dif, \
-                    error, dt, c_picard, mu, omega, theta, visc, A, dL_dt, \
+                    error, dt, c_picard, mu, omega, theta, visc, u_z, u_x_diva, A, dL_dt, \
                     m_stoch, smb_stoch);
 
             ++c;
