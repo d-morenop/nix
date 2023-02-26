@@ -1,5 +1,4 @@
 
-
 // NETCDF
 // https://www.unidata.ucar.edu/software/netcdf/
 // https://www.unidata.ucar.edu/software/netcdf/docs/pres_temp_4D_wr_8c-example.html#a9
@@ -8,7 +7,7 @@
 // NETCDF PARAMETERS.
 /* This is the name of the data file we will create. */
 //#define FILE_NAME "output/mismip/exp3/exp3_n.250/exp3_n.250.nc"
-#define FILE_NAME "/home/dmoreno/c++/flowline/output/diva/test.diva.short/flowline.nc"
+#define FILE_NAME "/home/dmoreno/flowline/picard_beta/flowline.nc"
 #define FILE_NAME_READ "/home/dmoreno/c++/flowline/output/glacier_ews/noise_sigm_ocn.12.0.nc"
 
 
@@ -30,6 +29,7 @@
 #define U_X_BAR_NAME "u_x"
 #define U_X_DIVA_NAME "u_x_diva"
 #define U_Z_NAME "u_z"
+#define U_NAME "u"
 #define VISC_NAME "visc"
 #define VISC_BAR_NAME "visc_bar"
 #define A_NAME "A"
@@ -56,6 +56,8 @@
 #define U2_0_VEC_NAME "u2_0_vec"
 #define M_STOCH_NAME "m_stoch"
 #define SMB_STOCH_NAME "smb_stoch"
+#define F_1_NAME "F_1"
+#define F_2_NAME "F_2"
 #define UNITS "units"
  
 /* For the units attributes. */
@@ -68,6 +70,7 @@
 #define U_X_UNITS "1/yr"
 #define U_X_DIVA_UNITS "1/yr"
 #define U_Z_UNITS "1/yr"
+#define U_UNITS "m/yr"
 #define VISC_UNITS "Pa s"
 #define VISC_BAR_UNITS "Pa s"
 #define A_UNITS "Pa^-3 s^-1"
@@ -94,6 +97,8 @@
 #define U2_0_VEC_UNITS "1/yr"
 #define M_STOCH_UNITS "m/yr"
 #define SMB_STOCH_UNITS "m/yr"
+#define F_1_UNITS "m / (Pa yr)"
+#define F_2_UNITS "m / (Pa yr)"
 
 /* Handle errors by printing an error message and exiting with a
  * non-zero status. */
@@ -107,12 +112,12 @@ int retval;
 // SOLUTION SAVED IN .NC FILE: flow_line.nc
 /* IDs for the netCDF file, dimensions, and variables. */
 int ncid, x_dimid, z_dimid, time_dimid;
-int x_varid, z_varid, u_bar_varid, ub_varid, u_x_varid, u_x_diva_varid, u_z_varid, H_varid, \
+int x_varid, z_varid, u_bar_varid, ub_varid, u_x_varid, u_x_diva_varid, u_z_varid, u_varid,H_varid, \
     visc_varid, visc_bar_varid, a_varid, s_varid, \
     tau_varid, beta_varid, lmbd_varid, taud_varid, b_varid, L_varid, dL_dt_varid, dt_varid, \
     c_pic_varid, t_varid, mu_varid, omega_varid, u2_bc_varid, u2_dif_varid, \
     picard_error_varid, u2_0_vec_varid, u2_dif_vec_varid, theta_varid, C_bed_varid, Q_fric_varid, \
-    m_stoch_varid, smb_stoch_varid;
+    F_1_varid, F_2_varid, m_stoch_varid, smb_stoch_varid;
 int dimids[NDIMS];
 
 // For the 0D plots (append the current length of domain L)
@@ -229,6 +234,13 @@ int f_nc(int N, int N_Z)
     if ((retval = nc_def_var(ncid, U2_0_VEC_NAME, NC_DOUBLE, NDIMS,
                     dimids, &u2_0_vec_varid)))
         ERR(retval);
+    if ((retval = nc_def_var(ncid, F_1_NAME, NC_DOUBLE, NDIMS,
+                    dimids, &F_1_varid)))
+        ERR(retval);
+    if ((retval = nc_def_var(ncid, F_2_NAME, NC_DOUBLE, NDIMS,
+                    dimids, &F_2_varid)))
+        ERR(retval);
+
 
     if ((retval = nc_def_var(ncid, L_NAME, NC_DOUBLE, NDIMS_0,
                     dimids_0, &L_varid)))
@@ -282,6 +294,9 @@ int f_nc(int N, int N_Z)
     if ((retval = nc_def_var(ncid, U_X_DIVA_NAME, NC_DOUBLE, NDIMS_Z,
                     dimids_z, &u_x_diva_varid)))
         ERR(retval);
+    if ((retval = nc_def_var(ncid, U_NAME, NC_DOUBLE, NDIMS_Z,
+                    dimids_z, &u_varid)))
+        ERR(retval);
 
     /* Assign units attributes to the netCDF variables. */
     if ((retval = nc_put_att_text(ncid, u_bar_varid, UNITS,
@@ -329,6 +344,12 @@ int f_nc(int N, int N_Z)
         ERR(retval);
     if ((retval = nc_put_att_text(ncid, u2_0_vec_varid, UNITS,
                     strlen(U2_0_VEC_UNITS), U2_0_VEC_UNITS)))
+        ERR(retval);
+    if ((retval = nc_put_att_text(ncid, F_1_varid, UNITS,
+                    strlen(F_1_UNITS), F_1_UNITS)))
+        ERR(retval);
+    if ((retval = nc_put_att_text(ncid, F_2_varid, UNITS,
+                    strlen(F_2_UNITS), F_2_UNITS)))
         ERR(retval);
 
     if ((retval = nc_put_att_text(ncid, L_varid, UNITS,
@@ -383,6 +404,9 @@ int f_nc(int N, int N_Z)
     if ((retval = nc_put_att_text(ncid, u_x_diva_varid, UNITS,
                     strlen(U_X_DIVA_UNITS), U_X_DIVA_UNITS)))
         ERR(retval);
+    if ((retval = nc_put_att_text(ncid, u_varid, UNITS,
+                    strlen(U_UNITS), U_UNITS)))
+        ERR(retval);
         
     /* End define mode. */
     if ((retval = nc_enddef(ncid)))
@@ -420,8 +444,8 @@ int f_write(int c, ArrayXd u_bar, ArrayXd ub, ArrayXd u_x, ArrayXd H, ArrayXd vi
             ArrayXd C_bed, ArrayXd Q_fric, ArrayXd u2_dif_vec, ArrayXd u2_0_vec, \
             double L, double t, double u2_bc, double u2_dif, double error, \
             double dt, int c_picard, double mu, double omega, ArrayXXd theta, \
-            ArrayXXd visc, ArrayXXd u_z, ArrayXXd u_x_diva, double A, double dL_dt, \
-            double m_stoch, double smb_stoch)
+            ArrayXXd visc, ArrayXXd u_z, ArrayXXd u_x_diva, ArrayXXd u, double A, double dL_dt, \
+            ArrayXd F_1, ArrayXd F_2, double m_stoch, double smb_stoch)
 {
     start[0]   = c;
     start_0[0] = c;
@@ -456,6 +480,10 @@ int f_write(int c, ArrayXd u_bar, ArrayXd ub, ArrayXd u_x, ArrayXd H, ArrayXd vi
     if ((retval = nc_put_vara_double(ncid, u2_dif_vec_varid, start, cnt, &u2_dif_vec(0))))
     ERR(retval);
     if ((retval = nc_put_vara_double(ncid, u2_0_vec_varid, start, cnt, &u2_0_vec(0))))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid, F_1_varid, start, cnt, &F_1(0))))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid, F_2_varid, start, cnt, &F_2(0))))
     ERR(retval);
 
     // 1D variables.
@@ -495,6 +523,9 @@ int f_write(int c, ArrayXd u_bar, ArrayXd ub, ArrayXd u_x, ArrayXd H, ArrayXd vi
     ERR(retval);
     if ((retval = nc_put_vara_double(ncid, u_x_diva_varid, start_z, cnt_z, &u_x_diva(0,0))))
     ERR(retval);
+    if ((retval = nc_put_vara_double(ncid, u_varid, start_z, cnt_z, &u(0,0))))
+    ERR(retval);
+
 
     return c;
 }

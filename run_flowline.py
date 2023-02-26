@@ -24,8 +24,8 @@ from subprocess import Popen, PIPE, STDOUT
 
 
 # User defined directories.
-path_flowline = "/home/dmoreno/scr/git/flowline/flowline/"
-path_output   = "/home/dmoreno/c++/flowline/output/diva/test.diva.short/"
+path_flowline = "/home/dmoreno/scr/flowline/"
+path_output   = "/home/dmoreno/flowline/picard_beta/"
 path_input    = "/home/dmoreno/c++/flowline/output/glacier_ews/"
 
 
@@ -54,11 +54,11 @@ else:
 # Copy main script and write_nc to the output folder for compilation therein.
 shutil.copyfile(path_flowline+'flow_line.cpp', path_output+'flow_line.cpp')
 shutil.copyfile(path_flowline+'read-write_nc.cpp', path_output+'read-write_nc.cpp')
-shutil.copyfile(path_input+'noise.nc', path_output+'noise.nc')
+#shutil.copyfile(path_input+'noise.nc', path_output+'noise.nc')
 
 
 # Compilation configuration. ['local', 'iceberg', 'brigit']
-config = 'foehn'
+config = 'iceshelf'
 
 if config == 'local':
     
@@ -66,6 +66,11 @@ if config == 'local':
     cmd  = "g++ -I /path/to/eigen3/ -o "+path_output+"flow_line.o "+path_output+"flow_line.cpp -lnetcdf"
 
 elif config == 'foehn':
+    
+    # Compiling command. -std=c++17
+    cmd = "g++ -std=c++11 -I /usr/include/eigen3/ -o "+path_output+"flow_line.o "+path_output+"flow_line.cpp -lnetcdf"
+
+elif config == 'iceshelf':
     
     # Compiling command. -std=c++17
     cmd = "g++ -std=c++11 -I /usr/include/eigen3/ -o "+path_output+"flow_line.o "+path_output+"flow_line.cpp -lnetcdf"

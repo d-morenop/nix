@@ -16,8 +16,9 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy import signal
 
 
+
 path_fig  = '/home/dmoreno/figures/flowline/frames/theta/'
-path_now = '/home/dmoreno/c++/flowline/output/diva/test.diva.short/'
+path_now = '/home/dmoreno/flowline/SSA/'
 path_stoch  = '/home/dmoreno/c++/flowline/output/glacier_ews/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
@@ -27,13 +28,15 @@ file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
 # Select plots to be saved (boolean integer).
 save_series        = 1
-save_series_comp   = 0
+save_series_comp   = 1
 save_shooting      = 0
 save_domain        = 1
 save_var_frames    = 1
 save_series_frames = 0
 save_theta         = 0
-save_diva          = 0
+save_visc          = 1
+save_u_der         = 1
+save_F_n           = 1
 save_L             = 0
 save_fig           = False
 read_stoch_nc      = False
@@ -58,17 +61,17 @@ data   = Dataset(nc_SSA, mode='r')
 
 
 # Let us create a dictionary with variable names.
-flowline_name = ['u_bar', 'ub', 'u_x', 'u_z', 'H', 'visc_bar', 'tau_b', 'tau_d', \
+flowline_name = ['u_bar', 'ub', 'u_x', 'u_z', 'u', 'H', 'visc_bar', 'tau_b', 'tau_d', \
 				 'L', 'dL_dt', 't', 'b', 'C_bed', 'dudx_bc', \
 				 'BC_error', 'u2_0_vec', 'u2_dif_vec', 'picard_error', \
 				 'c_picard', 'dt', 'mu', 'omega', 'A', 'theta', 'S', \
-				 'm_stoch', 'smb_stoch', 'Q_fric', 'beta', 'visc', 'u_x_diva']
+				 'm_stoch', 'smb_stoch', 'Q_fric', 'beta', 'visc', 'u_x_diva', 'F_1', 'F_2']
 
-var_name 	  = ['u_bar', 'ub', 'u_x', 'u_z', 'H', 'visc_bar', 'tau_b', 'tau_d', \
+var_name 	  = ['u_bar', 'ub', 'u_x', 'u_z', 'u', 'H', 'visc_bar', 'tau_b', 'tau_d', \
 				 'L', 'dL_dt', 't', 'b', 'C_bed', 'u_x_bc', \
 				 'dif', 'u2_0_vec', 'u2_dif_vec', 'picard_error', \
 				 'c_picard', 'dt', 'mu', 'omega_picard', 'A_s', 'theta', 'S', \
-				 'm_stoch', 'smb_stoch', 'Q_fric', 'beta', 'visc', 'u_x_diva']
+				 'm_stoch', 'smb_stoch', 'Q_fric', 'beta', 'visc', 'u_x_diva', 'F_1', 'F_2']
 
 # Dimension.
 l_var = len(var_name)
@@ -84,6 +87,8 @@ for i in range(l_var):
 L = 1.0e-3 * L
 b = 1.0e-3 * b
 H = 1.0e-3 * H
+tau_b = 1.0e-3 * tau_b
+beta  = 1.0e-3 * beta
 theta = theta - 273.15
 
 
@@ -275,8 +280,8 @@ if save_series == 1:
 	#ax4.plot(t_plot, dL_dt, linestyle='-', color='brown', marker='None', \
 	#		 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 
-	#ax5.plot(t_plot, visc_bar_mean, linestyle='-', color='purple', marker='None', \
-	#		 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+	ax3.plot(t_plot, visc_bar_mean, linestyle='-', color='brown', marker='None', \
+			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 	ax5.plot(t_plot, q[:,n-1], linestyle='-', color='purple', marker='None', \
 			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 
@@ -307,15 +312,15 @@ if save_series == 1:
 		ax3.set_ylim(-2.2, 0.9)
 		ax5.set_ylim(-0.5, 45.0)
 	
-	ax.set_ylabel(r'$L \ (km)$', fontsize=18)
-	ax2.set_ylabel(r'$H_{gl} \ (km)$', fontsize=18)
+	ax.set_ylabel(r'$L \ (\mathrm{km})$', fontsize=18)
+	ax2.set_ylabel(r'$H_{gl} \ (\mathrm{km})$', fontsize=18)
 	#ax3.set_ylabel(r'$ 1/A \ (Pa^{3} \ s) $', fontsize=18)
-	ax4.set_ylabel(r'$ \bar{\theta}(0,t) \ (^{\circ} C) $', fontsize=18)
+	ax4.set_ylabel(r'$ \bar{\theta}(0,t) \ (^{\circ} \mathrm{C}) $', fontsize=18)
 	#ax4.set_ylabel(r'$ \dot{L} \ (m/yr)$',fontsize=18)
-	#ax5.set_ylabel(r'$ \bar{\eta} \ (Pa \cdot s)$', fontsize=18)
+	ax3.set_ylabel(r'$ \bar{\eta} \ (\mathrm{Pa \cdot s})$', fontsize=18)
 	ax5.set_ylabel(r'$ q \ (\mathrm{m}^2 / \mathrm{yr})$', fontsize=18)
-	ax6.set_ylabel(r'$ \bar{u}(L) \ (m/yr)$', fontsize=18)
-	ax3.set_xlabel(r'$\mathrm{Time} \ (kyr)$', fontsize=18)
+	ax6.set_ylabel(r'$ \bar{u}(L) \ (\mathrm{m/yr})$', fontsize=18)
+	ax3.set_xlabel(r'$\mathrm{Time} \ (\mathrm{kyr})$', fontsize=18)
 	
 	#ax.set_xlim(t_plot[0], t_plot[l-1])
 	#ax2.set_xlim(t_plot[0], t_plot[l-1])
@@ -325,7 +330,7 @@ if save_series == 1:
 	ax.yaxis.label.set_color('red')
 	ax2.yaxis.label.set_color('black')
 	ax4.yaxis.label.set_color('darkgreen')
-	#ax4.yaxis.label.set_color('brown')
+	ax3.yaxis.label.set_color('brown')
 	ax5.yaxis.label.set_color('purple')
 	ax6.yaxis.label.set_color('blue')
 	
@@ -341,7 +346,7 @@ if save_series == 1:
 	ax.tick_params(axis='y', which='major', length=4, colors='red')
 	ax2.tick_params(axis='y', which='major', length=4, colors='black')
 	ax4.tick_params(axis='y', which='major', length=4, colors='darkgreen')
-	#ax4.tick_params(axis='y', which='major', length=4, colors='brown')
+	ax3.tick_params(axis='y', which='major', length=4, colors='brown')
 	ax5.tick_params(axis='y', which='major', length=4, colors='purple')
 	ax6.tick_params(axis='y', which='major', length=4, colors='blue')
 	
@@ -574,8 +579,8 @@ if save_domain == 1:
 	 						   facecolor='grey', alpha=0.4)
 	
 	
-		ax.set_ylabel(r'$z(x) \ (km)$', fontsize=20)
-		ax.set_xlabel(r'$x \ (km) $', fontsize=20)
+		ax.set_ylabel(r'$z(x) \ (\mathrm{km})$', fontsize=20)
+		ax.set_xlabel(r'$x \ (\mathrm{km}) $', fontsize=20)
 	
 		ax.yaxis.label.set_color('black')
 	 	
@@ -640,7 +645,8 @@ if save_var_frames == 1:
 					      - 151.72 * x_tilde**6 )
 		
 
-		#L_plot = b[i,:]
+		# Vertically averaged du/dx.
+		u_x_bar = np.mean(u_x_diva[i,:,:], axis=0)
 			
 		######################################
 		######################################
@@ -659,7 +665,7 @@ if save_var_frames == 1:
 	
 		ax.plot(L_plot, u_bar[i,:], linestyle='-', color='blue', marker='None', \
 	 			linewidth=2.0, alpha=1.0, label=r'$u_{b}(x)$') 
-		ax5.plot(L_plot, u_x[i,:], linestyle='-', color='darkgreen', marker='None', \
+		ax5.plot(L_plot, u_x_bar, linestyle='-', color='darkgreen', marker='None', \
 	 			linewidth=2.0, alpha=1.0, label=r'$\partial u_{b}/\partial x$')  
 		ax3.plot(L_plot, visc_bar[i,:], linestyle='-', color='purple', marker='None', \
 	  	 		linewidth=2.0, alpha=1.0, label=r'$\partial H/\partial x$') 
@@ -675,14 +681,14 @@ if save_var_frames == 1:
 	 	#		linewidth=2.0, alpha=1.0, label=r'$\tau_{d}(x)$') 
 	
 	
-		ax.set_ylabel(r'$ \bar{u} (x) \ (m/yr)$',fontsize=16)
-		ax3.set_ylabel(r'$\eta(x)\ (Pa \cdot s)$',fontsize=16)
+		ax.set_ylabel(r'$ \bar{u} (x) \ (\mathrm{m/yr})$',fontsize=16)
+		ax3.set_ylabel(r'$\bar{\eta} (x)\ (\mathrm{Pa \cdot s})$',fontsize=16)
 		#ax4.set_ylabel(r'$ Q_{\mathrm{fric}}(x) \ (W/m^2)$',fontsize=16)
-		ax4.set_ylabel(r'$ \beta(x) \ (Pa yr/m)$',fontsize=16)
-		ax5.set_ylabel(r'$\partial u_{b}/\partial x $',fontsize=16)
-		ax2.set_ylabel(r'$H(x) \ (km)$', fontsize=16)
-		ax6.set_ylabel(r'$\tau_{b}(x) \ (Pa)$', fontsize=16)
-		ax3.set_xlabel(r'$x \ (km) $',fontsize=16)
+		ax4.set_ylabel(r'$ \beta(x) \ (\mathrm{kPa \ yr/m})$',fontsize=16)
+		ax5.set_ylabel(r'$\partial \bar{u}_{b}/\partial x $',fontsize=16)
+		ax2.set_ylabel(r'$H(x) \ (\mathrm{km})$', fontsize=16)
+		ax6.set_ylabel(r'$\tau_{b}(x) \ (\mathrm{kPa})$', fontsize=16)
+		ax3.set_xlabel(r'$x \ (\mathrm{km}) $',fontsize=16)
 		ax7.set_yticks([])
 	
 		ax.yaxis.label.set_color('blue')
@@ -840,7 +846,7 @@ if save_theta == 1:
 #############################################
 # VISC(x,z,t) and u_x(x,z,t) FRAMES
 
-if save_diva == 1:
+if save_visc == 1:
 
 	# Number of x ticks.
 	n_ticks = 5
@@ -853,8 +859,10 @@ if save_diva == 1:
 	y_labels = np.linspace(0, n_z, z_ticks, dtype=int)
 
 	# Var limits.
-	var_min = np.round(1e-6 * np.nanmin(visc), 0)
-	var_max = np.round(1e-6 * np.nanmax(visc), 0)
+	#var_min = np.round(1e-6 * np.nanmin(visc), 0)
+	#var_max = np.round(1e-6 * np.nanmax(visc), 0)
+	var_min = np.nanmin(visc)
+	var_max = np.nanmax(visc)
 
 	cb_ticks = np.linspace(var_min, var_max, 6)
 	
@@ -910,8 +918,187 @@ if save_diva == 1:
 		
 		plt.show()
 		plt.close(fig)
+	
+
+
+if save_u_der == 1:
+
+	# Number of x ticks.
+	n_ticks = 5
+	x_ticks = np.linspace(0, n, n_ticks)
+	n_z     = np.shape(visc)[1]
+	z_ticks = int(0.2 * n_z + 1)
+
+	# n_z-0.5 to avoid half of grid cell in black when plotting.
+	y_ticks  = np.linspace(0, n_z-0.5, z_ticks, dtype=int)
+	y_labels = np.linspace(0, n_z, z_ticks, dtype=int)
+
+	# Var limits.
+	#var_min = np.round(1e-6 * np.nanmin(visc), 0)
+	#var_max = np.round(1e-6 * np.nanmax(visc), 0)
+	u_min = np.nanmin(u)
+	u_max = np.nanmax(u)
+
+	u_z_min = np.nanmin(u_z)
+	u_z_max = np.nanmax(u_z)
+
+	cb_ticks_u   = np.linspace(u_min, u_max, 6)
+	cb_ticks_u_z = np.round(np.linspace(u_z_min, u_z_max, 6), 4)
+	
+	for i in range(l-1, l, 1):
+
+		# Update x_labels as domain extension changes in each iteration.
+		x_labels  = np.linspace(0, L[i], n_ticks, dtype=int)
 		
 
+		# FIGURE FOR U_X.
+		fig = plt.figure(dpi=600, figsize=(6,4))
+		plt.rcParams['text.usetex'] = True
+		ax  = fig.add_subplot(111)
+
+		# Flip theta matrix so that the plot is not upside down.
+		im = ax.imshow(np.flip(u[i,:,:],axis=0), cmap='plasma', \
+						vmin=u_min, vmax=u_max, aspect='auto')
+	
+		ax.set_ylabel(r'$ \mathbf{n}_{z} $', fontsize=20)
+		ax.set_xlabel(r'$\ \mathbf{x} \ (\mathrm{km})$', fontsize=20)
+
+		divider = make_axes_locatable(ax)
+		cax     = divider.append_axes("right", size="5%", pad=0.1)
+		cb      = fig.colorbar(im, cax=cax, extend='neither')
+
+		cb.set_ticks(cb_ticks_u)
+		cb.set_ticklabels(list(cb_ticks_u), fontsize=14)
+
+		cb.set_label(r'$ u (x,z) \ ( \mathrm{m / yr})$', \
+					 rotation=90, labelpad=6, fontsize=20)
+
+		ax.set_xticks(x_ticks)
+		ax.set_xticklabels(list(x_labels), fontsize=15)
+		
+		ax.set_yticks(y_ticks)
+		ax.set_yticklabels(list(y_labels[::-1]), fontsize=15)
+	
+		ax.set_title(r'$i = \ $'+str(i)+r'$, \ t =  \ $'+str(np.round(t[i],2))+r'$ \ yr$', fontsize=16)
+		plt.tight_layout()
+
+		if save_fig == True:
+			##### Frame name ########
+			if i < 10:
+				frame = '000'+str(i)
+			elif i > 9 and i < 100:
+				frame = '00'+str(i)
+			elif i > 99 and i < 1000:
+				frame = '0'+str(i)
+			else:
+				frame = str(i)
+			
+			plt.savefig(path_fig+'flow_line_visc_'+frame+'.png', bbox_inches='tight')
+		
+		plt.show()
+		plt.close(fig)
+
+		# FIGURE FOR U_Z.
+		fig = plt.figure(dpi=600, figsize=(6,4))
+		plt.rcParams['text.usetex'] = True
+		ax  = fig.add_subplot(111)
+
+		# Flip theta matrix so that the plot is not upside down.
+		im = ax.imshow(np.flip(u_z[i,:,:],axis=0), cmap='plasma', \
+						vmin=u_z_min, vmax=u_z_max, aspect='auto')
+	
+		ax.set_ylabel(r'$ \mathbf{n}_{z} $', fontsize=20)
+		ax.set_xlabel(r'$\ \mathbf{x} \ (\mathrm{km})$', fontsize=20)
+
+		divider = make_axes_locatable(ax)
+		cax     = divider.append_axes("right", size="5%", pad=0.1)
+		cb      = fig.colorbar(im, cax=cax, extend='neither')
+
+		cb.set_ticks(cb_ticks_u_z)
+		cb.set_ticklabels(list(cb_ticks_u_z), fontsize=14)
+
+		cb.set_label(r'$ u_{z} (x,z) \ ( \mathrm{1 / yr})$', \
+					 rotation=90, labelpad=6, fontsize=20)
+
+		ax.set_xticks(x_ticks)
+		ax.set_xticklabels(list(x_labels), fontsize=15)
+
+		ax.set_yticks(y_ticks)
+		ax.set_yticklabels(list(y_labels[::-1]), fontsize=15)
+	
+		ax.set_title(r'$i = \ $'+str(i)+r'$, \ t =  \ $'+str(np.round(t[i],2))+r'$ \ yr$', fontsize=16)
+		plt.tight_layout()
+
+		if save_fig == True:
+			##### Frame name ########
+			if i < 10:
+				frame = '000'+str(i)
+			elif i > 9 and i < 100:
+				frame = '00'+str(i)
+			elif i > 99 and i < 1000:
+				frame = '0'+str(i)
+			else:
+				frame = str(i)
+			
+			plt.savefig(path_fig+'flow_line_visc_'+frame+'.png', bbox_inches='tight')
+		
+		plt.show()
+		plt.close(fig)
+
+
+
+
+
+#############################################
+#############################################
+# TIME SERIES
+if save_F_n == 1:
+
+	for i in range(l-1, l, 1):
+
+		L_plot  = np.linspace(0, L[i], n)
+	
+		# Figure.
+		fig = plt.figure(dpi=600, figsize=(5.5,6))
+		ax = fig.add_subplot(211)
+		ax2 = fig.add_subplot(212)
+
+		
+		plt.rcParams['text.usetex'] = True
+		
+		ax.plot(L_plot, F_1[i,:], linestyle='-', color='red', marker='None', \
+				markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+		
+		ax2.plot(L_plot, F_2[i,:], linestyle='-', color='black', marker='None', \
+				markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+		
+		
+		ax.set_ylabel(r'$ F_{1} \ (\mathrm{m / (Pa yr)})$', fontsize=18)
+		ax2.set_ylabel(r'$ F_{2} \ (\mathrm{m / (Pa yr)})$', fontsize=18)
+		
+		ax2.set_xlabel(r'$ x \ (\mathrm{km})$', fontsize=18)
+	
+			
+		ax.yaxis.label.set_color('black')
+		ax2.yaxis.label.set_color('black')
+		
+		ax.set_xticklabels([])
+		#ax2.set_xticklabels([])
+
+		ax.tick_params(axis='y', which='major', length=0, colors='black')
+		ax2.tick_params(axis='y', which='major', length=4, colors='black')
+		
+		ax.grid(axis='x', which='major', alpha=0.85)
+		ax2.grid(axis='x', which='major', alpha=0.85)
+		
+		plt.tight_layout()
+
+		if save_fig == True:
+			plt.savefig(path_fig+'time_series.png', bbox_inches='tight')
+
+		# Display and close figure.
+		plt.show()
+		plt.close(fig)
 
 #############################################
 #############################################
