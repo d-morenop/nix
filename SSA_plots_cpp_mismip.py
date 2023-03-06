@@ -3,7 +3,7 @@
 """
 Created on Thu May  6 17:40:49 2021
 
-@author: dmoren07
+@author: dmoreno
 """
 
 
@@ -18,7 +18,7 @@ from scipy import signal
 
 
 path_fig  = '/home/dmoreno/figures/flowline/frames/theta/'
-path_now = '/home/dmoreno/flowline/SSA/'
+path_now = '/home/dmoreno/flowline/SSA.eps.1e-3/'
 path_stoch  = '/home/dmoreno/c++/flowline/output/glacier_ews/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
@@ -36,7 +36,7 @@ save_series_frames = 0
 save_theta         = 0
 save_visc          = 1
 save_u_der         = 1
-save_F_n           = 1
+save_F_n           = 0
 save_L             = 0
 save_fig           = False
 read_stoch_nc      = False
