@@ -946,7 +946,7 @@ ArrayXd f_visc(ArrayXd u2, ArrayXXd theta, double theta_act, \
 */
 
 
-ArrayXXd f_visc(ArrayXXd u, ArrayXXd theta, ArrayXXd visc, ArrayXd H, ArrayXd tau_b, \
+ArrayXXd f_visc(ArrayXXd theta, ArrayXXd visc, ArrayXd H, ArrayXd tau_b, \
                 ArrayXd beta, ArrayXd u_bar, ArrayXd dz, \
                 double theta_act, double ds, double L, \
                 Array2d Q_act, Array2d A_0, double n_gln, double R, double B, double n_exp, \
@@ -994,9 +994,6 @@ ArrayXXd f_visc(ArrayXXd u, ArrayXXd theta, ArrayXXd visc, ArrayXd H, ArrayXd ta
     // DIVA solver.
     else if ( vel_meth == 2 && t >= t_eq )
     {
-
-        // Test defining taub with u_bar instead of ub.
-        //tau_b = beta * u_bar;
         
         // As defined in Eq. 21 (Lipscomb et al., 2019).
         for (int i=1; i<n-1; i++)
@@ -1006,7 +1003,6 @@ ArrayXXd f_visc(ArrayXXd u, ArrayXXd theta, ArrayXXd visc, ArrayXd H, ArrayXd ta
         u_x(0)   = u_bar(1) - u_bar(0);
         u_x(n-1) = u_bar(n-1) - u_bar(n-2);
 
-        
 
         // Vertical shear stress du/dz from Eq. 36 Lipscomb et al.
         for (int j=0; j<n_z; j++)
@@ -1033,18 +1029,6 @@ ArrayXXd f_visc(ArrayXXd u, ArrayXXd theta, ArrayXXd visc, ArrayXd H, ArrayXd ta
         // Vertically-averaged viscosity.
         visc_bar = visc.rowwise().mean();
         
-        ////////////////////////////////////////////////////////////////7
-        // Chapuza.
-        /*
-        u_bar_z  = u_z.rowwise().mean();
-        strain   = pow(u_x,2) + 0.25 * pow(u_z,2) + eps;
-        visc_bar = 0.5 * B * pow(strain, n_exp);
-        for (int j=0; j<n_z; j++)
-        {
-            visc.col(j) = visc_bar;
-        }
-        */
-        /////////////////////////////////////////////////////////////////
 
         /*
         // Constant ice rate factor A.
@@ -1343,7 +1327,8 @@ ArrayXd F_int(ArrayXXd visc, ArrayXd H, ArrayXd dz, int n_int, int n_z, int n) {
         double sum = 0;
 
         // Vertical integration.
-        for (int j = 0; j < n_z; ++j) 
+        //for (int j = 0; j < n_z; ++j) 
+        for (int j = 0; j <= n_z; ++j) 
         {
             double H_minus_z = H(i) - z;
             double value = pow(H_minus_z / H(i), n_int) / visc(i, j);
@@ -1385,8 +1370,10 @@ ArrayXXd f_u(ArrayXd u_bar, ArrayXd beta, ArrayXd C_bed, ArrayXXd visc, \
 
         // REVISE HOW BETA IS CALCULATED
         // Obtain ub from new u_bar and previous beta (Eq. 32 Lipscomb et al.).
-        //ub = u_bar / ( 1.0 + beta * F_2 );
-        ub = u_bar - beta * F_2;
+        ub = u_bar / ( 1.0 + beta * F_2 );
+
+        // Impose BC here?
+        ub(0) = - ub(1);
 
         // Beta definition. New beta from ub.
         beta = C_bed * pow(ub, m - 1.0);
@@ -1399,9 +1386,6 @@ ArrayXXd f_u(ArrayXd u_bar, ArrayXd beta, ArrayXd C_bed, ArrayXXd visc, \
         beta_eff(0) = beta_eff(1);
 
         // Now we can compute u(x,z) from beta and visc.
-        // PROBLEM HERE WITH F INTEGRALS??????????????????
-        // WE GET ALL 0 BUT THE FIRST ENTRY FOR EACH VECTOR.
-        // Picard iterations do not seem to converge now!
         for (int j=0; j<n_z; j++)
         {
             // Integral only up to current vertical level j.
@@ -1411,10 +1395,12 @@ ArrayXXd f_u(ArrayXd u_bar, ArrayXd beta, ArrayXd C_bed, ArrayXXd visc, \
             u.col(j) = ub * ( 1.0 + beta * F_1 );
         }    
 
+        // Impose BC here?
+        u.row(0) = - u.row(1);
+
     }
 
-    // Calculate basal shear stress with ub. 
-    // Before Picard iteration.
+    // Calculate basal shear stress with ub (not updated in Picard iteration). 
     tau_b    = beta_eff * ub;
     tau_b(0) = tau_b(1);    // Symmetry ice divide. Avoid negative tau as u_bar(0) < 0. 
 
@@ -1505,7 +1491,7 @@ ArrayXXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc_bar
     u_bar = tridiagonal_solver(A, B, C, F, n); 
 
     // Replace potential negative values with given value. (result.array() < 0).select(0, result);
-    u_bar = (u_bar < 0.0).select(0.5 * u_bar(2), u_bar);
+    //u_bar = (u_bar < 0.0).select(0.5 * u_bar(2), u_bar);
 
     // Boundary conditions.
     // Ice divide: symmetry x = 0.
@@ -1567,7 +1553,7 @@ int main()
     double const ds_inv = n;
 
     double const t0   = 0.0;                         // Starting time [yr].
-    double const tf   = 1.0e2;                       // 2.0e4, Ending time [yr]. 2.0e4.
+    double const tf   = 2.0e2;                       // 2.0e4, Ending time [yr]. 2.0e4.
     double t;                                        // Time variable [yr].
 
     // VELOCITY SOLVER.
@@ -1875,7 +1861,7 @@ int main()
             u        = fric_all.block(0,6,n,n_z);
 
             // Update viscosity with new velocity.
-            visc_all = f_visc(u, theta, visc, H, tau_b, beta, u_bar, dz, \
+            visc_all = f_visc(theta, visc, H, tau_b, beta, u_bar, dz, \
                                 theta_act, ds, L, Q_act, A_0, n_gln, R, B, n_exp, \
                                     eps, t, t_eq, sec_year, n, n_z, vel_meth, visc_therm);
             
@@ -1893,7 +1879,6 @@ int main()
             // Necessary to deal with the nonlinear velocity dependence
             // on both viscosity and beta.
             // Just update beta and visc, not tau_b!
-            // SOLCE ISSUE WITH BETA BEING CALCULATED TWICE. PICARD ITERATION "IF" MUST BE CHNAGED.
             if (c_picard == 0)
             {
                 // Assume worst case as the inital guess.
@@ -1904,7 +1889,6 @@ int main()
             {
                 // Difference in iter i-2.
                 c_u_bar_2   = u_bar_old_1 - u_bar_old_2;
-                //c_u_bar_dif = c_u_bar_1 - c_u_bar_2;
                 
                 // Angle defined between two consecutive vel solutions.
                 omega = acos( c_u_bar_1.dot(c_u_bar_2) / \
@@ -1932,22 +1916,6 @@ int main()
             
             // New velocity guess based on updated omega.
             u_bar = u_bar_old_1 + mu * c_u_bar_1.array();
-
-            /*
-            // Update beta with new velocity.
-            fric_all = f_u(u_bar, beta, C_bed, visc, H, dz, sec_year, m, vel_meth, n_z, n);
-            beta     = fric_all.col(0);
-            u        = fric_all.block(0,6,n,n_z);
-
-            // Update viscosity with new velocity.
-            visc_all = f_visc(u, theta, visc, H, tau_b, beta, u_bar, dz, \
-                                theta_act, ds, L, Q_act, A_0, n_gln, R, B, n_exp, \
-                                    eps, t, t_eq, sec_year, n, n_z, vel_meth, visc_therm);
-            
-            // Allocate variables.
-            visc     = visc_all.block(0,0,n,n_z);
-            visc_bar = visc_all.block(0,n_z,n,1);
-            */
             
             // Update multistep variables.
             u_bar_old_2 = u_bar_old_1;
@@ -1980,7 +1948,6 @@ int main()
             // Abort flowline.
             return 0;
         }
-
 
 
         // Allocate variables from converged solution.

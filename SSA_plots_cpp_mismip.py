@@ -18,7 +18,7 @@ from scipy import signal
 
 
 path_fig  = '/home/dmoreno/figures/flowline/frames/theta/'
-path_now = '/home/dmoreno/flowline/SSA.eps.1e-3/'
+path_now = '/home/dmoreno/flowline/ub_new_bc/'
 path_stoch  = '/home/dmoreno/c++/flowline/output/glacier_ews/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
@@ -36,7 +36,7 @@ save_series_frames = 0
 save_theta         = 0
 save_visc          = 1
 save_u_der         = 1
-save_F_n           = 0
+save_F_n           = 1
 save_L             = 0
 save_fig           = False
 read_stoch_nc      = False
