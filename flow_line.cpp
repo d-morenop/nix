@@ -820,7 +820,7 @@ ArrayXd f_H(ArrayXd u_bar, ArrayXd H, ArrayXd S, ArrayXd sigma, \
             F(i) = H(i) + S(i) * dt;
         }
 
-        // Vectors at the boundary.
+        // Vectors at the boundaries.
         A(0) = 0.0;
         B(0) = 1.0 + gamma * u_bar(0);
         //B(0) = 1.0 + gamma * ( u_bar(1) - u_bar(0) );
@@ -877,73 +877,6 @@ ArrayXd f_dhdx(ArrayXd dH, ArrayXd b, int n)
 
 	return dhdx;
 }
-
-/*
-ArrayXd f_visc(ArrayXd u2, ArrayXXd theta, double theta_act, \
-               Array2d Q_act, Array2d A_0, double n_gln, double R, double B, double n_exp, \
-               double eps, double t, double t_eq, double sec_year, int n, int n_z, int visc_therm)
-{
-    ArrayXd u2_eps(n), visc(n); 
-    
-    // Temperature dependent viscosity.
-    if (visc_therm == 1 && t > t_eq)
-    {
-        ArrayXXd A(n,n_z), B(n,n_z);
-        ArrayXd B_bar(n);
-
-        // Calculate temperature-dependent rate factor if thermodynamics is switched on.
-        // Arrhenius law A(T,p) equivalent to A(T').
-        // Eq. 4.15 and 6.54 (Greve and Blatter, 2009).
-        for (int i=0; i<n; i++)
-        {
-            for (int j=0; j<n_z; j++)
-            {
-                // Rate factor. We consider two temperature regimes (Greve and Blatter, 2009).
-                if ( theta(i,j) < theta_act )
-                {
-                    A(i,j) = A_0(0) * exp(- Q_act(0) / (R * theta(i,j)) );
-                }
-                else
-                {
-                    A(i,j) = A_0(1) * exp(- Q_act(1) / (R * theta(i,j)) );
-                }
-            }
-        }
-
-        //cout << "\n A = " << A / sec_year;
-
-        // Associated rate factor. A: [Pa^-3 yr^-1]
-        B = pow(A, ( -1 / n_gln ) );
-
-        // Vertically averaged B.
-        B_bar = B.rowwise().mean();
-
-        // Regularitazion term to avoid division by 0. 
-        u2_eps = u2 + eps;
-
-        // Exponent n_exp = (1-n)/n
-        visc = 0.5 * B_bar * pow(u2_eps, n_exp);
-
-        // Avoid singularity???????
-        //visc(1) = visc(0);
-
-    }
-
-    if ( visc_therm == 1 )
-    {
-        // Regularitazion term to avoid division by 0. 
-        u2_eps = u2 + eps;
-
-        // n_exp = (1-n)/n
-        visc = 0.5 * B * pow(u2_eps, n_exp);
-
-        // Constant viscosity experiment:
-        //visc = ArrayXd::Constant(n, 0.5e17); // 1.0e15, 0.5e17
-    }
-    
-	return visc;
-}	
-*/
 
 
 ArrayXXd f_visc(ArrayXXd theta, ArrayXXd visc, ArrayXd H, ArrayXd tau_b, \
@@ -1344,18 +1277,70 @@ ArrayXd F_int(ArrayXXd visc, ArrayXd H, ArrayXd dz, int n_int, int n_z, int n) {
 }
 
 
+ArrayXXd F_int_all(ArrayXXd visc, ArrayXd H, ArrayXd dz, int n_z, int n) {
+    
+    ArrayXXd F_all(n,n_z+1), F_1(n,n_z);
+    ArrayXd F_2(n);
+
+    double z, sum_1, sum_2, value_1, value_2, H_minus_z;
+    int n_2 = 2;
+    
+    for (int i = 0; i < n; ++i) 
+    {
+        z = 0;
+        sum_1 = 0;
+        sum_2 = 0;
+
+        
+        // Vertical integration.
+        for (int j = 0; j < n_z; ++j) 
+        {
+            // Current vertical height.
+            H_minus_z = ( H(i) - z ) / H(i);
+            
+            // F_2 integral is a 1D array.
+            value_2 = pow(H_minus_z, n_2) / visc(i, j);
+            sum_2  += value_2;
+
+            // F_1 integral is a 2D array.
+            value_1  = H_minus_z / visc(i, j);
+            sum_1   += value_1;
+            F_1(i,j) = sum_1;
+
+            // Update vertical height.
+            z += dz(i);
+        }
+        
+        // Integral value.
+        F_1.row(i) = dz(i) * F_1.row(i);
+        F_2(i)     = dz(i) * sum_2;
+        
+    }
+    
+    // Allocate solutions.
+    F_all.block(0,0,n,1)   = F_2;
+    F_all.block(0,1,n,n_z) = F_1;
+    
+    return F_all;
+}
+
+
+
+
 ArrayXXd f_u(ArrayXd u_bar, ArrayXd beta, ArrayXd C_bed, ArrayXXd visc, \
              ArrayXd H, ArrayXd dz, double sec_year, \
              double m, int vel_meth, int n_z, int n)
 {
-    ArrayXXd out(n,n_z+6), u(n,n_z);
-    ArrayXd beta_eff(n), ub(n), F_2(n), F_1(n), tau_b(n), Q_fric(n), u_z_int(n);
+    ArrayXXd out(n,n_z+6), u(n,n_z), F_1(n,n_z), F_all(n,n_z+1);
+    ArrayXd beta_eff(n), ub(n), F_2(n), tau_b(n), Q_fric(n), u_z_int(n);
     
 
     // For constant visc or SSA, ub = u_bar.
     if ( vel_meth == 0 || vel_meth == 1 )
     {
-        // Beta definition. New beta from ub.
+        // Vel definition. New beta from ub.
+        ub = u_bar;
+
         // beta = beta_eff, ub = u_bar for SSA.
         beta_eff    = C_bed * pow(u_bar, m - 1.0);
         beta_eff(0) = beta_eff(1);
@@ -1366,8 +1351,15 @@ ArrayXXd f_u(ArrayXd u_bar, ArrayXd beta, ArrayXd C_bed, ArrayXXd visc, \
     else
     {
         // Useful integral. n_z-1 as we count from 0.
-        F_2 = F_int(visc, H, dz, 2, n_z-1, n);
-
+        //F_2 = F_int(visc, H, dz, 2, n_z-1, n);
+        
+        // Allocate solutions.
+        F_all = F_int_all(visc, H, dz, n_z, n);
+        
+        F_2 = F_all.block(0,0,n,1);
+        F_1 = F_all.block(0,1,n,n_z);
+        
+        
         // REVISE HOW BETA IS CALCULATED
         // Obtain ub from new u_bar and previous beta (Eq. 32 Lipscomb et al.).
         ub = u_bar / ( 1.0 + beta * F_2 );
@@ -1385,20 +1377,25 @@ ArrayXXd f_u(ArrayXd u_bar, ArrayXd beta, ArrayXd C_bed, ArrayXXd visc, \
         beta(0)     = beta(1);
         beta_eff(0) = beta_eff(1);
 
+        
         // Now we can compute u(x,z) from beta and visc.
         for (int j=0; j<n_z; j++)
         {
             // Integral only up to current vertical level j.
-            F_1 = F_int(visc, H, dz, 1, j, n);
+            //F_1 = F_int(visc, H, dz, 1, j, n);
 
             // 2D velocity field (Eq. 29 Lipscomb et al., 2019).
-            u.col(j) = ub * ( 1.0 + beta * F_1 );
-        }    
+            //u.col(j) = ub * ( 1.0 + beta * F_1 );
 
+            // With F_int_all.
+            u.col(j) = ub * ( 1.0 + beta * F_1.col(j) );
+        }   
+        
         // Impose BC here?
         u.row(0) = - u.row(1);
-
+        
     }
+    
 
     // Calculate basal shear stress with ub (not updated in Picard iteration). 
     tau_b    = beta_eff * ub;
@@ -1413,7 +1410,7 @@ ArrayXXd f_u(ArrayXd u_bar, ArrayXd beta, ArrayXd C_bed, ArrayXXd visc, \
     out.col(1) = tau_b;
     out.col(2) = Q_fric;
     out.col(3) = ub;
-    out.col(4) = F_1;
+    //out.col(4) = F_1;
     out.col(5) = F_2;
     out.block(0,6,n,n_z) = u;
     
@@ -1491,7 +1488,8 @@ ArrayXXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc_bar
     u_bar = tridiagonal_solver(A, B, C, F, n); 
 
     // Replace potential negative values with given value. (result.array() < 0).select(0, result);
-    //u_bar = (u_bar < 0.0).select(0.5 * u_bar(2), u_bar);
+    // Sometimes, u_bar(1) < 0 so that u_bar(0) > 0 after the BC and the model crashes.
+    u_bar = (u_bar < 0.0).select(0.5 * u_bar(2), u_bar);
 
     // Boundary conditions.
     // Ice divide: symmetry x = 0.
@@ -1539,7 +1537,7 @@ int main()
     // VISCOSITY REGULARIZATION TERM.
     // eps is fundamental for GL, velocities, thickness, etc. 1.0e-10, 1.0e-5
     // Values below 1.0e-4 give rise to instabilities?
-    double const eps = 1.0e-3;                            
+    double const eps = 1.0e-6;                            
 
     // BASAL FRICTION.
     double const m = 1.0 / 3.0;                      // Friction exponent.
@@ -1553,7 +1551,7 @@ int main()
     double const ds_inv = n;
 
     double const t0   = 0.0;                         // Starting time [yr].
-    double const tf   = 2.0e2;                       // 2.0e4, Ending time [yr]. 2.0e4.
+    double const tf   = 1.0e3;                       // 2.0e4, Ending time [yr]. 2.0e4.
     double t;                                        // Time variable [yr].
 
     // VELOCITY SOLVER.
@@ -1698,7 +1696,6 @@ int main()
     VectorXd u_bar_vec(n); 
     VectorXd c_u_bar_1(n);                   // Correction vector Picard relaxed iteration.
     VectorXd c_u_bar_2(n);
-    VectorXd c_u_bar_dif(n);
 
     // MISMIP FORCING.
     //ArrayXd A_s(n_s);                    // Rarte factor values for MISMIP exp.
@@ -1858,7 +1855,7 @@ int main()
             // Update beta with new velocity.
             fric_all = f_u(u_bar, beta, C_bed, visc, H, dz, sec_year, m, vel_meth, n_z, n);
             beta     = fric_all.col(0);
-            u        = fric_all.block(0,6,n,n_z);
+            //u        = fric_all.block(0,6,n,n_z);
 
             // Update viscosity with new velocity.
             visc_all = f_visc(theta, visc, H, tau_b, beta, u_bar, dz, \
@@ -1876,8 +1873,7 @@ int main()
             error     = c_u_bar_1.norm() / u_bar_vec.norm();
             
             // New relaxed Picard iteration. Pattyn (2003). 
-            // Necessary to deal with the nonlinear velocity dependence
-            // on both viscosity and beta.
+            // Necessary to deal with the nonlinear velocity dependence on both viscosity and beta.
             // Just update beta and visc, not tau_b!
             if (c_picard == 0)
             {
@@ -1954,7 +1950,7 @@ int main()
         tau_b    = fric_all.col(1);
         Q_fric   = fric_all.col(2);
         ub       = fric_all.col(3);
-        F_1      = fric_all.col(4);
+        //F_1      = fric_all.col(4);
         F_2      = fric_all.col(5);
         u        = fric_all.block(0,6,n,n_z);
         u_x      = visc_all.block(0,n_z+1,n,1);

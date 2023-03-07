@@ -18,7 +18,7 @@ from scipy import signal
 
 
 path_fig  = '/home/dmoreno/figures/flowline/frames/theta/'
-path_now = '/home/dmoreno/flowline/ub_new_bc/'
+path_now = '/home/dmoreno/flowline/ub_new_test.F.all_opt/'
 path_stoch  = '/home/dmoreno/c++/flowline/output/glacier_ews/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
@@ -28,15 +28,15 @@ file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
 # Select plots to be saved (boolean integer).
 save_series        = 1
-save_series_comp   = 1
+save_series_comp   = 0
 save_shooting      = 0
 save_domain        = 1
 save_var_frames    = 1
 save_series_frames = 0
 save_theta         = 0
-save_visc          = 1
-save_u_der         = 1
-save_F_n           = 1
+save_visc          = 0
+save_u_der         = 0
+save_F_n           = 0
 save_L             = 0
 save_fig           = False
 read_stoch_nc      = False
@@ -848,6 +848,9 @@ if save_theta == 1:
 
 if save_visc == 1:
 
+	# Units 10⁶ Pa·s.
+	visc = 1.0e-6 * visc
+
 	# Number of x ticks.
 	n_ticks = 5
 	x_ticks = np.linspace(0, n, n_ticks)
@@ -876,8 +879,9 @@ if save_visc == 1:
 		ax  = fig.add_subplot(111)
 
 		# Flip theta matrix so that the plot is not upside down.
-		im = ax.imshow(np.flip(visc[i,:,:],axis=0), cmap='plasma', \
-						vmin=var_min, vmax=var_max, aspect='auto')
+		#im = ax.imshow(np.flip(visc[i,:,:],axis=0), cmap='plasma', \
+		#				vmin=var_min, vmax=var_max, aspect='auto')
+		im = ax.imshow(np.flip(visc[i,:,:],axis=0), cmap='plasma', aspect='auto')
 	
 		ax.set_ylabel(r'$ \mathbf{n}_{z} $', fontsize=20)
 		ax.set_xlabel(r'$\ \mathbf{x} \ (\mathrm{km})$', fontsize=20)
@@ -886,8 +890,8 @@ if save_visc == 1:
 		cax     = divider.append_axes("right", size="5%", pad=0.1)
 		cb      = fig.colorbar(im, cax=cax, extend='neither')
 
-		cb.set_ticks(cb_ticks)
-		cb.set_ticklabels(list(cb_ticks), fontsize=14)
+		#cb.set_ticks(cb_ticks)
+		#cb.set_ticklabels(list(cb_ticks), fontsize=14)
 
 		cb.set_label(r'$\eta (x,z) \ (10^{6} \ \mathrm{Pa \cdot s})$', \
 					 rotation=90, labelpad=6, fontsize=20)
@@ -957,8 +961,9 @@ if save_u_der == 1:
 		ax  = fig.add_subplot(111)
 
 		# Flip theta matrix so that the plot is not upside down.
-		im = ax.imshow(np.flip(u[i,:,:],axis=0), cmap='plasma', \
-						vmin=u_min, vmax=u_max, aspect='auto')
+		#im = ax.imshow(np.flip(u[i,:,:],axis=0), cmap='plasma', \
+		#				vmin=u_min, vmax=u_max, aspect='auto')
+		im = ax.imshow(np.flip(u[i,:,:],axis=0), cmap='plasma', aspect='auto')
 	
 		ax.set_ylabel(r'$ \mathbf{n}_{z} $', fontsize=20)
 		ax.set_xlabel(r'$\ \mathbf{x} \ (\mathrm{km})$', fontsize=20)
@@ -967,8 +972,8 @@ if save_u_der == 1:
 		cax     = divider.append_axes("right", size="5%", pad=0.1)
 		cb      = fig.colorbar(im, cax=cax, extend='neither')
 
-		cb.set_ticks(cb_ticks_u)
-		cb.set_ticklabels(list(cb_ticks_u), fontsize=14)
+		#cb.set_ticks(cb_ticks_u)
+		#cb.set_ticklabels(list(cb_ticks_u), fontsize=14)
 
 		cb.set_label(r'$ u (x,z) \ ( \mathrm{m / yr})$', \
 					 rotation=90, labelpad=6, fontsize=20)
