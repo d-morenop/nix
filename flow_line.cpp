@@ -1224,32 +1224,7 @@ Array2d du2_ds(double u_1, double u_2, double dh_dx, double visc,\
 }
 
 
-
 /*
-ArrayXd F_int(ArrayXXd visc, ArrayXd H, ArrayXd dz, int n_int, int n_z_int, int n)
-{
-    ArrayXd F = ArrayXd::Zero(n);
-
-    
-    // Here we can set vertical integration up to a desired level n_z.
-    int j = 0;
-
-    for (int i=0; i<n; i++)
-    {
-        j = 0;
-        for (int k=0; k<=n_z_int; k++)
-        {
-            double integral_value = dz(i) * pow( ( H(i) - j * dz(i) ) / H(i) , n_int) / visc(i,j);
-            F(i) += integral_value;
-            //std::cout << "i = " << i << ", j = " << j << ", k = " << k << ", integral_value = " << integral_value << ", F(i) = " << F(i) << std::endl;
-            j++;
-        }
-    }
-
-    return F;
-}
-*/
-
 ArrayXd F_int(ArrayXXd visc, ArrayXd H, ArrayXd dz, int n_int, int n_z, int n) {
     
     ArrayXd F(n);
@@ -1275,7 +1250,7 @@ ArrayXd F_int(ArrayXXd visc, ArrayXd H, ArrayXd dz, int n_int, int n_z, int n) {
 
     return F;
 }
-
+*/
 
 ArrayXXd F_int_all(ArrayXXd visc, ArrayXd H, ArrayXd dz, int n_z, int n) {
     
@@ -1489,7 +1464,12 @@ ArrayXXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc_bar
 
     // Replace potential negative values with given value. (result.array() < 0).select(0, result);
     // Sometimes, u_bar(1) < 0 so that u_bar(0) > 0 after the BC and the model crashes.
-    u_bar = (u_bar < 0.0).select(0.5 * u_bar(2), u_bar);
+    // Necessary for SSA solver, not DIVA.
+    //u_bar = (u_bar < 0.0).select(0.5 * u_bar(2), u_bar);
+    u_bar = (u_bar < 0.0).select(0.25 * u_bar(2), u_bar);
+
+    // THis works but yields extremely thick ice at the divde.
+    //u_bar = (u_bar < 0.0).select(0.0, u_bar);
 
     // Boundary conditions.
     // Ice divide: symmetry x = 0.
@@ -1524,7 +1504,7 @@ int main()
 
    
     // GROUNDING LINE.
-    double L = 694.5e3;                              // Grounding line position [m] (479.1e3), 50.0e3
+    double L = 479.1e3;                              // Grounding line position [m] exp1 = 694.5e3, exp3 = (479.1e3), 50.0e3
     double dL_dt;                                   // GL migration rate [m/yr]. 
     int const dL_dt_num_opt = 1;                    // GL migration numerator discretization opt.
     int const dL_dt_den_opt = 1;                    // GL migration denominator discretization opt.
@@ -1537,7 +1517,8 @@ int main()
     // VISCOSITY REGULARIZATION TERM.
     // eps is fundamental for GL, velocities, thickness, etc. 1.0e-10, 1.0e-5
     // Values below 1.0e-4 give rise to instabilities?
-    double const eps = 1.0e-6;                            
+    // DIVA: 1.0e-6
+    double const eps = 1.0e-5;                            
 
     // BASAL FRICTION.
     double const m = 1.0 / 3.0;                      // Friction exponent.
@@ -1551,11 +1532,11 @@ int main()
     double const ds_inv = n;
 
     double const t0   = 0.0;                         // Starting time [yr].
-    double const tf   = 1.0e3;                       // 2.0e4, Ending time [yr]. 2.0e4.
+    double const tf   = 56.5e4;                       // 2.0e4, Ending time [yr]. 2.0e4.
     double t;                                        // Time variable [yr].
 
     // VELOCITY SOLVER.
-    int const vel_meth = 2;                          // Vel solver choice: 0 = cte, 1 = SSA, 2 = DIVA.
+    int const vel_meth = 1;                          // Vel solver choice: 0 = cte, 1 = SSA, 2 = DIVA.
 
     // TIME STEPING. Quite sensitive (use fixed dt in case of doubt).
     // For stochastic perturbations. dt = 0.1 and n = 250.
@@ -1643,7 +1624,7 @@ int main()
     // Following Pattyn et al. (2012) the overdeepening hysterisis uses n = 250.
     // exp = "mismip_1", "mismip_3", "galcier_ews"
     //int const mismip = 1;
-    int experiment = 1;
+    int experiment = 3;
     double A, B;
 
     // PICARD ITERATION
@@ -1742,7 +1723,7 @@ int main()
     //u_bar = ArrayXd::LinSpaced(n, 1.0, 5.0);
     
     // Viscosity from constant A value. u2 = 0 initialization.
-    // 4.6416e-24, 2.1544e-24. 4.227e-25 [Pa^-3 s^-1] ==> [Pa^-3 yr^-1]
+    // 4.6416e-24, 4.227e-25 [Pa^-3 s^-1] ==> [Pa^-3 yr^-1]
     A = 4.6416e-24 * sec_year;               // 4.23e-25
     B = pow(A, ( -1 / n_gln ) );
 
@@ -1760,6 +1741,38 @@ int main()
     //w = ArrayXd::LinSpaced(n, w_min, w_max);
     w = ArrayXd::Constant(n, w_min);
 
+    /////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////
+
+    // MISMIP EXPERIMENTS FORCING.
+    // Number of steps in the A forcing.
+    //int const n_s = 21;  
+    /*
+    ArrayXd A_s(n_s);  
+    ArrayXd t_s(n_s);  
+    
+     
+    */
+    ArrayXd A_s(n_s);  
+    ArrayXd t_s(n_s); 
+
+    // Exp 3 hysteresis forcing.
+    // Rate factor.
+    
+    A_s << 5.0e-25, 4.0e-25, 3.0e-25, 2.5e-25, 2.0e-25, 1.5e-25, 1.0e-25, 5.0e-26, 2.5e-26, 
+           5.0e-26, 1.0e-25, 1.5e-25, 2.0e-25, 2.5e-25, 3.0e-25, 3.5e-25, 4.0e-25, 4.25e-25, 
+           4.5e-25, 4.75e-25, 5.0e-25; 
+
+    // Time length for a certain A value. 
+    t_s << 3.0e4, 6.0e4, 9.0e4, 11.5e4, 14.0e4, 16.5e4, 19.0e4, 21.5e4, 24.0e4, 
+           26.5e4, 29.0e4, 31.5e4, 34.0e4, 36.5e4, 39.0e4, 41.5e4, 44.0e4, 46.5e4, 
+           49.0e4, 51.5e4, 54.0e4;
+    
+
+    /*
+    A_s << 5.0e-25, 4.0e-25; 
+    t_s << 1.0e4, 2.0e4;
+    */
     
     /////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////
@@ -1808,6 +1821,21 @@ int main()
     // Time integration.
     while (t < tf)
     {
+        ////////////////////////////////////////////////////////////////////////
+        ////////////////////////////////////////////////////////////////////////
+        // MISMIP EXPERIMENTS.
+        // Update rate factor value.
+        if ( t > t_s(c_s) )
+        {
+            c_s = min(c_s + 1, n_s - 1);
+        }
+        
+        // Ice hardness.
+        A = A_s(c_s) * sec_year;
+        B = pow(A, ( -1 / n_gln ) );
+        ////////////////////////////////////////////////////////////////////////
+        ////////////////////////////////////////////////////////////////////////
+
         // Update bedrock with new domain extension L.
         bed = f_bed(L, n, experiment, y_0, y_p, x_1, x_2);
 

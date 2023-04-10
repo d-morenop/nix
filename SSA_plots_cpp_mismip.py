@@ -18,7 +18,7 @@ from scipy import signal
 
 
 path_fig  = '/home/dmoreno/figures/flowline/frames/theta/'
-path_now = '/home/dmoreno/flowline/ub_new_test.F.all_opt/'
+path_now = '/home/dmoreno/flowline/mismip/exp.3/test.long.SSA/u_bar_select/eps.1e-4/'
 path_stoch  = '/home/dmoreno/c++/flowline/output/glacier_ews/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
@@ -28,7 +28,7 @@ file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
 # Select plots to be saved (boolean integer).
 save_series        = 1
-save_series_comp   = 0
+save_series_comp   = 1
 save_shooting      = 0
 save_domain        = 1
 save_var_frames    = 1
@@ -47,7 +47,7 @@ smth_series        = 0
 # MISMIP bedrock experiments.
 # exp = 1: inclined bed; exp = 3: overdeepening bed.
 exp_name = ['mismip_1', 'mismip_3', 'glacier_ews']
-idx = 0
+idx = 1
 exp = exp_name[idx]
 
 
@@ -132,6 +132,9 @@ def f_bed(x, exp, n):
 		bed = ( 729.0 - 2184.8 * x_tilde**2 + \
 						+ 1031.72 * x_tilde**4 + \
 						- 151.72 * x_tilde**6 )
+
+		# Transform to kmto plot.
+		bed = 1.0e-3 * bed
 
 	elif exp == 'glacier_ews':
 
@@ -246,13 +249,7 @@ if save_series == 1:
 	ax5 = ax3.twinx()
 	
 	plt.rcParams['text.usetex'] = True
-	
-	ax.plot(t_plot, L, linestyle='-', color='red', marker='None', \
-			markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
-	
-	ax2.plot(t_plot, H[:,n-1], linestyle='-', color='black', marker='None', \
-			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
-	
+
 	# Define variables.
 	area = np.empty(l)
 	u_L  = np.empty(l)
@@ -267,6 +264,17 @@ if save_series == 1:
 		
 		# Ice velocity at the GL.
 		u_L[i] = u_bar[i,n-1]
+	
+
+	ax6.plot(t_plot, u_L, linestyle='-', color='blue', marker='None', \
+			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+	ax.plot(t_plot, L, linestyle='-', color='red', marker='None', \
+			markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+	
+	ax2.plot(t_plot, H[:,n-1], linestyle='-', color='black', marker='None', \
+			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+	
+
 
 
 	# Smooth.
@@ -290,8 +298,7 @@ if save_series == 1:
 	#		 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 	#ax6.plot(t_plot, var_smth[0][:], linestyle='-', color='blue', marker='None', \
 	#		 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
-	ax6.plot(t_plot, u_L, linestyle='-', color='blue', marker='None', \
-			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+	
 			 
 	# Histograms for stochastic time series.
 	if read_stoch_nc == True:
@@ -963,7 +970,7 @@ if save_u_der == 1:
 		# Flip theta matrix so that the plot is not upside down.
 		#im = ax.imshow(np.flip(u[i,:,:],axis=0), cmap='plasma', \
 		#				vmin=u_min, vmax=u_max, aspect='auto')
-		im = ax.imshow(np.flip(u[i,:,:],axis=0), cmap='plasma', aspect='auto')
+		im = ax.imshow(np.flip(u[i,:,:],axis=0), norm='log', cmap='viridis', aspect='auto')
 	
 		ax.set_ylabel(r'$ \mathbf{n}_{z} $', fontsize=20)
 		ax.set_xlabel(r'$\ \mathbf{x} \ (\mathrm{km})$', fontsize=20)
@@ -1009,9 +1016,10 @@ if save_u_der == 1:
 		ax  = fig.add_subplot(111)
 
 		# Flip theta matrix so that the plot is not upside down.
-		im = ax.imshow(np.flip(u_z[i,:,:],axis=0), cmap='plasma', \
-						vmin=u_z_min, vmax=u_z_max, aspect='auto')
-	
+		#im = ax.imshow(np.flip(u_z[i,:,:],axis=0), cmap='plasma', \
+		#				vmin=u_z_min, vmax=u_z_max, aspect='auto')
+		im = ax.imshow(np.flip(u_z[i,:,:],axis=0), norm='log', cmap='plasma', aspect='auto')
+
 		ax.set_ylabel(r'$ \mathbf{n}_{z} $', fontsize=20)
 		ax.set_xlabel(r'$\ \mathbf{x} \ (\mathrm{km})$', fontsize=20)
 
@@ -1019,8 +1027,8 @@ if save_u_der == 1:
 		cax     = divider.append_axes("right", size="5%", pad=0.1)
 		cb      = fig.colorbar(im, cax=cax, extend='neither')
 
-		cb.set_ticks(cb_ticks_u_z)
-		cb.set_ticklabels(list(cb_ticks_u_z), fontsize=14)
+		#cb.set_ticks(cb_ticks_u_z)
+		#cb.set_ticklabels(list(cb_ticks_u_z), fontsize=14)
 
 		cb.set_label(r'$ u_{z} (x,z) \ ( \mathrm{1 / yr})$', \
 					 rotation=90, labelpad=6, fontsize=20)
