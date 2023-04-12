@@ -99,33 +99,33 @@ def stochastic_noise(t, tf, dt, sigm_ocn, sigm_smb, tau_ocn, tau_smb):
 
 
 # Options.
-read_nc   = True
-save_nc   = False
+read_nc   = False
+save_nc   = True
 overwrite = True
 
-plot_time_series = False
-plot_frames      = True
-save_fig = True
+plot_time_series = True
+plot_frames      = False
+save_fig = False
 
 # Path and file name to write solution.
-path      = '/home/dmoreno/c++/flowline/output/glacier_ews/'
+path      = '/home/dmoreno/flowline/data/'
 path_fig  = '/home/dmoreno/figures/stochastic_noise/frames/'
 file_name = 'noise_sigm_ocn.12.0.nc'
 
 # Definitions.
-tf = 2.0e4                            # End time as defined in flow_line.cpp [yr].
+tf = 5.0e4                            # End time as defined in flow_line.cpp [yr].
 dt = 1     # keep this at 1 for now... averaging for longer model timesteps happens in main script
 N  = int(tf)
 t  = dt * np.linspace(0, N, N)
 
-# Persistence parameter frontal ablation.
+# Persistence parameter frontal ablation and SMB.
 tau_ocn = 9.0   # [yr]
 tau_smb = 1.5    # [yr]
 
 # Maximum variability in frontal ablation and SMB (standard deviation).
 # Flowline crashes for values above sigm_ocn > 5.0 m/yr.
 sigm_ocn = 12.0   # 12.0 [m/yr] 
-sigm_smb = 0.4   # 0.4 [m/yr]
+sigm_smb = 0.3   # 0.4 [m/yr]
 
 
 # Save noise in a nc file.
@@ -160,7 +160,7 @@ if save_nc == True:
         
    
     # Create nc file.
-    f = nc4.Dataset(path+file_name,'w', format='NETCDF4') #'w' stands for write
+    f = nc4.Dataset(path+file_name, 'w', format='NETCDF4') #'w' stands for write
 
     # A netCDF group is basically a directory or folder within the netCDF dataset. 
     # This allows you to organize data as you would in a unix file system.

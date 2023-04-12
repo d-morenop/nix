@@ -25,7 +25,7 @@ from subprocess import Popen, PIPE, STDOUT
 
 # User defined directories.
 path_flowline = "/home/dmoreno/scr/flowline/"
-path_output   = "/home/dmoreno/flowline/mismip/exp.3/test.long.SSA/u_bar_select/eps.1e-5/"
+path_output   = "/home/dmoreno/flowline/ewr/test_A/stoch_n.250_A.0.25-10.0e-25/"
 path_input    = "/home/dmoreno/c++/flowline/output/glacier_ews/"
 
 

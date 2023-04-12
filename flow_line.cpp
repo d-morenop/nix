@@ -647,15 +647,17 @@ ArrayXd f_q(ArrayXd u_bar, ArrayXd H, double H_f, double t, double t_eq, double 
             
             // Successful MISMIP experiments but GL 
             //too retreated compared to Christian et al. (2022).
-            //q(n-1) = ( ub(n-1) + ( H_f / H(n-1) ) * m_dot ) * H(n-1);
+            //q(n-1) = ( u_bar(n-1) + ( H_f / H(n-1) ) * m_dot ) * H(n-1);
 
             // This seems to work as Christian et al. (2022).
             // Velocity evaluated at (n-2) instead of last point (n-1).
-            //q(n-1) = ( ub(n-2) + ( H_f / H(n-1) ) * m_dot ) * H(n-1);
+            //q(n-1) = ( u_bar(n-2) + ( H_f / H(n-1) ) * m_dot ) * H(n-1);
 
             // Ice flux at GL computed on the ice thickness grid. Schoof (2007).
             // Too retreated
-            //q(n-1) = H(n-1) * 0.5 * ( ub(n-1) + ub(n-2) + ( H_f / H(n-1) ) * m_dot );
+            // LAST ATTEMPT.
+            // ALMOST GOOD,A BIT TOO RETREATED FOR N=350 POINTS.
+            q(n-1) = H(n-1) * 0.5 * ( u_bar(n-1) + u_bar(n-2) + ( H_f / H(n-1) ) * m_dot );
 
             // Ice flux at GL computed on the ice thickness grid. Schoof (2007).
             // Mean.
@@ -665,8 +667,8 @@ ArrayXd f_q(ArrayXd u_bar, ArrayXd H, double H_f, double t, double t_eq, double 
             //q(n-1) = H_mean * 0.5 * ( ub(n-1) + ub(n-2) + m_dot );
 
             // Previous grid points as the grid is staggered. Correct extension!!
-            // Good results for stochastic with n = 350.
-            q(n-1) = H(n-1) * 0.5 * ( u_bar(n-2) + u_bar(n-3) + ( H_f / H(n-1) ) * m_dot );
+            // GOOD RESULTS for stochastic with n = 350.
+            //q(n-1) = H(n-1) * 0.5 * ( u_bar(n-2) + u_bar(n-3) + ( H_f / H(n-1) ) * m_dot );
 
             // GL too advanced for n = 500.
             //q(n-1) = H_f * 0.5 * ( ub(n-1) + ub(n-2) + m_dot );
@@ -799,6 +801,8 @@ ArrayXd f_H(ArrayXd u_bar, ArrayXd H, ArrayXd S, ArrayXd sigma, \
                                         (  dL_dt * ( H(n-1) - H(n-2) ) + \
                                             - ( q(n-1) - q(n-2) ) ) + S(n-1) );
         
+        // Make sure that grounding line thickness is above minimum?
+        //H_now(n-1) = max( (rho_w/rho)*D, H_now(n-1));
     }
     
     // Implicit scheme.
@@ -1499,41 +1503,46 @@ int main()
     // PHYSICAL CONSTANTS.
     double const u_0   = 150.0 / sec_year;
     double const g     = 9.8;                      // Gravitational acceleration [m/s²].
-    double const rho   = 900.0;                     // Ice density [kg/m³]. 917.0
-    double const rho_w = 1000.0;                    // Water denisity [kg/m³]. 1028.0
+    double const rho   = 917.0;                     // Ice density [kg/m³]. 900.0, 917.0
+    double const rho_w = 1028.0;                    // Water denisity [kg/m³]. 1000.0, 1028.0
 
    
     // GROUNDING LINE.
-    double L = 479.1e3;                              // Grounding line position [m] exp1 = 694.5e3, exp3 = (479.1e3), 50.0e3
+    double L = 50.0e3;                              // Grounding line position [m] exp1 = 694.5e3, exp3 = (479.1e3), 50.0e3
     double dL_dt;                                   // GL migration rate [m/yr]. 
     int const dL_dt_num_opt = 1;                    // GL migration numerator discretization opt.
     int const dL_dt_den_opt = 1;                    // GL migration denominator discretization opt.
 
     // ICE VISCOSITY: visc.
-    double const n_gln = 3.0;
-    //double const n_exp = (1.0 - n_gln) / n_gln;      // Pattyn.
-    double const n_exp = (1.0 - n_gln) / (2.0 * n_gln);  // De-smedt et al.
+    double const n_gln = 3.0;                             // Glen flow low exponent.
+    double const n_exp = (1.0 - n_gln) / (2.0 * n_gln);   // De-smedt et al.
+    //double const n_exp = (1.0 - n_gln) / n_gln;         // Pattyn.
 
     // VISCOSITY REGULARIZATION TERM.
     // eps is fundamental for GL, velocities, thickness, etc. 1.0e-10, 1.0e-5
-    // Values below 1.0e-4 give rise to instabilities?
-    // DIVA: 1.0e-6
-    double const eps = 1.0e-5;                            
+    // Values above 1.0e-7 are unstable for the ewr domain (much smaller than MISMIP).
+    // DIVA: 1.0e-6, 1.0e-5
+    double const eps = 1.0e-9;                            
 
     // BASAL FRICTION.
     double const m = 1.0 / 3.0;                      // Friction exponent.
 
 
     // SIMULATION PARAMETERS.
-    int const n   = 250;                             // 600. Number of horizontal points 350, 500, 1000, 1500
+    int const n   = 250;                             // 150. Number of horizontal points 350, 500, 1000, 1500
     int const n_z = 20;                              // Number vertical layers. 10, 20.
     
     double const ds     = 1.0 / n;                   // Normalized spatial resolution.
     double const ds_inv = n;
 
     double const t0   = 0.0;                         // Starting time [yr].
-    double const tf   = 56.5e4;                       // 2.0e4, Ending time [yr]. 2.0e4.
+    double const tf   = 4.0e4;                       // 3.5e4, 2.0e4, Ending time [yr]. 56.5e4.
     double t;                                        // Time variable [yr].
+
+    // Time variables.
+    double const t_eq     = 2.0e3;                   // Equilibration time: visc, vel, theta, etc. 0.2 * tf
+    double const t0_A     = 2.0e4;                   // Start time to apply increase in ice rate factor. 3.0e4
+    double const t0_stoch = 3.0e3;                   // Start time to apply stochastic BC. 2.0e4
 
     // VELOCITY SOLVER.
     int const vel_meth = 1;                          // Vel solver choice: 0 = cte, 1 = SSA, 2 = DIVA.
@@ -1544,13 +1553,12 @@ int main()
     double dt;                                       // Time step [yr].
     double dt_CFL;                                   // Courant-Friedrichs-Lewis condition [yr].
     double dt_tilde;                                 // New timestep. 
-    double const t_eq = 0.2 * tf;                    // Length of equilibration time [yr] .
     double const dt_min = 0.1;                       // Minimum time step [yr]. 0.1
     double const dt_max = 2.0;                       // Maximum time step [yr]. 
     double const rel = 0.7;                          // Relaxation between interations [0,1]. 0.5
     
     // INPUT DEFINITIONS.   
-    int const N = 20000;                             // Number of time points in BC (input from noise.nc in glacier_ews).
+    int const N = 50000;                             // Number of time points in BC (input from noise.nc in glacier_ews).
     double const dt_noise = 1.0;                     // Assumed time step in stochastic_anom.py 
 
     // OUTPUT DEFINITIONS.
@@ -1560,12 +1568,12 @@ int main()
     // Glacier ews option.
     double const x_1 = 346.0e3;                      // Peak beginning [m].
     double const x_2 = 350.0e3;                      // Peak end [m].
-    double const y_p = 88.0;                         // Peak height [m].
+    double const y_p = 88.0;                         // Peak height [m]. 88.0
     double const y_0 = 70.0;                         // Initial bedrock elevation (x=0) [m].
     
     // SURFACE MASS BALANCE.
-    int const stoch = 0;                             // Stochastic SBM.
-    double const S_0      = 0.7;                     // SMB at x = 0 (for equilibration) [m/yr].
+    int const stoch = 1;                             // Stochastic SBM.
+    double const S_0      = 0.3;                     // SMB at x = 0 (and during equilibration) [m/yr]. 0.7
     double const dlta_smb = -4.0;                    // Difference between interior and terminus SMB [m/yr]. 
     double const x_acc    = 300.0e3;                 // Position at which accumulation starts decreasing [m]. 300.0, 355.0
     double const x_mid    = 3.5e5;                   // Position of middle of SMB sigmoid  [m]. 365.0, 375.0
@@ -1575,6 +1583,7 @@ int main()
     double const var_mult = 0.25;                    // Factor by which inland variability is less than max.
     double m_stoch;
     double smb_stoch;
+    int t_stoch;          
 
 
     // THERMODYNAMICS.
@@ -1616,7 +1625,7 @@ int main()
     double u2_dif;                                   // Difference between analytical and numerical.
 
     // CALVING.
-    int const calving_meth = 0;                      // 0, no calving; 1, Christian et al. (2022).
+    int const calving_meth = 1;                      // 0, no calving; 1, Christian et al. (2022).
     double const m_dot = 30.0;                       // Mean frontal ablation [m/yr]. 30.0
     double H_f;
 
@@ -1624,7 +1633,7 @@ int main()
     // Following Pattyn et al. (2012) the overdeepening hysterisis uses n = 250.
     // exp = "mismip_1", "mismip_3", "galcier_ews"
     //int const mismip = 1;
-    int experiment = 3;
+    int experiment = 4;
     double A, B;
 
     // PICARD ITERATION
@@ -1704,9 +1713,9 @@ int main()
     // Time steps in which the solution is saved. 
     ArrayXd a = ArrayXd::LinSpaced(t_n, t0, tf);      
 
-    // EXPERIMENT. Christian et al (2022).
+    // EXPERIMENT. Christian et al (2022): 7.0e6
     // Constant friction coeff. 7.624e6 [Pa m^-1/3 s^1/3]
-    C_ref = ArrayXd::Constant(n, 7.624e6/ pow(sec_year, m) );    // [Pa m^-1/3 yr^1/3] 7.0e6
+    C_ref = ArrayXd::Constant(n, 7.0e6/ pow(sec_year, m) );    // [Pa m^-1/3 yr^1/3] 7.0e6
 
     // We assume a constant viscosity in the first iteration. 1.0e13 Pa s.
     visc     = ArrayXXd::Constant(n, n_z, 1.0e8 / sec_year);            // [Pa yr]
@@ -1731,8 +1740,8 @@ int main()
     theta = ArrayXXd::Constant(n, n_z, 248.0);
 
     // Intialize ice thickness and SMB.
-    H = ArrayXd::Constant(n, 10.0);
-    S = ArrayXd::Constant(n, 0.3);
+    H = ArrayXd::Constant(n, 10.0); // 10.0
+    S = ArrayXd::Constant(n, 0.3); // 0.3
 
     // Initilize vertical discretization.
     dz = H / n_z;
@@ -1745,14 +1754,8 @@ int main()
     /////////////////////////////////////////////////////////////////////////////////
 
     // MISMIP EXPERIMENTS FORCING.
-    // Number of steps in the A forcing.
-    //int const n_s = 21;  
     /*
-    ArrayXd A_s(n_s);  
-    ArrayXd t_s(n_s);  
-    
-     
-    */
+    // Number of steps in the A forcing.
     ArrayXd A_s(n_s);  
     ArrayXd t_s(n_s); 
 
@@ -1768,11 +1771,30 @@ int main()
            26.5e4, 29.0e4, 31.5e4, 34.0e4, 36.5e4, 39.0e4, 41.5e4, 44.0e4, 46.5e4, 
            49.0e4, 51.5e4, 54.0e4;
     
-
-    /*
-    A_s << 5.0e-25, 4.0e-25; 
-    t_s << 1.0e4, 2.0e4;
     */
+    
+
+
+    /////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////
+
+    // TRANSITION INDICATORS EXPERIMENTS.
+    int const A_rate = 1;         // 0: constant A, 1: linear increase in A.
+
+    ArrayXd A_s(2);  
+    ArrayXd t_s(1); 
+    //A_s << 2.0e-25, 20.0e-25; // Christian: 4.23e-25. 2.0e-25 is right at the peak for ewr.
+    
+    // WE NEED TO TUNE THIS NUMBER TOGEHTER WITH THE FLUX DISCRETIAZTION TO OBTAIN THE SAME EXTENT.
+    A_s << 0.25e-25, 10.0e-25; // 4.227e-25, (1.0e-25, 10.0e-25)
+    t_s << 2.0e4;
+
+    // FORCING CAN BE IMPOSED DIRECTLY ON A_s (i.e., an increase in temperature) or
+    // on the calving at the front as a consequence of ocean warming.
+
+    /////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////
+    
     
     /////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////
@@ -1783,7 +1805,7 @@ int main()
     cout << " \n tf = " << tf;
 
     // Call nc read function.
-    //noise = f_nc_read(N);
+    noise = f_nc_read(N);
     //cout << "\n noise_ocn = " << noise;
 
     // Call nc write function.
@@ -1821,6 +1843,7 @@ int main()
     // Time integration.
     while (t < tf)
     {
+        /*
         ////////////////////////////////////////////////////////////////////////
         ////////////////////////////////////////////////////////////////////////
         // MISMIP EXPERIMENTS.
@@ -1835,6 +1858,30 @@ int main()
         B = pow(A, ( -1 / n_gln ) );
         ////////////////////////////////////////////////////////////////////////
         ////////////////////////////////////////////////////////////////////////
+        */        
+
+        ////////////////////////////////////////////////////////////////////////
+        ////////////////////////////////////////////////////////////////////////
+        // TRANSITION INDICATORS EXPERIMENTS.
+
+        // Equilibrate with constant A.
+        if ( t < t0_A || A_rate == 0 )
+        {
+            A = A_s(0);
+        }
+        
+        // Update rate factor value with current timestep.
+        else
+        {
+            A = A_s(0) + ( A_s(1) - A_s(0) ) * (t - t0_A) / (tf - t0_A);
+        }
+        
+        // Ice hardness.
+        A = A * sec_year;
+        B = pow(A, ( -1 / n_gln ) );
+        ////////////////////////////////////////////////////////////////////////
+        ////////////////////////////////////////////////////////////////////////
+
 
         // Update bedrock with new domain extension L.
         bed = f_bed(L, n, experiment, y_0, y_p, x_1, x_2);
@@ -1849,13 +1896,20 @@ int main()
         {
             // Christian's spin-up also considers stochastic anomalies?
             // Lower bound of zero in m to avoid numerical issues.
-            noise_now = noise.col(floor(t));
+            // Start counting time when stoch is applied (t0_stoch).
+
+            // TIME IS NOW WORKING CORRECTLY, BUT IT IS NOT TAKING THE STOCHASTIC
+            // VALUES CORRECTLY!!! FILES VALUES LOOK OK WITH NCVIEW THOUGH.
+            t_stoch = floor(max(0.0, t-t0_stoch));
+            //cout << "\n t_sotch = " << t_stoch;
+            
+            noise_now = noise.col(t_stoch);
             m_stoch   = max(0.0, noise_now(0)); 
             smb_stoch = noise_now(1);
 
             // Update SMB considering new domain extension and current stochastic term.
             S = f_smb(sigma, L, S_0, x_mid, x_sca, x_varmid, \
-                      x_varsca, dlta_smb, var_mult, smb_stoch, t, t_eq , n, stoch);
+                      x_varsca, dlta_smb, var_mult, smb_stoch, t, t0_stoch , n, stoch);
         }
 
 
@@ -1998,6 +2052,7 @@ int main()
         if ( c == 0 || t > a(c) )
         {
             cout << "\n t = " << t;
+            //cout << "\n noise_now(0) = " << noise_now(0);
 
             // Write solution in nc.
             f_write(c, u_bar, ub, u_x, H, visc_bar, S, tau_b, beta, tau_d, bed, \

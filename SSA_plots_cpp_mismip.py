@@ -9,6 +9,7 @@ Created on Thu May  6 17:40:49 2021
 
 import os
 import numpy as np
+import netCDF4 as nc4
 from netCDF4 import Dataset
 from dimarray import get_datadir
 import matplotlib.pyplot as plt
@@ -18,8 +19,9 @@ from scipy import signal
 
 
 path_fig  = '/home/dmoreno/figures/flowline/frames/theta/'
-path_now = '/home/dmoreno/flowline/mismip/exp.3/test.long.SSA/u_bar_select/eps.1e-4/'
-path_stoch  = '/home/dmoreno/c++/flowline/output/glacier_ews/'
+#path_now = '/home/dmoreno/flowline/ewr/rate/n.350_A.2.0e-25_n-1_n-2/'
+path_now = '/home/dmoreno/flowline/ewr/test_A/stoch_n.250_A.1.0-10.0e-25/'
+path_stoch  = '/home/dmoreno/flowline/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
 
@@ -28,10 +30,10 @@ file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
 # Select plots to be saved (boolean integer).
 save_series        = 1
-save_series_comp   = 1
+save_series_comp   = 0
 save_shooting      = 0
 save_domain        = 1
-save_var_frames    = 1
+save_var_frames    = 0
 save_series_frames = 0
 save_theta         = 0
 save_visc          = 0
@@ -47,7 +49,7 @@ smth_series        = 0
 # MISMIP bedrock experiments.
 # exp = 1: inclined bed; exp = 3: overdeepening bed.
 exp_name = ['mismip_1', 'mismip_3', 'glacier_ews']
-idx = 1
+idx = 2
 exp = exp_name[idx]
 
 
@@ -146,9 +148,9 @@ def f_bed(x, exp, n):
 		x_2 = 350.0
 
 		# Initial bedrock elevation (x = 0) [km].
-		y_0 = 0.05
+		y_0 = 0.07
 
-		# Peak height [km].
+		# Peak height [km]. 88.0e-3 up to 100.0e-3
 		y_p = 88.0e-3
 
 		# Intermideiate slope.
@@ -165,7 +167,7 @@ def f_bed(x, exp, n):
 				bed[i] = y_0 - 1.5e-3 * x[i]
 			
 			# Second.
-			elif x[i] >= x_1 and x[i] <= x_2:
+			elif x[i] >= x_1 and x[i] < x_2:
 				
 				# Save index of last point in the previous interval.
 				if c_x1 == 0:
@@ -176,7 +178,8 @@ def f_bed(x, exp, n):
 				bed[i] = y_1 + m_bed * ( x[i] - x_1 )
 			
 			# Third.
-			elif x[i] > x_2:
+			
+			elif x[i] >= x_2:
 				# Save index of last point in the previous interval.
 				if c_x2 == 0:
 					y_2  = bed[i-1]
@@ -191,11 +194,16 @@ def f_bed(x, exp, n):
 # Horizontal dimension to plot. x_plot [km].
 if exp == 'mismip_1' or 'mismip_3':
 	x_plot = np.linspace(0, 2000.0, n)
+
 elif exp == 'glacier_ews':
 	x_plot = np.linspace(0, 400.0, n)
 
 
 # Bedrock test [km].
+# PROBLEM HERE, WE HAVE TO FORCE IT AGAIN.
+x_plot = np.linspace(0, 400.0, n)
+#print(x_plot[n-1])
+
 bed = f_bed(x_plot, exp, n)
 
 
@@ -217,8 +225,7 @@ if read_stoch_nc == True:
 
 
 # Sea level array.
-sl    = np.empty(n)
-sl[:] = 0.0
+sl    = np.zeros(n)
 
 
 #############################################
@@ -283,12 +290,14 @@ if save_series == 1:
 							20, # window size used for filtering
 							8) # order of fitted polynomial							
 
-	ax4.plot(t_plot, theta_bar, linestyle='-', color='darkgreen', marker='None', \
-			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
-	#ax4.plot(t_plot, dL_dt, linestyle='-', color='brown', marker='None', \
+	#ax4.plot(t_plot, theta_bar, linestyle='-', color='darkgreen', marker='None', \
 	#		 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+	ax4.plot(t_plot, dL_dt, linestyle='-', color='darkgreen', marker='None', \
+			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 
-	ax3.plot(t_plot, visc_bar_mean, linestyle='-', color='brown', marker='None', \
+	#ax3.plot(t_plot, visc_bar_mean, linestyle='-', color='brown', marker='None', \
+	#		 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+	ax3.plot(t_plot, A_s, linestyle='-', color='brown', marker='None', \
 			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 	ax5.plot(t_plot, q[:,n-1], linestyle='-', color='purple', marker='None', \
 			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
@@ -314,17 +323,18 @@ if save_series == 1:
 		ax3.set_ylabel(r'$ \mathrm{SMB} \ (m / yr) $', fontsize=18)
 		ax5.set_ylabel(r'$ \dot{m} \ (m/yr)$', fontsize=18)
 
-		# Axis limits.
-		ax.set_ylim(372.0, 376.0)
-		ax3.set_ylim(-2.2, 0.9)
-		ax5.set_ylim(-0.5, 45.0)
+	# Axis limits.
+	#ax.set_ylim(345.0, 355.0)
+	#ax3.set_ylim(-2.2, 0.9)
+	#ax5.set_ylim(-0.5, 45.0)
 	
 	ax.set_ylabel(r'$L \ (\mathrm{km})$', fontsize=18)
 	ax2.set_ylabel(r'$H_{gl} \ (\mathrm{km})$', fontsize=18)
 	#ax3.set_ylabel(r'$ 1/A \ (Pa^{3} \ s) $', fontsize=18)
-	ax4.set_ylabel(r'$ \bar{\theta}(0,t) \ (^{\circ} \mathrm{C}) $', fontsize=18)
-	#ax4.set_ylabel(r'$ \dot{L} \ (m/yr)$',fontsize=18)
-	ax3.set_ylabel(r'$ \bar{\eta} \ (\mathrm{Pa \cdot s})$', fontsize=18)
+	#ax4.set_ylabel(r'$ \bar{\theta}(0,t) \ (^{\circ} \mathrm{C}) $', fontsize=18)
+	ax4.set_ylabel(r'$ \dot{L} \ (m/yr)$',fontsize=18)
+	#ax3.set_ylabel(r'$ \bar{\eta} \ (\mathrm{Pa \cdot s})$', fontsize=18)
+	ax3.set_ylabel(r'$ A \ (Pa^{-3} s^{-1})$', fontsize=18)
 	ax5.set_ylabel(r'$ q \ (\mathrm{m}^2 / \mathrm{yr})$', fontsize=18)
 	ax6.set_ylabel(r'$ \bar{u}(L) \ (\mathrm{m/yr})$', fontsize=18)
 	ax3.set_xlabel(r'$\mathrm{Time} \ (\mathrm{kyr})$', fontsize=18)
@@ -534,7 +544,7 @@ if save_shooting == 1:
 
 if save_domain == 1:
 	
-	for i in range(l-1, l, 1): # range(0, l, 2), (l-1, l, 20)
+	for i in range(0, l, 2): # range(0, l, 2), (l-1, l, 20)
 		
 		# Horizontal dimension [km].
 		L_plot  = np.linspace(0, L[i], n)
@@ -549,6 +559,7 @@ if save_domain == 1:
 		
 		# Ocean.
 		bed_p = np.where(x_plot > L[i], bed, np.nan)
+		sl    = np.zeros(n)
 		sl    = np.where(x_plot > L[i], sl, np.nan)	
 		
 		# Figure.
@@ -572,6 +583,9 @@ if save_domain == 1:
 		ax.plot(x_plot, bed, linestyle='-', color='brown', marker='None', \
 	  			linewidth=2.0, alpha=1.0, label=r'$bed(x)$') 
 		
+		#ax.plot(x_plot, b[i,:], linestyle='-', color='brown', marker='None', \
+	  	#		linewidth=2.0, alpha=1.0, label=r'$bed(x)$') 
+
 		# Ice surface elevation.
 		ax.plot(L_plot, z_s, linestyle='-', color='darkgrey', marker='None', \
 	  			linewidth=2.0, alpha=1.0, label=r'$z_s(x)$')  
@@ -593,21 +607,29 @@ if save_domain == 1:
 	 	
 		ax.tick_params(axis='both', which='major', length=4, colors='black')
 	
-		
-		ax.set_xticks([0, 250, 500, 750, 1000, 1250, 1500, 1750])
-		ax.set_xticklabels(['$0$', '$250$', '$500$', '$750$',\
-						  '$1000$', '$1250$','$1500$', '$1750$'], fontsize=15)
-		
-		ax.set_yticks([-1, 0, 1, 2, 3, 4, 5, 6])
-		ax.set_yticklabels(['$-1$', '$0$', '$1$',\
-						  '$2$', '$3$','$4$','$5$','$6$'], fontsize=15)
-		
+		if idx == 2:
+			"""
+			ax.set_xticks([0, 50, 100, 150, 200, 250, 300, 350, 400])
+			ax.set_xticklabels(['$0$', '$250$', '$500$', '$750$',\
+							'$1000$', '$1250$','$1500$', '$1750$'], fontsize=15)
+			
+			ax.set_yticks([-1, 0, 1, 2, 3, 4, 5, 6])
+			ax.set_yticklabels(['$-1$', '$0$', '$1$',\
+							'$2$', '$3$','$4$','$5$','$6$'], fontsize=15)
+			"""
+			ax.set_xlim(0, 400)
+			ax.set_ylim(-0.75, 3.0)
+		else:
+			ax.set_xticks([0, 250, 500, 750, 1000, 1250, 1500, 1750])
+			ax.set_xticklabels(['$0$', '$250$', '$500$', '$750$',\
+							'$1000$', '$1250$','$1500$', '$1750$'], fontsize=15)
+			
+			ax.set_yticks([-1, 0, 1, 2, 3, 4, 5, 6])
+			ax.set_yticklabels(['$-1$', '$0$', '$1$',\
+							'$2$', '$3$','$4$','$5$','$6$'], fontsize=15)
 
-		#ax.set_xlim(0, 400)
-		#ax.set_ylim(-0.75, 3.0)
-
-		ax.set_xlim(0, 1750)
-		ax.set_ylim(-1.0, 5.0)
+			ax.set_xlim(0, 1750)
+			ax.set_ylim(-1.0, 5.0)
 		
 		ax.set_title(r'$i = \ $'+str(i)+r'$, \ t = \ $'+str(np.round(t[i],2))+r'$ \ yr$', fontsize=16)
 	 	
@@ -643,7 +665,7 @@ if save_domain == 1:
 
 if save_var_frames == 1:
 	
-	for i in range(l-1, l, 1): # (0, l, 10), (l-1, l, 20)
+	for i in range(0, l, 1): # (0, l, 10), (l-1, l, 20)
 		
 		L_plot  = np.linspace(0, L[i], n)
 		x_tilde = L_plot / 750.0  
