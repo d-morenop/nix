@@ -83,18 +83,17 @@ rungeKutta   --->  4th-order Runge-Kutta integration scheme for the SSA stress
 ////////////////////////////////////////////////////
 // TOOLS. USEFUL FUNCTIONS.
 
-/*
-ArrayXd gaussian_filter(ArrayXd w, ArrayXd zeros, \
-                        double sigma, double L, double ds, int n)
+
+ArrayXd gaussian_filter(ArrayXd w, double sigma, double L, double ds, int n)
 {
-    ArrayXd smth(n), summ(n);
-    //ArrayXd summ = ArrayXd::Zero(n);
+    ArrayXd smth(n);
+    ArrayXd summ = ArrayXd::Zero(n);
 
     double x, y;
     double h_L = ds * L;
     double A = 1.0 / (sqrt(2.0 * M_PI) * sigma);
 
-    summ = zeros;
+    //summ = zeros;
  
     // Weierstrass transform.
     for (int i=0; i<n; i++) 
@@ -103,8 +102,7 @@ ArrayXd gaussian_filter(ArrayXd w, ArrayXd zeros, \
         for (int j=0; j<n; j++)
         {
             y = j * h_L;
-            summ(i) = summ(i) + w(j) * \
-                                exp( - pow((x - y) / sigma, 2) / 2.0 ) * h_L;
+            summ(i) += w(j) * exp( - pow((x - y)/ sigma, 2) / 2.0 ) * h_L;
         }
     }
  
@@ -114,7 +112,38 @@ ArrayXd gaussian_filter(ArrayXd w, ArrayXd zeros, \
     return smth;
 }
 
+/*
+ArrayXd gaussian_filter(ArrayXd w, double sigma, double L, double ds, int n) 
+{
+    //int n = w.size();
+    ArrayXd gauss(n);
+    double dx = ds * L;
+    double normalization = 1.0 / (sigma * sqrt(2 * M_PI));
 
+    for (int i = 0; i < n; i++) {
+        double x = dx * i;
+        gauss(i) = normalization * exp(-(x * x) / (2 * sigma * sigma));
+    }
+
+    ArrayXd filter = w * gauss;
+    ArrayXd weierstrass = ArrayXd::Zero(n);
+    double a = 0.5;
+    double b = 2.0 / 3.0;
+    int iterations = 10;
+
+    for (int i = 0; i < iterations; i++) {
+        double c = pow(b, i);
+        for (int j = 0; j < n; j++) {
+            double x = dx * j;
+            double value = cos(c * M_PI * x / dx);
+            weierstrass(j) += a * c * value;
+        }
+    }
+    return weierstrass * filter;
+}
+*/
+
+/*
 ArrayXd running_mean(ArrayXd x, int p, int n)
 {
     ArrayXd y(n);
@@ -1542,6 +1571,7 @@ int main()
     // Time variables.
     double const t_eq     = 2.0e3;                   // Equilibration time: visc, vel, theta, etc. 0.2 * tf
     double const t0_A     = 2.0e4;                   // Start time to apply increase in ice rate factor. 3.0e4
+    double const tf_A     = 3.0e4;
     double const t0_stoch = 3.0e3;                   // Start time to apply stochastic BC. 2.0e4
 
     // VELOCITY SOLVER.
@@ -1566,6 +1596,9 @@ int main()
 
     // BEDROCK
     // Glacier ews option.
+    int const smooth_bed = 0;                        // Apply gaussian filter on bed topography. 
+    double const sigma_gauss = 10.0;                  // Sigma gaussian filter. 
+    double const t0_gauss = 1.5e4;                   // Init time to apply gaussian filter.
     double const x_1 = 346.0e3;                      // Peak beginning [m].
     double const x_2 = 350.0e3;                      // Peak end [m].
     double const y_p = 88.0;                         // Peak height [m]. 88.0
@@ -1711,7 +1744,8 @@ int main()
     ArrayXd dz(n);                                        // Vertical discretization (only x-dependecy for now).                                  
     
     // Time steps in which the solution is saved. 
-    ArrayXd a = ArrayXd::LinSpaced(t_n, t0, tf);      
+    ArrayXd a    = ArrayXd::LinSpaced(t_n, t0, tf);       // Array with output time frames.
+    ArrayXd a_hr = ArrayXd::LinSpaced(int(tf), t0, tf);   // Array with high resolution time frames.    
 
     // EXPERIMENT. Christian et al (2022): 7.0e6
     // Constant friction coeff. 7.624e6 [Pa m^-1/3 s^1/3]
@@ -1786,7 +1820,7 @@ int main()
     //A_s << 2.0e-25, 20.0e-25; // Christian: 4.23e-25. 2.0e-25 is right at the peak for ewr.
     
     // WE NEED TO TUNE THIS NUMBER TOGEHTER WITH THE FLUX DISCRETIAZTION TO OBTAIN THE SAME EXTENT.
-    A_s << 0.25e-25, 10.0e-25; // 4.227e-25, (1.0e-25, 10.0e-25)
+    A_s << 0.5e-26, 5.0e-25; // 4.227e-25, (1.0e-25, 10.0e-25)
     t_s << 2.0e4;
 
     // FORCING CAN BE IMPOSED DIRECTLY ON A_s (i.e., an increase in temperature) or
@@ -1810,6 +1844,7 @@ int main()
 
     // Call nc write function.
     f_nc(n, n_z);
+    f_nc_hr(n, n_z);
 
 
     // Wall time for computational speed.
@@ -1829,8 +1864,9 @@ int main()
     }
     */
    
-    // Counter to write solution.
-    int c = 0;
+    // Counters to write solution.
+    int c    = 0;
+    int c_hr = 0;
 
     // Counter for MISMIP ice factor A forcing.
     int c_s = 0;
@@ -1871,9 +1907,14 @@ int main()
         }
         
         // Update rate factor value with current timestep.
-        else
+        else if ( t >= t0_A && t <= tf_A && A_rate == 1 )
         {
-            A = A_s(0) + ( A_s(1) - A_s(0) ) * (t - t0_A) / (tf - t0_A);
+            A = A_s(0) + ( A_s(1) - A_s(0) ) * (t - t0_A) / (tf_A - t0_A);
+        }
+
+        else if ( t > tf_A && A_rate == 1 )
+        {
+            A = A_s(1);
         }
         
         // Ice hardness.
@@ -1885,6 +1926,11 @@ int main()
 
         // Update bedrock with new domain extension L.
         bed = f_bed(L, n, experiment, y_0, y_p, x_1, x_2);
+
+        if ( smooth_bed == 1 && t > t0_gauss )
+        {
+            bed = gaussian_filter(bed, sigma_gauss, L, ds, n);
+        }
 
         // Friction coefficient.
         C_bed = f_C_bed(C_ref, theta, H, t, t_eq, theta_max, \
@@ -2063,6 +2109,16 @@ int main()
             ++c;
         }  
 
+        // Write solution with high resolution output frequency.
+        else if ( c_hr == 0 || t > a_hr(c_hr) )
+        {
+            // Write solution in nc.
+            f_write_hr(c_hr, u_bar(n-1), H(n-1), L, t, u_x_bc, u2_dif, \
+                       error, dt, c_picard, mu, omega, A, dL_dt, m_stoch, smb_stoch);
+
+            ++c_hr;
+        }  
+
         
         // Integrate ice thickness forward in time.
         H = f_H(u_bar, H, S, sigma, dt, ds, ds_inv, n, \
@@ -2101,11 +2157,15 @@ int main()
     printf("\n Computational speed: %.3f kyr/hr.\n", \
             60 * 60 * (1.0e-3 * tf) /  (elapsed.count() * 1e-9) );
 
-    // Close nc file. 
+    // Close nc files. 
     if ((retval = nc_close(ncid)))
+    ERR(retval);
+    if ((retval = nc_close(ncid_hr)))
     ERR(retval);
  
     printf("\n *** %s file has been successfully written \n", FILE_NAME);
+    printf("\n *** %s file has been successfully written \n", FILE_NAME_HR);
+
 
     return 0;
 }

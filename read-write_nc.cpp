@@ -7,7 +7,8 @@
 // NETCDF PARAMETERS.
 /* This is the name of the data file we will create. */
 //#define FILE_NAME "output/mismip/exp3/exp3_n.250/exp3_n.250.nc"
-#define FILE_NAME "/home/dmoreno/flowline/ewr/test_A/stoch_n.250_A.0.25-12.0e-25/flowline.nc"
+#define FILE_NAME "/home/dmoreno/flowline/ewr/A_rates/bed_peak/test_hr_L/tf_A.2.0e4_A.0.5e-26_5.0e-25/flowline.nc"
+#define FILE_NAME_HR "/home/dmoreno/flowline/ewr/A_rates/bed_peak/test_hr_L/tf_A.2.0e4_A.0.5e-26_5.0e-25/flowline_hr.nc"
 #define FILE_NAME_READ "/home/dmoreno/flowline/data/noise_sigm_ocn.12.0.nc"
 
 
@@ -118,6 +119,7 @@ int x_varid, z_varid, u_bar_varid, ub_varid, u_x_varid, u_x_diva_varid, u_z_vari
     c_pic_varid, t_varid, mu_varid, omega_varid, u2_bc_varid, u2_dif_varid, \
     picard_error_varid, u2_0_vec_varid, u2_dif_vec_varid, theta_varid, C_bed_varid, Q_fric_varid, \
     F_1_varid, F_2_varid, m_stoch_varid, smb_stoch_varid;
+
 int dimids[NDIMS];
 
 // For the 0D plots (append the current length of domain L)
@@ -126,12 +128,44 @@ int dimids_0[NDIMS_0];
 // For the theta, visc plots: theta(x,z,t), visc(x,z,t).
 int dimids_z[NDIMS_Z];
 
-    
 /* The start and cnt arrays will tell the netCDF library where to
     write our data. */
 size_t start[NDIMS], cnt[NDIMS];
 size_t start_0[NDIMS_0], cnt_0[NDIMS_0];
 size_t start_z[NDIMS_Z], cnt_z[NDIMS_Z];
+
+////////////////////////////////////////////////////
+////////////////////////////////////////////////////
+
+
+
+////////////////////////////////////////////////////
+////////////////////////////////////////////////////
+
+// IDs for high resolution.
+int ncid_hr, x_dimid_hr, z_dimid_hr, time_dimid_hr;
+int x_varid_hr, z_varid_hr, u_bar_varid_hr, H_varid_hr, L_varid_hr, t_varid_hr, a_varid_hr, \
+    u2_bc_varid_hr, u2_dif_varid_hr, picard_error_varid_hr, dt_varid_hr, c_pic_varid_hr, mu_varid_hr, \
+    omega_varid_hr, A_varid_hr, dL_dt_varid_hr, m_stoch_varid_hr, smb_stoch_varid_hr;
+
+int dimids_hr[NDIMS];
+
+// For the 0D plots (append the current length of domain L)
+int dimids_0_hr[NDIMS_0];
+
+// For the theta, visc plots: theta(x,z,t), visc(x,z,t).
+int dimids_z_hr[NDIMS_Z];
+
+/* The start and cnt arrays will tell the netCDF library where to
+    write our data. */
+size_t start_hr[NDIMS], cnt_hr[NDIMS];
+size_t start_0_hr[NDIMS_0], cnt_0_hr[NDIMS_0];
+size_t start_z_hr[NDIMS_Z], cnt_z_hr[NDIMS_Z];
+
+////////////////////////////////////////////////////
+////////////////////////////////////////////////////
+    
+
     
 
 int f_nc(int N, int N_Z)
@@ -439,6 +473,190 @@ int f_nc(int N, int N_Z)
 }
 
 
+
+// Create another nc file just for high resolution output.
+int f_nc_hr(int N, int N_Z)
+{
+    /* These program variables hold one spatial variable x. */
+    double xs[N];    
+    double xz[N_Z];
+        
+    /* Create the file. */
+    if ((retval = nc_create(FILE_NAME_HR, NC_CLOBBER, &ncid_hr)))
+        ERR(retval);
+        
+    /* Define the dimensions. The record dimension is defined to have
+    * unlimited length - it can grow as needed. Here it is
+    * the time dimension.*/
+    if ((retval = nc_def_dim(ncid_hr, X_NAME, N, &x_dimid_hr)))
+        ERR(retval);
+    if ((retval = nc_def_dim(ncid_hr, Z_NAME, N_Z, &z_dimid_hr)))
+        ERR(retval);
+    if ((retval = nc_def_dim(ncid_hr, TIME_NAME, NC_UNLIMITED, &time_dimid_hr)))
+        ERR(retval);
+        
+    /* Define the coordinate variables. We will only define coordinate
+        variables for x and z. Ordinarily we would need to provide
+        an array of dimension IDs for each variable's dimensions, but
+        since coordinate variables only have one dimension, we can
+        simply provide the address of that dimension ID (&x_dimid). */
+    if ((retval = nc_def_var(ncid_hr, X_NAME, NC_DOUBLE, 1, &x_dimid_hr,
+                    &x_varid_hr)))
+        ERR(retval);
+    if ((retval = nc_def_var(ncid_hr, Z_NAME, NC_DOUBLE, 1, &z_dimid_hr,
+                    &z_varid_hr)))
+        ERR(retval);
+        
+    /* Assign units attributes to coordinate variables. */
+    if ((retval = nc_put_att_text(ncid_hr, x_varid_hr, UNITS,
+                    strlen(X_UNITS), X_UNITS)))
+        ERR(retval);
+    if ((retval = nc_put_att_text(ncid_hr, z_varid_hr, UNITS,
+                    strlen(Z_UNITS), Z_UNITS)))
+        ERR(retval);
+        
+    /* The dimids array is used to pass the dimids of the dimensions of
+        the netCDF variables. In C, the unlimited dimension must come 
+        first on the list of dimids. */
+    dimids_hr[0] = time_dimid_hr;
+    dimids_hr[1] = x_dimid_hr;
+
+    dimids_0_hr[0] = time_dimid_hr;
+
+    dimids_z_hr[0] = time_dimid_hr;
+    dimids_z_hr[1] = x_dimid_hr;
+    dimids_z_hr[1] = z_dimid_hr;
+        
+    // DEFINE NETCDF VARIABLES.
+    // 1D (2D variables evaluated at the grounding line).
+    if ((retval = nc_def_var(ncid_hr, U_BAR_NAME, NC_DOUBLE, NDIMS_0,
+                    dimids_0_hr, &u_bar_varid_hr)))
+        ERR(retval);
+    if ((retval = nc_def_var(ncid_hr, H_NAME, NC_DOUBLE, NDIMS_0,
+                    dimids_0_hr, &H_varid_hr)))
+        ERR(retval);
+    
+    // 1D variables.
+    if ((retval = nc_def_var(ncid_hr, L_NAME, NC_DOUBLE, NDIMS_0,
+                    dimids_0_hr, &L_varid_hr)))
+        ERR(retval);
+    if ((retval = nc_def_var(ncid_hr, DL_DT_NAME, NC_DOUBLE, NDIMS_0,
+                    dimids_0_hr, &dL_dt_varid_hr)))
+        ERR(retval);
+    if ((retval = nc_def_var(ncid_hr, DT_NAME, NC_DOUBLE, NDIMS_0,
+                    dimids_0_hr, &dt_varid_hr)))
+        ERR(retval);
+    if ((retval = nc_def_var(ncid_hr, C_PIC_NAME, NC_INT, NDIMS_0,
+                    dimids_0_hr, &c_pic_varid_hr)))
+        ERR(retval);
+    if ((retval = nc_def_var(ncid_hr, MU_NAME, NC_DOUBLE, NDIMS_0,
+                    dimids_0_hr, &mu_varid_hr)))
+        ERR(retval);
+    if ((retval = nc_def_var(ncid_hr, OMEGA_NAME, NC_DOUBLE, NDIMS_0,
+                    dimids_0_hr, &omega_varid_hr)))
+        ERR(retval);
+    if ((retval = nc_def_var(ncid_hr, T_NAME, NC_DOUBLE, NDIMS_0,
+                    dimids_0_hr, &t_varid_hr)))
+        ERR(retval);
+    if ((retval = nc_def_var(ncid_hr, U2_BC_NAME, NC_DOUBLE, NDIMS_0,
+                    dimids_0_hr, &u2_bc_varid_hr)))
+        ERR(retval);
+    if ((retval = nc_def_var(ncid_hr, U2_DIF_NAME, NC_DOUBLE, NDIMS_0,
+                    dimids_0_hr, &u2_dif_varid_hr)))
+        ERR(retval);
+    if ((retval = nc_def_var(ncid_hr, PICARD_ERROR_NAME, NC_DOUBLE, NDIMS_0,
+                    dimids_0_hr, &picard_error_varid_hr)))
+        ERR(retval);
+    if ((retval = nc_def_var(ncid_hr, A_NAME, NC_DOUBLE, NDIMS_0,
+                    dimids_0_hr, &a_varid_hr)))
+        ERR(retval);
+    if ((retval = nc_def_var(ncid_hr, M_STOCH_NAME, NC_DOUBLE, NDIMS_0,
+                    dimids_0_hr, &m_stoch_varid_hr)))
+        ERR(retval);
+    if ((retval = nc_def_var(ncid_hr, SMB_STOCH_NAME, NC_DOUBLE, NDIMS_0,
+                    dimids_0_hr, &smb_stoch_varid_hr)))
+        ERR(retval);
+
+
+    /* Assign units attributes to the netCDF variables. */
+    if ((retval = nc_put_att_text(ncid_hr, u_bar_varid_hr, UNITS,
+                    strlen(U_BAR_UNITS), U_BAR_UNITS)))
+        ERR(retval);
+    if ((retval = nc_put_att_text(ncid_hr, H_varid_hr, UNITS,
+                    strlen(H_UNITS), H_UNITS)))
+        ERR(retval);
+
+    if ((retval = nc_put_att_text(ncid_hr, L_varid_hr, UNITS,
+                    strlen(L_UNITS), L_UNITS)))
+        ERR(retval);
+    if ((retval = nc_put_att_text(ncid_hr, dL_dt_varid_hr, UNITS,
+                    strlen(DL_DT_UNITS), DL_DT_UNITS)))
+        ERR(retval);
+    if ((retval = nc_put_att_text(ncid_hr, dt_varid_hr, UNITS,
+                    strlen(DT_UNITS), DT_UNITS)))
+        ERR(retval);
+    if ((retval = nc_put_att_text(ncid_hr, c_pic_varid_hr, UNITS,
+                    strlen(C_PIC_UNITS), C_PIC_UNITS)))
+        ERR(retval);
+    if ((retval = nc_put_att_text(ncid_hr, mu_varid_hr, UNITS,
+                    strlen(MU_UNITS), MU_UNITS)))
+        ERR(retval);
+    if ((retval = nc_put_att_text(ncid_hr, omega_varid_hr, UNITS,
+                    strlen(OMEGA_UNITS), OMEGA_UNITS)))
+        ERR(retval);
+    if ((retval = nc_put_att_text(ncid_hr, t_varid_hr, UNITS,
+                    strlen(T_UNITS), T_UNITS)))
+        ERR(retval);
+    if ((retval = nc_put_att_text(ncid_hr, u2_bc_varid_hr, UNITS,
+                    strlen(U2_BC_UNITS), U2_BC_UNITS)))
+        ERR(retval);
+    if ((retval = nc_put_att_text(ncid_hr, u2_dif_varid_hr, UNITS,
+                    strlen(U2_DIF_UNITS), U2_DIF_UNITS)))
+        ERR(retval);
+    if ((retval = nc_put_att_text(ncid_hr, picard_error_varid_hr, UNITS,
+                    strlen(PICARD_ERROR_UNITS), PICARD_ERROR_UNITS)))
+        ERR(retval);
+    if ((retval = nc_put_att_text(ncid_hr, a_varid_hr, UNITS,
+                    strlen(A_UNITS), A_UNITS)))
+        ERR(retval);
+    if ((retval = nc_put_att_text(ncid_hr, m_stoch_varid_hr, UNITS,
+                    strlen(M_STOCH_UNITS), M_STOCH_UNITS)))
+        ERR(retval);
+    if ((retval = nc_put_att_text(ncid_hr, smb_stoch_varid_hr, UNITS,
+                    strlen(SMB_STOCH_UNITS), SMB_STOCH_UNITS)))
+        ERR(retval);
+        
+    /* End define mode. */
+    if ((retval = nc_enddef(ncid_hr)))
+        ERR(retval);
+        
+    /* Write the coordinate variable data. This will put the x and z
+     of our data grid into the netCDF file. */
+    if ((retval = nc_put_var_double(ncid_hr, x_varid_hr, &xs[0])))
+        ERR(retval);
+    if ((retval = nc_put_var_double(ncid_hr, z_varid_hr, &xz[0])))
+        ERR(retval);
+        
+    /* These settings tell netcdf to write one timestep of data. (The
+        setting of start[0] inside the loop below tells netCDF which
+        timestep to write.) */
+    cnt_hr[0]   = 1;
+    cnt_hr[1]   = N;
+    start_hr[1] = 0;
+
+    cnt_0_hr[0]   = 1;
+    start_0_hr[0] = 0;
+
+    cnt_z_hr[0]   = 1;
+    cnt_z_hr[1]   = N_Z;
+    cnt_z_hr[2]   = N;
+    start_z_hr[1] = 0;
+    start_z_hr[2] = 0;
+
+    return N;
+}
+
+
 int f_write(int c, ArrayXd u_bar, ArrayXd ub, ArrayXd u_x, ArrayXd H, ArrayXd visc_bar, \
             ArrayXd S, ArrayXd tau_b, ArrayXd beta, ArrayXd tau_d, ArrayXd bed, \
             ArrayXd C_bed, ArrayXd Q_fric, ArrayXd u2_dif_vec, ArrayXd u2_0_vec, \
@@ -526,6 +744,55 @@ int f_write(int c, ArrayXd u_bar, ArrayXd ub, ArrayXd u_x, ArrayXd H, ArrayXd vi
     if ((retval = nc_put_vara_double(ncid, u_varid, start_z, cnt_z, &u(0,0))))
     ERR(retval);
 
+
+    return c;
+}
+
+
+
+int f_write_hr(int c, double u_bar_L, double H_L, \
+               double L, double t, double u2_bc, double u2_dif, double error, \
+               double dt, int c_picard, double mu, double omega, double A, double dL_dt, \
+               double m_stoch, double smb_stoch)
+{
+    start_hr[0]   = c;
+    start_0_hr[0] = c;
+    start_z_hr[0] = c;
+
+    // 1D (2D variables evaluated at the grounding line).
+    if ((retval = nc_put_vara_double(ncid_hr, u_bar_varid_hr, start_hr, cnt_hr, &u_bar_L)))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid_hr, H_varid_hr, start_hr, cnt_hr, &H_L)))
+    ERR(retval);
+
+
+    // 1D variables.
+    if ((retval = nc_put_vara_double(ncid_hr, L_varid_hr, start_0_hr, cnt_0_hr, &L)))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid_hr, dL_dt_varid_hr, start_0_hr, cnt_0_hr, &dL_dt)))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid_hr, t_varid_hr, start_0_hr, cnt_0_hr, &t)))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid_hr, u2_bc_varid_hr, start_0_hr, cnt_0_hr, &u2_bc)))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid_hr, u2_dif_varid_hr, start_0_hr, cnt_0_hr, &u2_dif)))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid_hr, picard_error_varid_hr, start_0_hr, cnt_0_hr, &error)))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid_hr, dt_varid_hr, start_0_hr, cnt_0_hr, &dt)))
+    ERR(retval);
+    if ((retval = nc_put_vara_int(ncid_hr, c_pic_varid_hr, start_0_hr, cnt_0_hr, &c_picard)))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid_hr, mu_varid_hr, start_0_hr, cnt_0_hr, &mu)))
+    ERR(retval); // currently mu
+    if ((retval = nc_put_vara_double(ncid_hr, omega_varid_hr, start_0_hr, cnt_0_hr, &omega)))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid_hr, a_varid_hr, start_0_hr, cnt_0_hr, &A)))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid_hr, m_stoch_varid_hr, start_0_hr, cnt_0_hr, &m_stoch)))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid_hr, smb_stoch_varid_hr, start_0_hr, cnt_0_hr, &smb_stoch)))
+    ERR(retval);
 
     return c;
 }

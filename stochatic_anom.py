@@ -99,17 +99,17 @@ def stochastic_noise(t, tf, dt, sigm_ocn, sigm_smb, tau_ocn, tau_smb):
 
 
 # Options.
-read_nc   = False
-save_nc   = True
+read_nc   = True
+save_nc   = False
 overwrite = True
 
 plot_time_series = True
 plot_frames      = False
-save_fig = False
+save_fig         = True
 
 # Path and file name to write solution.
 path      = '/home/dmoreno/flowline/data/'
-path_fig  = '/home/dmoreno/figures/stochastic_noise/frames/'
+path_fig  = '/home/dmoreno/figures/transition_indicators/'
 file_name = 'noise_sigm_ocn.12.0.nc'
 
 # Definitions.
@@ -231,25 +231,23 @@ if plot_time_series == True:
 
     ax2.bar(t, noise_smb, width=2.5, bottom=None, align='center', data=None, color='red')
 
-    ax1.set_ylabel(r'$ \dot{m}  \ (m/yr) $', fontsize=16)
-    ax2.set_ylabel(r'$ \mathrm{SMB}  \ (m/yr) $', fontsize=16)
-    ax2.set_xlabel(r'$\mathrm{Time} \ (kyr) $', fontsize=18)
+    ax1.set_ylabel(r'$ \dot{m}  \ (\mathrm{m/yr}) $', fontsize=16)
+    ax2.set_ylabel(r'$ \mathrm{SMB}  \ (\mathrm{m/yr}) $', fontsize=16)
+    ax2.set_xlabel(r'$\mathrm{Time} \ (\mathrm{kyr}) $', fontsize=18)
 
     ax1.set_xticks([])
-    ax2.set_xticklabels(['$0.0$', '$2.5$', '$5.0$', \
-                         '$7.5$', '$10.0$', '$12.5$', 
-                         '$15.0$', '$17.5$', '$20.0$'], fontsize=15)
+
+    ax2.set_yticks([0.0, 10, 20, 30, 40, 50])
+    ax2.set_xticklabels(['$0$', '$10$', '$20$', \
+                         '$30$', '$40$', '$50$'], fontsize=15)
     
-    ax2.set_xticklabels(['$-1.0$', '$2.5$', '$5.0$', \
-                         '$7.5$', '$10.0$', '$12.5$', 
-                         '$15.0$', '$17.5$', '$20.0$'], fontsize=12)
     ax2.set_yticks([-1.0, -0.5, 0.0, 0.5, 1.0])
     ax2.set_yticklabels(['$-1.0$', '$-0.5$', '$0.0$', \
-                         '$0.5$', '$1.0$'], fontsize=12)
+                         '$0.5$', '$1.0$'], fontsize=13)
     
     ax1.set_yticks([-30, -15, 0, 15, 30])
     ax1.set_yticklabels(['$-30.0$', '$-15.0$', '$0.0$', \
-                         '$15.0$', '$30.0$'], fontsize=12)
+                         '$15.0$', '$30.0$'], fontsize=13)
 
     #ax.legend(loc='best', ncol = 1, frameon = True, framealpha = 1.0, \
     #            fontsize = 12, fancybox = True)
@@ -265,7 +263,10 @@ if plot_time_series == True:
     ax1.set_ylim(-30, 30)
     ax2.set_ylim(-1, 1)
 
-    plt.tight_layout()
+    #plt.tight_layout()
+
+    if save_fig == True:
+        plt.savefig(path_fig+'stoch_bc.png', bbox_inches='tight')
 
     plt.show()
     plt.close(fig)

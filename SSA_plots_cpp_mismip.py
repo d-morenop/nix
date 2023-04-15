@@ -18,9 +18,9 @@ from scipy import signal
 
 
 
-path_fig  = '/home/dmoreno/figures/flowline/frames/theta/'
+path_fig  = '/home/dmoreno/figures/transition_indicators/A_rates/bed_peak/'
 #path_now = '/home/dmoreno/flowline/ewr/rate/n.350_A.2.0e-25_n-1_n-2/'
-path_now = '/home/dmoreno/flowline/ewr/test_A/stoch_n.250_A.1.0-10.0e-25/'
+path_now = '/home/dmoreno/flowline/ewr/A_rates/bed_peak/tf_A.3.0e4_A.0.5e-26_5.0e-25/'
 path_stoch  = '/home/dmoreno/flowline/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
@@ -32,7 +32,7 @@ file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 save_series        = 1
 save_series_comp   = 0
 save_shooting      = 0
-save_domain        = 1
+save_domain        = 0
 save_var_frames    = 0
 save_series_frames = 0
 save_theta         = 0
@@ -40,7 +40,7 @@ save_visc          = 0
 save_u_der         = 0
 save_F_n           = 0
 save_L             = 0
-save_fig           = False
+save_fig           = True
 read_stoch_nc      = False
 
 smth_series        = 0
@@ -327,6 +327,7 @@ if save_series == 1:
 	#ax.set_ylim(345.0, 355.0)
 	#ax3.set_ylim(-2.2, 0.9)
 	#ax5.set_ylim(-0.5, 45.0)
+	ax4.set_ylim(-60, 60)
 	
 	ax.set_ylabel(r'$L \ (\mathrm{km})$', fontsize=18)
 	ax2.set_ylabel(r'$H_{gl} \ (\mathrm{km})$', fontsize=18)
@@ -339,9 +340,9 @@ if save_series == 1:
 	ax6.set_ylabel(r'$ \bar{u}(L) \ (\mathrm{m/yr})$', fontsize=18)
 	ax3.set_xlabel(r'$\mathrm{Time} \ (\mathrm{kyr})$', fontsize=18)
 	
-	#ax.set_xlim(t_plot[0], t_plot[l-1])
-	#ax2.set_xlim(t_plot[0], t_plot[l-1])
-	#ax3.set_xlim(t_plot[0], t_plot[l-1])
+	ax.set_xlim(t_plot[0], t_plot[l-1])
+	ax2.set_xlim(t_plot[0], t_plot[l-1])
+	ax3.set_xlim(t_plot[0], t_plot[l-1])
 	
 		
 	ax.yaxis.label.set_color('red')
@@ -544,7 +545,7 @@ if save_shooting == 1:
 
 if save_domain == 1:
 	
-	for i in range(0, l, 2): # range(0, l, 2), (l-1, l, 20)
+	for i in range(0, l, 1): # range(0, l, 2), (l-1, l, 20)
 		
 		# Horizontal dimension [km].
 		L_plot  = np.linspace(0, L[i], n)
