@@ -7,8 +7,8 @@
 // NETCDF PARAMETERS.
 /* This is the name of the data file we will create. */
 //#define FILE_NAME "output/mismip/exp3/exp3_n.250/exp3_n.250.nc"
-#define FILE_NAME "/home/dmoreno/flowline/ewr/A_rates/bed_peak/test_hr_L/tf_A.2.0e4_A.0.5e-26_5.0e-25/flowline.nc"
-#define FILE_NAME_HR "/home/dmoreno/flowline/ewr/A_rates/bed_peak/test_hr_L/tf_A.2.0e4_A.0.5e-26_5.0e-25/flowline_hr.nc"
+#define FILE_NAME "/home/dmoreno/flowline/ewr/A_rates/bed_peak/hr/y_p.44_tf_A.4.0e4_A.0.5e-26_5.0e-25/flowline.nc"
+#define FILE_NAME_HR "/home/dmoreno/flowline/ewr/A_rates/bed_peak/hr/y_p.44_tf_A.4.0e4_A.0.5e-26_5.0e-25/flowline_hr.nc"
 #define FILE_NAME_READ "/home/dmoreno/flowline/data/noise_sigm_ocn.12.0.nc"
 
 

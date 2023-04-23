@@ -1571,7 +1571,7 @@ int main()
     // Time variables.
     double const t_eq     = 2.0e3;                   // Equilibration time: visc, vel, theta, etc. 0.2 * tf
     double const t0_A     = 2.0e4;                   // Start time to apply increase in ice rate factor. 3.0e4
-    double const tf_A     = 3.0e4;
+    double const tf_A     = 4.0e4;
     double const t0_stoch = 3.0e3;                   // Start time to apply stochastic BC. 2.0e4
 
     // VELOCITY SOLVER.
@@ -1600,8 +1600,8 @@ int main()
     double const sigma_gauss = 10.0;                  // Sigma gaussian filter. 
     double const t0_gauss = 1.5e4;                   // Init time to apply gaussian filter.
     double const x_1 = 346.0e3;                      // Peak beginning [m].
-    double const x_2 = 350.0e3;                      // Peak end [m].
-    double const y_p = 88.0;                         // Peak height [m]. 88.0
+    double const x_2 = 350.0e3;                      // Peak end [m]. 88.0
+    double const y_p = 44.0;                         // Peak height [m]. 88.0, 176.0
     double const y_0 = 70.0;                         // Initial bedrock elevation (x=0) [m].
     
     // SURFACE MASS BALANCE.

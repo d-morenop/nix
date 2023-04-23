@@ -18,9 +18,9 @@ from scipy import signal
 
 
 
-path_fig  = '/home/dmoreno/figures/transition_indicators/A_rates/bed_peak/'
+path_fig  = '/home/dmoreno/figures/transition_indicators/A_rates/bed_peak/frames/'
 #path_now = '/home/dmoreno/flowline/ewr/rate/n.350_A.2.0e-25_n-1_n-2/'
-path_now = '/home/dmoreno/flowline/ewr/A_rates/bed_peak/tf_A.3.0e4_A.0.5e-26_5.0e-25/'
+path_now = '/home/dmoreno/flowline/ewr/A_rates/bed_peak/hr/y_p.88.tf_A.2.5e4_A.0.5e-26_5.0e-25/'
 path_stoch  = '/home/dmoreno/flowline/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
@@ -29,14 +29,14 @@ file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 # /home/dmoren07/c++/flowline/output/glacier_ews/m_dot.30.0/
 
 # Select plots to be saved (boolean integer).
-save_series        = 1
+save_series        = 0
 save_series_comp   = 0
 save_shooting      = 0
-save_domain        = 0
+save_domain        = 1
 save_var_frames    = 0
 save_series_frames = 0
 save_theta         = 0
-save_visc          = 0
+save_visc          = 0	
 save_u_der         = 0
 save_F_n           = 0
 save_L             = 0
@@ -242,18 +242,31 @@ if save_series == 1:
 	# Ice flux.
 	q = u_bar * 1.0e3 * H
 
+	# Plot bed peak position.
+	y_p = np.full(len(t_plot), 350)
+
 	# Mean variables.
 	theta_bar = np.mean(theta[:,0,:], axis=1)
 	visc_bar_mean  = np.mean(visc_bar, axis=1)
 	
 	# Figure.
+	fig = plt.figure(dpi=600, figsize=(5.5,4.5))
+
+	"""
 	fig = plt.figure(dpi=600, figsize=(5.5,6))
+
 	ax = fig.add_subplot(311)
 	ax6 = ax.twinx()
 	ax2 = fig.add_subplot(312)
 	ax4 = ax2.twinx()
 	ax3 = fig.add_subplot(313)
 	ax5 = ax3.twinx()
+	"""
+
+	ax = fig.add_subplot(211)
+	ax6 = ax.twinx()
+	ax2 = fig.add_subplot(212)
+	ax4 = ax2.twinx()
 	
 	plt.rcParams['text.usetex'] = True
 
@@ -268,15 +281,17 @@ if save_series == 1:
 		
 		# Current u_x value minus analytical.
 		u_x_0[i] = u_x[i,0] # u_x[i,n-1]
-		
-		# Ice velocity at the GL.
-		u_L[i] = u_bar[i,n-1]
-	
 
-	ax6.plot(t_plot, u_L, linestyle='-', color='blue', marker='None', \
+
+	ax6.plot(t_plot, u_bar[:,n-1], linestyle='-', color='blue', marker='None', \
 			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+
 	ax.plot(t_plot, L, linestyle='-', color='red', marker='None', \
 			markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+
+	# Plot bed peak position.
+	ax.plot(t_plot, y_p, linestyle='--', color='red', marker='None', \
+			markersize=3.0, linewidth=1.5, alpha=1.0, label=r'$u_{b}(x)$') 
 	
 	ax2.plot(t_plot, H[:,n-1], linestyle='-', color='black', marker='None', \
 			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
@@ -292,15 +307,15 @@ if save_series == 1:
 
 	#ax4.plot(t_plot, theta_bar, linestyle='-', color='darkgreen', marker='None', \
 	#		 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
-	ax4.plot(t_plot, dL_dt, linestyle='-', color='darkgreen', marker='None', \
-			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+	#ax3.plot(t_plot, dL_dt, linestyle='-', color='darkgreen', marker='None', \
+	#		 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 
 	#ax3.plot(t_plot, visc_bar_mean, linestyle='-', color='brown', marker='None', \
 	#		 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
-	ax3.plot(t_plot, A_s, linestyle='-', color='brown', marker='None', \
+	ax4.plot(t_plot, A_s, linestyle='-', color='darkgreen', marker='None', \
 			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
-	ax5.plot(t_plot, q[:,n-1], linestyle='-', color='purple', marker='None', \
-			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+	#ax5.plot(t_plot, q[:,n-1], linestyle='-', color='purple', marker='None', \
+	#		 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 
 		
 	#ax6.plot(t, u_x_0, linestyle='-', color='darkgreen', marker='None', \
@@ -311,6 +326,7 @@ if save_series == 1:
 			 
 	# Histograms for stochastic time series.
 	if read_stoch_nc == True:
+
 		#ax3.bar(t_plot, smb_stoch, width=0.5, bottom=None, align='center', data=None, color='darkgreen')
 		#ax5.bar(t_plot, m_stoch, width=0.5, bottom=None, align='center', data=None, color='purple')
 		ax3.bar(t_stoch, noise_smb, width=4.0, bottom=None, \
@@ -324,53 +340,69 @@ if save_series == 1:
 		ax5.set_ylabel(r'$ \dot{m} \ (m/yr)$', fontsize=18)
 
 	# Axis limits.
-	#ax.set_ylim(345.0, 355.0)
-	#ax3.set_ylim(-2.2, 0.9)
-	#ax5.set_ylim(-0.5, 45.0)
-	ax4.set_ylim(-60, 60)
+	ax.set_ylim(280.0, 360.0)
+	ax2.set_ylim(0.4, 0.5)
+	ax6.set_ylim(0.0, 300.0)
+	#ax4.set_ylim(A_s[0]*(1.0 - 0.2), A_s[l-1]*(1.0 + 0.05))
+
+	ax.set_xlim(15.0, t_plot[l-1])
+	ax2.set_xlim(15.0, t_plot[l-1])
 	
 	ax.set_ylabel(r'$L \ (\mathrm{km})$', fontsize=18)
 	ax2.set_ylabel(r'$H_{gl} \ (\mathrm{km})$', fontsize=18)
 	#ax3.set_ylabel(r'$ 1/A \ (Pa^{3} \ s) $', fontsize=18)
 	#ax4.set_ylabel(r'$ \bar{\theta}(0,t) \ (^{\circ} \mathrm{C}) $', fontsize=18)
-	ax4.set_ylabel(r'$ \dot{L} \ (m/yr)$',fontsize=18)
+	#ax4.set_ylabel(r'$ \dot{L} \ (m/yr)$',fontsize=18)
 	#ax3.set_ylabel(r'$ \bar{\eta} \ (\mathrm{Pa \cdot s})$', fontsize=18)
-	ax3.set_ylabel(r'$ A \ (Pa^{-3} s^{-1})$', fontsize=18)
-	ax5.set_ylabel(r'$ q \ (\mathrm{m}^2 / \mathrm{yr})$', fontsize=18)
-	ax6.set_ylabel(r'$ \bar{u}(L) \ (\mathrm{m/yr})$', fontsize=18)
-	ax3.set_xlabel(r'$\mathrm{Time} \ (\mathrm{kyr})$', fontsize=18)
 	
-	ax.set_xlim(t_plot[0], t_plot[l-1])
-	ax2.set_xlim(t_plot[0], t_plot[l-1])
-	ax3.set_xlim(t_plot[0], t_plot[l-1])
+	#ax4.set_ylabel(r'$ A \ (Pa^{-3} s^{-1})$', fontsize=18)
+	ax4.set_ylabel(r'$ A \ (10^{-17} \ \mathrm{Pa}^{-3} \mathrm{yr}^{-1})$', fontsize=17)
+	#ax5.set_ylabel(r'$ q \ (\mathrm{m}^2 / \mathrm{yr})$', fontsize=18)
+	ax6.set_ylabel(r'$ \bar{u}(L) \ (\mathrm{m/yr})$', fontsize=18)
+	#ax3.set_xlabel(r'$\mathrm{Time} \ (\mathrm{kyr})$', fontsize=18)
+	ax2.set_xlabel(r'$\mathrm{Time} \ (\mathrm{kyr})$', fontsize=18)
 	
 		
 	ax.yaxis.label.set_color('red')
 	ax2.yaxis.label.set_color('black')
 	ax4.yaxis.label.set_color('darkgreen')
-	ax3.yaxis.label.set_color('brown')
-	ax5.yaxis.label.set_color('purple')
+	#ax3.yaxis.label.set_color('brown')
+	#ax5.yaxis.label.set_color('purple')
 	ax6.yaxis.label.set_color('blue')
 	
 	ax.set_xticklabels([])
-	ax2.set_xticklabels([])
+	#ax2.set_xticklabels([])
 
-	#ax3.set_xticklabels([0, 2500, 5000, 7500, 10000, \
-	#					 12500, 15000, 17500, 20000])
-	#ax3.set_xticklabels(['$0.0$', '$2.5$', '$5.0$', \
-    #                     '$7.5$', '$10.0$', '$12.5$', 
-    #                     '$15.0$', '$17.5$', '$20.0$'], fontsize=12)
+	ax2.set_xticks([15, 20, 25, 30, 35, t_plot[l-1]])
+	ax2.set_xticklabels(['$15$', '$20$', \
+                         '$25$', '$30$', '$35$', 
+                         '$40$'], fontsize=14)
 	
+
+	ax.set_yticks([280, 300, 320, 340, 340])
+	ax.set_yticklabels(['$280$', '$300$', \
+                         '$320$', '$340$', '$360$'], fontsize=14)
+	
+	ax6.set_yticks([0, 100, 200, 300])
+	ax6.set_yticklabels(['$0$', '$100$','$200$', '$300$'], fontsize=14)
+
+	ax2.set_yticks([0.4, 0.42, 0.44, 0.46, 0.48, 0.5])
+	ax2.set_yticklabels(['$0.40$', '$0.42$','$0.44$', '$0.46$',\
+						 '$0.48$', '$0.50$'], fontsize=14)
+	
+	#ax4.set_yticklabels([0.0, 0.5e-17, 1.0e-17, 1.5e-17])
+	ax4.set_yticklabels(['$0.0$', '$0.0$', '$0.5$', '$1.0$', '$1.5$'], fontsize=14)
+
 	ax.tick_params(axis='y', which='major', length=4, colors='red')
 	ax2.tick_params(axis='y', which='major', length=4, colors='black')
 	ax4.tick_params(axis='y', which='major', length=4, colors='darkgreen')
-	ax3.tick_params(axis='y', which='major', length=4, colors='brown')
-	ax5.tick_params(axis='y', which='major', length=4, colors='purple')
+	#ax3.tick_params(axis='y', which='major', length=4, colors='brown')
+	#ax5.tick_params(axis='y', which='major', length=4, colors='purple')
 	ax6.tick_params(axis='y', which='major', length=4, colors='blue')
 	
 	ax.grid(axis='x', which='major', alpha=0.85)
 	ax2.grid(axis='x', which='major', alpha=0.85)
-	ax3.grid(axis='x', which='major', alpha=0.85)
+	#ax3.grid(axis='x', which='major', alpha=0.85)
 	
 	plt.tight_layout()
 
@@ -545,7 +577,7 @@ if save_shooting == 1:
 
 if save_domain == 1:
 	
-	for i in range(0, l, 1): # range(0, l, 2), (l-1, l, 20)
+	for i in range(0, l, 5): # range(0, l, 2), (l-1, l, 20)
 		
 		# Horizontal dimension [km].
 		L_plot  = np.linspace(0, L[i], n)
@@ -601,8 +633,8 @@ if save_domain == 1:
 	 						   facecolor='grey', alpha=0.4)
 	
 	
-		ax.set_ylabel(r'$z(x) \ (\mathrm{km})$', fontsize=20)
-		ax.set_xlabel(r'$x \ (\mathrm{km}) $', fontsize=20)
+		ax.set_ylabel(r'$z \ (\mathrm{km})$', fontsize=30)
+		ax.set_xlabel(r'$x \ (\mathrm{km}) $', fontsize=30)
 	
 		ax.yaxis.label.set_color('black')
 	 	
@@ -632,9 +664,12 @@ if save_domain == 1:
 			ax.set_xlim(0, 1750)
 			ax.set_ylim(-1.0, 5.0)
 		
-		ax.set_title(r'$i = \ $'+str(i)+r'$, \ t = \ $'+str(np.round(t[i],2))+r'$ \ yr$', fontsize=16)
+		#ax.set_title(r'$i = \ $'+str(i)+r'$, \ t = \ $'+str(np.round(t[i],2))+r'$ \ yr$', fontsize=16)
 	 	
 		ax.grid(axis='x', which='major', alpha=0.85)
+
+		# Enlarge ticklabels without declaring the ticks as such.
+		ax.tick_params(axis='both', labelsize=20)
 	
 		
 		##### Frame name ########
@@ -650,7 +685,7 @@ if save_domain == 1:
 		plt.tight_layout()
 		
 		if save_fig == True:
-			plt.savefig(path_fig+'flow_line_mismip_exp.1_'+frame+'.png', bbox_inches='tight')
+			plt.savefig(path_fig+'fy_p.88_tf_A.2.5e4_A.0.5e-26_5.0e-25_'+frame+'.png', bbox_inches='tight')
 			print('Saved')
 		
 		plt.show()
