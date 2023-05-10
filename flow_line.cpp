@@ -93,21 +93,19 @@ ArrayXd gaussian_filter(ArrayXd w, double sigma, double L, double ds, int n)
     double h_L = ds * L;
     double A = 1.0 / (sqrt(2.0 * M_PI) * sigma);
 
-    //summ = zeros;
- 
     // Weierstrass transform.
-    for (int i=0; i<n; i++) 
+    for (int i = 0; i < n; i++)
     {
         x = i * h_L;
-        for (int j=0; j<n; j++)
+        for (int j = 0; j < n; j++)
         {
             y = j * h_L;
-            summ(i) += w(j) * exp( - pow((x - y)/ sigma, 2) / 2.0 ) * h_L;
+            summ(i) += w(j) * exp(-pow((x - y) / sigma, 2) / 2.0);
         }
     }
- 
-    // Normalising Kernel.
-    smth = A * summ;
+
+    // Normalizing Kernel.
+    smth = A * summ * h_L;
 
     return smth;
 }
@@ -1293,6 +1291,7 @@ ArrayXXd F_int_all(ArrayXXd visc, ArrayXd H, ArrayXd dz, int n_z, int n) {
     double z, sum_1, sum_2, value_1, value_2, H_minus_z;
     int n_2 = 2;
     
+    // Horizontal loop.
     for (int i = 0; i < n; ++i) 
     {
         z = 0;
@@ -1592,6 +1591,7 @@ int main()
     double const dt_noise = 1.0;                     // Assumed time step in stochastic_anom.py 
 
     // OUTPUT DEFINITIONS.
+    int const out_hr = 1;                            // Allow high resolution output.
     int const t_n = 100;                             // Number of output frames. 30.
 
     // BEDROCK
@@ -1727,7 +1727,7 @@ int main()
     // MATRICES.
     ArrayXXd sol(2,n);                     // Matrix output.
     ArrayXXd u(n,n_z);                     // Full velocity u(x,z) [m/yr].  
-    ArrayXXd u_z(n,n_z);              // Full horizontal velderivative [1/yr]
+    ArrayXXd u_z(n,n_z);                   // Full vertical vel derivative [1/yr]
     ArrayXXd u_x_diva(n,n_z);
     ArrayXXd visc_all(n,3*n_z+2);            // Output ice viscosity function [Pa·s]. (n,n_z+2)
     ArrayXXd visc(n,n_z);                  // Ice viscosity [Pa·s]. 
@@ -1927,7 +1927,7 @@ int main()
         // Update bedrock with new domain extension L.
         bed = f_bed(L, n, experiment, y_0, y_p, x_1, x_2);
 
-        if ( smooth_bed == 1 && t > t0_gauss )
+        if ( smooth_bed == 1 )
         {
             bed = gaussian_filter(bed, sigma_gauss, L, ds, n);
         }
@@ -2110,7 +2110,7 @@ int main()
         }  
 
         // Write solution with high resolution output frequency.
-        else if ( c_hr == 0 || t > a_hr(c_hr) )
+        else if ( out_hr == 1 && c_hr == 0 || t > a_hr(c_hr) )
         {
             // Write solution in nc.
             f_write_hr(c_hr, u_bar(n-1), H(n-1), L, t, u_x_bc, u2_dif, \
