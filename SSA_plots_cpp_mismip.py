@@ -20,7 +20,7 @@ from scipy import signal
 
 path_fig  = '/home/dmoreno/figures/transition_indicators/A_rates/bed_peak/frames/'
 #path_now = '/home/dmoreno/flowline/ewr/rate/n.350_A.2.0e-25_n-1_n-2/'
-path_now = '/home/dmoreno/flowline/ewr/A_rates/bed_peak/hr/y_p.88.tf_A.2.5e4_A.0.5e-26_5.0e-25/'
+path_now = '/home/dmoreno/flowline/mismip_therm/exp_1-2_dt.adapt_long/'
 path_stoch  = '/home/dmoreno/flowline/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
@@ -29,18 +29,18 @@ file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 # /home/dmoren07/c++/flowline/output/glacier_ews/m_dot.30.0/
 
 # Select plots to be saved (boolean integer).
-save_series        = 0
+save_series        = 1
 save_series_comp   = 0
 save_shooting      = 0
-save_domain        = 1
+save_domain        = 0
 save_var_frames    = 0
 save_series_frames = 0
 save_theta         = 0
-save_visc          = 0	
+save_visc          = 0
 save_u_der         = 0
 save_F_n           = 0
-save_L             = 0
-save_fig           = True
+save_L             = 1
+save_fig           = False
 read_stoch_nc      = False
 
 smth_series        = 0
@@ -49,7 +49,7 @@ smth_series        = 0
 # MISMIP bedrock experiments.
 # exp = 1: inclined bed; exp = 3: overdeepening bed.
 exp_name = ['mismip_1', 'mismip_3', 'glacier_ews']
-idx = 2
+idx = 0
 exp = exp_name[idx]
 
 
@@ -201,7 +201,7 @@ elif exp == 'glacier_ews':
 
 # Bedrock test [km].
 # PROBLEM HERE, WE HAVE TO FORCE IT AGAIN.
-x_plot = np.linspace(0, 400.0, n)
+#x_plot = np.linspace(0, 400.0, n)
 #print(x_plot[n-1])
 
 bed = f_bed(x_plot, exp, n)
@@ -290,8 +290,8 @@ if save_series == 1:
 			markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 
 	# Plot bed peak position.
-	ax.plot(t_plot, y_p, linestyle='--', color='red', marker='None', \
-			markersize=3.0, linewidth=1.5, alpha=1.0, label=r'$u_{b}(x)$') 
+	#ax.plot(t_plot, y_p, linestyle='--', color='red', marker='None', \
+	#		markersize=3.0, linewidth=1.5, alpha=1.0, label=r'$u_{b}(x)$') 
 	
 	ax2.plot(t_plot, H[:,n-1], linestyle='-', color='black', marker='None', \
 			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
@@ -340,13 +340,13 @@ if save_series == 1:
 		ax5.set_ylabel(r'$ \dot{m} \ (m/yr)$', fontsize=18)
 
 	# Axis limits.
-	ax.set_ylim(280.0, 360.0)
-	ax2.set_ylim(0.4, 0.5)
-	ax6.set_ylim(0.0, 300.0)
+	#ax.set_ylim(280.0, 360.0)
+	#ax2.set_ylim(0.4, 0.5)
+	#ax6.set_ylim(0.0, 300.0)
 	#ax4.set_ylim(A_s[0]*(1.0 - 0.2), A_s[l-1]*(1.0 + 0.05))
 
-	ax.set_xlim(15.0, t_plot[l-1])
-	ax2.set_xlim(15.0, t_plot[l-1])
+	#ax.set_xlim(15.0, t_plot[l-1])
+	#ax2.set_xlim(15.0, t_plot[l-1])
 	
 	ax.set_ylabel(r'$L \ (\mathrm{km})$', fontsize=18)
 	ax2.set_ylabel(r'$H_{gl} \ (\mathrm{km})$', fontsize=18)
@@ -373,6 +373,7 @@ if save_series == 1:
 	ax.set_xticklabels([])
 	#ax2.set_xticklabels([])
 
+	"""
 	ax2.set_xticks([15, 20, 25, 30, 35, t_plot[l-1]])
 	ax2.set_xticklabels(['$15$', '$20$', \
                          '$25$', '$30$', '$35$', 
@@ -392,6 +393,7 @@ if save_series == 1:
 	
 	#ax4.set_yticklabels([0.0, 0.5e-17, 1.0e-17, 1.5e-17])
 	ax4.set_yticklabels(['$0.0$', '$0.0$', '$0.5$', '$1.0$', '$1.5$'], fontsize=14)
+	"""
 
 	ax.tick_params(axis='y', which='major', length=4, colors='red')
 	ax2.tick_params(axis='y', which='major', length=4, colors='black')
@@ -1076,7 +1078,7 @@ if save_u_der == 1:
 		# Flip theta matrix so that the plot is not upside down.
 		#im = ax.imshow(np.flip(u_z[i,:,:],axis=0), cmap='plasma', \
 		#				vmin=u_z_min, vmax=u_z_max, aspect='auto')
-		im = ax.imshow(np.flip(u_z[i,:,:],axis=0), norm='log', cmap='plasma', aspect='auto')
+		im = ax.imshow(np.flip(u_z[i,:,:],axis=0), norm='log', cmap='viridis', aspect='auto')
 
 		ax.set_ylabel(r'$ \mathbf{n}_{z} $', fontsize=20)
 		ax.set_xlabel(r'$\ \mathbf{x} \ (\mathrm{km})$', fontsize=20)
@@ -1296,73 +1298,46 @@ if save_series_frames == 1:
 
 if save_L == 1:
 
-	# Path.
-	path = '/home/dmoreno/c++/flowline/output/glacier_ews/S_erf_n-2_n-3/'
+	# Time points where we want to plot.
+	t_L = np.arange(40.0e3, t[l-1], 3.0e4)
 
-	# List all folders in directory.
-	ensemble = os.listdir(path)
-	ensemble.sort()
+	# Find the indexes in the time vector that are closest to our t_L values.
+	indices = np.abs(t[:, np.newaxis] - t_L).argmin(axis=0)
 
-	# Number of ensembles.
-	l_ens = len(ensemble)
-
-	# Define variable.
-	L = np.full(l_ens, np.nan)
-
-	for i in range(l_ens):
-
-		# Current path.
-		path_now = path+ensemble[i]
-
-		# Read corresponding nc file.
-		nc_SSA = os.path.join(get_datadir(), path_now+'/flowline.nc')
-		data   = Dataset(nc_SSA, mode='r')
-
-		l_t  = len(data.variables['L'][:])
-		L[i] = data.variables['L'][l_t-1]
-
+	col_1 = np.linspace(0.0, 1.0, l)
 
 	fig = plt.figure(dpi=400)
 	ax = fig.add_subplot(111)
 
-	# x axis.
-	#n_s = np.array([125, 250, 375, 500, 625, 750, 875, 1000, 1125, 1250, 1500])
-	n_s = np.array([200, 300, 400, 500, 600, 700, 800, 900, 1000])
-
-	l_n_s = len(n_s)
-
-	# Bed peak position
-	x_plot = np.linspace(0, 1500, l_n_s)
-	peak = np.full(l_n_s, 350)
-
 	plt.rcParams['text.usetex'] = True
 
-	ax.plot(n_s, 1.0e-3*L, linestyle=':', color='blue', marker='o', \
-			markersize=5.0, linewidth=1.0, alpha=1.0, label=r'$ \mathrm{Flowline} $') 
+	for i in indices:
 
-	ax.plot(x_plot, peak, linestyle='--', color='black', marker='None', \
-			markersize=3.0, linewidth=1.5, alpha=1.0, label=r'$ \mathrm{Bed \ peak}$') 
-
-	ax.set_ylabel(r'$L \ (km)$', fontsize=18)
-	ax.set_xlabel(r'$\mathrm{Grid \ points} \ N$', fontsize=18)
+		# Current path.
+		ax.plot(A_s[i], 1.0e-3*L[i], markeredgecolor=[col_1[i],0,0], marker='o', \
+					markersize=7.0, markerfacecolor='None', alpha=0.5, label=r'$ \mathrm{Flowline} $') 
 
 
-	#ax.set_xticks([125, 250, 375, 500, 625, 750, 875, 1000, 1125])
-	ax.set_xticks([200, 300, 400, 500, 600, 700, 800, 900, 1000])
-	#ax.set_yticks([320, 330, 340, 350, 360])
+
+	ax.set_xlabel(r'$A$', fontsize=18)
+	ax.set_ylabel(r'$L$', fontsize=18)
 
 
-	ax.legend(loc='best', ncol = 1, frameon = True, framealpha = 1.0, \
-	 		  fontsize = 12, fancybox = True)
+	#ax.legend(loc='best', ncol = 1, frameon = True, framealpha = 1.0, \
+	# 		  fontsize = 12, fancybox = True)
 
 
-	ax.tick_params(axis='both', which='major', length=4, colors='black')
+	ax.tick_params(axis='both', which='major', length=4, colors='black', labelsize=15)
+
+	#ax.tick_params(axis='both', labelsize=20)
 
 
 	ax.grid(axis='x', which='major', alpha=0.85)
 
-	ax.set_xlim(180, 1020)
-	ax.set_ylim(100, 400)
+	#ax.set_xlim(180, 1020)
+	#ax.set_ylim(100, 400)
+
+	plt.xscale('log')
 
 	plt.tight_layout()
 
@@ -1436,64 +1411,5 @@ if save_L == 1:
 
 # plt.show()
 # plt.close(fig)
-
-
-"""
-#############################################
-#############################################
-sec_year = 3.154e7
- 	
-# visc_barosity dependence on T and du/dx
-eps  = 1.0e-7
-dudx = np.arange(-1.0e-5, 1.0e-5, 1.0e-7)
-#eps  = 1.0e-11
-#dudx = np.arange(-1.0, 1.0, 1.0e-3)
-#dudx = dudx * sec_year
-
-n_gln = 3
-n_exp = (1.0 - n_gln) / (2.0 * n_gln)
-
-def f_visc_bar(A, dudx):
-	#A = sec_year * A
-	B    = A**( -1 / n_gln )
-	visc_bar_plot = 0.5 * B * ( (abs(dudx) + eps)**2 )**n_exp
-	return visc_bar_plot
- 	
-
-fig = plt.figure(dpi=400)
-ax = fig.add_subplot(111)
-
-plt.rcParams['text.usetex'] = True
-
-As = np.array([1.0e-24, 1.0e-25, 1.0e-26])
-col = ['red', 'darkgreen', 'darkblue']
-
-for i in range(len(As)):
-	A_now = As[i]
-	visc_bar_plot  = f_visc_bar(As[i], dudx)
-	
-	ax.plot(dudx, visc_bar_plot, linestyle='-', color=col[i], marker='None', \
-		 	markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$A = \ $'+str(A_now)) 
-
-
-ax.legend(loc='upper right', ncol = 1, frameon = True, \
-		  framealpha = 1.0, fontsize = 14, fancybox = True)
-	
-ax.set_ylabel(r'$\eta(\theta, \partial u / \partial x)$',fontsize=18)
-ax.set_xlabel(r'$\partial u / \partial x$',fontsize=18)
-
-ax.yaxis.label.set_color('darkblue')
-ax.tick_params(axis='y', which='major', length=4, colors='darkblue')
-
-ax.grid(axis='x', which='major', alpha=0.85)
-
-plt.tight_layout()
-
-plt.show()
-plt.close(fig)
-"""
-
-
- 	
 
 

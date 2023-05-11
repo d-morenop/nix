@@ -475,8 +475,9 @@ Array2d f_dt(double error, double picard_tol, double dt_meth, \
 ////////////////////////////////////////////////////
 // Flow line functions.
 
-ArrayXd f_bed(double L, int n, int experiment, \
-              double y_0, double y_p, double x_1, double x_2)
+ArrayXd f_bed(double L, int n, int bed_exp, \
+              double y_0, double y_p, double x_1, double x_2, \
+              int smooth_bed, double sigma_gauss, double ds)
 {
     // Prepare variables.
     ArrayXd bed(n);
@@ -486,19 +487,19 @@ ArrayXd f_bed(double L, int n, int experiment, \
     // MISMIP experiments bedrock.
     // Same bedrock as Schoof (2007).
     // Inverse sign to get a decreasing bedrock elevation.
-    if (experiment == 1)
+    if (bed_exp == 1)
     {
         x = x / 750.0e3; 
         bed = 720.0 - 778.5 * x;
     }
-    else if (experiment == 3)
+    else if (bed_exp == 3)
     {
         x = x / 750.0e3; 
         bed = 729.0 - 2148.8 * pow(x, 2) + \
                       1031.72 * pow(x, 4) + \
                     - 151.72 * pow(x, 6);
     }
-    else if (experiment = 4)
+    else if (bed_exp = 4)
     {
         // Variables.
         int c_x1 = 0;
@@ -543,6 +544,12 @@ ArrayXd f_bed(double L, int n, int experiment, \
                 bed(i) = y_2 - 5.0e-3 * ( x(i) - x_2 );
             } 
         }
+    }
+
+    // Potential smooth bed.
+    if ( smooth_bed == 1 )
+    {
+        bed = gaussian_filter(bed, sigma_gauss, L, ds, n);
     }
 
     return bed;
@@ -959,7 +966,7 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd visc, ArrayXd H, ArrayXd tau_b, \
     else if ( vel_meth == 2 && t >= t_eq )
     {
         
-        // As defined in Eq. 21 (Lipscomb et al., 2019).
+        // Horizontal derivative du/dx as defined in Eq. 21 (Lipscomb et al., 2019).
         for (int i=1; i<n-1; i++)
         {
             u_x(i) = 0.5 * ( u_bar(i+1) - u_bar(i-1) );
@@ -971,12 +978,13 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd visc, ArrayXd H, ArrayXd tau_b, \
         // Vertical shear stress du/dz from Eq. 36 Lipscomb et al.
         for (int j=0; j<n_z; j++)
         {
-            // Fill matrix since horizontal derivates have no vertical depedency.
+            // Fill matrix since horizontal derivates have no vertical depedency since
+            // take the derizative of the vertically-averaged velocity.
             u_x_diva.col(j) = u_x;
 
             for (int i=0; i<n; i++)
             {
-                //Eq. 36 Lipscomb et al. (2019).
+                // Velcity vertical derivative du/dz. Eq. 36 Lipscomb et al. (2019).
                 u_z(i,j) = tau_b(i) * ( H(i) - j * dz(i) ) / ( visc(i,j) * H(i) );
             }
         }
@@ -984,36 +992,22 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd visc, ArrayXd H, ArrayXd tau_b, \
         // Sigma coordinates transformation.
         u_x_diva = u_x_diva / (ds * L);
 
-        // Regularitazion term to avoid division by 0. 
+        // Strain rate and regularization term to avoid division by 0. 
         strain_diva = pow(u_x_diva,2) + 0.25 * pow(u_z,2) + eps;
 
-        // Exponent n_exp = (1-n)/(2n)
-        visc = 0.5 * B * pow(strain_diva, n_exp);
 
-        // Vertically-averaged viscosity.
-        visc_bar = visc.rowwise().mean();
-        
-
-        /*
-        // Constant ice rate factor A.
-        if (visc_therm == 0 || t <= t_eq)
+        // Viscosity independent of temperature.
+        if ( visc_therm == 0 || t <= t_eq ) 
         {
-            // Regularitazion term to avoid division by 0. 
-            // Like this instead?
-            //strain_diva = pow(u_x_diva,2) + 0.25 * pow(u_z,2) + pow(eps,2);
-            strain_diva = pow(u_x_diva,2) + 0.25 * pow(u_z,2) + eps;
-
-            // Exponent n_exp = (1-n)/n
-            // WE GET NAN HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            // Exponent n_exp = (1-n)/(2n)
             visc = 0.5 * B * pow(strain_diva, n_exp);
-            
         }
-        
-        // Temperature dependent viscosity through A(T).
-        else if (visc_therm == 1 && t > t_eq)
+
+        // Viscosity dependent on temperature.
+        // We calculate B from A(T,p).
+        else if ( visc_therm == 1 && t > t_eq )
         {
-            ArrayXXd A(n,n_z), B(n,n_z);
-            ArrayXd B_bar(n);
+            ArrayXXd A_theta(n,n_z), B_theta(n,n_z);
 
             // Calculate temperature-dependent rate factor if thermodynamics is switched on.
             // Arrhenius law A(T,p) equivalent to A(T').
@@ -1025,34 +1019,25 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd visc, ArrayXd H, ArrayXd tau_b, \
                     // Rate factor. We consider two temperature regimes (Greve and Blatter, 2009).
                     if ( theta(i,j) < theta_act )
                     {
-                        A(i,j) = A_0(0) * exp(- Q_act(0) / (R * theta(i,j)) );
+                        A_theta(i,j) = A_0(0) * exp(- Q_act(0) / (R * theta(i,j)) );
                     }
                     else
                     {
-                        A(i,j) = A_0(1) * exp(- Q_act(1) / (R * theta(i,j)) );
+                        A_theta(i,j) = A_0(1) * exp(- Q_act(1) / (R * theta(i,j)) );
                     }
                 }
             }
 
-            //cout << "\n A = " << A / sec_year;
-
             // Associated rate factor. A: [Pa^-3 yr^-1]
-            B = pow(A, ( -1 / n_gln ) );
+            B_theta = pow(A_theta, ( -1 / n_gln ) );
 
-            // Vertically averaged B.
-            B_bar = B.rowwise().mean();
-
-            // Regularitazion term to avoid division by 0. 
-            strain = pow(u_x,2) + 0.25 * pow(u_z,2) + eps;
-
-            // Exponent n_exp = (1-n)/n
-            visc = 0.5 * B_bar * pow(strain, n_exp);
-
-            // Avoid singularity???????
-            //visc(1) = visc(0);
+            // Exponent n_exp = (1-n)/(2n)
+            visc = 0.5 * B_theta * pow(strain_diva, n_exp);
 
         }
-        */
+
+        // Vertically-averaged viscosity.
+        visc_bar = visc.rowwise().mean();
 
     }
 
@@ -1142,89 +1127,80 @@ ArrayXXd f_theta(ArrayXXd theta, ArrayXd ub, ArrayXd H, ArrayXd tau_b, ArrayXd Q
     // Zero frictional heat test.
     //Q_f_k = ArrayXd::Zero(n);
 
-    if ( t > t_eq )
+    // Heat due to deformation is not included yet (via strain rate).
+
+    for (int i=1; i<n; i++)
     {
-        for (int i=1; i<n; i++)
-        {
-            for (int j=1; j<n_z-1; j++)
-            {
-                // Old formulation.
-                //theta_now(i,j) = theta(i,j) + dt * ( kappa * dz_2_inv(i) * \
-                                ( theta(i,j+1) - 2.0 * theta(i,j) + theta(i,j-1) ) + \
-                                - ub(i) * ( theta(i,j) - theta(i-1,j) ) * dx_inv );
-
-                
-                // Just vertical difussion.
-                //theta_now(i,j) = theta(i,j) + dt * kappa * dz_2_inv(i) * \
-                                ( theta(i,j+1) - 2.0 * theta(i,j) + theta(i,j-1) );
-
-                // Horizontal advection. Correction for sigma coord.
-                // We have not considered the stagerred grid yet.
-                //theta_now(i,j) = theta(i,j) + dt * ( kappa * dz_2_inv(i) * \
-                                ( theta(i,j+1) - 2.0 * theta(i,j) + theta(i,j-1) ) + \
-                                ( sigma(i) * dL_dt - ub(i) ) * \
-                                ( theta(i,j) - theta(i-1,j) ) * dx_inv );
-
-                // Prescribed vertical advection.
-                // account for sigma coordinate correction?
-                // Since w < 0 we need an opposite discretization scheme in theta.
-                theta_now(i,j) = theta(i,j) + dt * ( kappa * dz_2_inv(i) * \
-                                ( theta(i,j+1) - 2.0 * theta(i,j) + theta(i,j-1) ) + \
-                                ( sigma(i) * dL_dt - ub(i) ) * \
-                                ( theta(i,j) - theta(i-1,j) ) * dx_inv + \
-                                ( theta(i,j+1) - theta(i,j) ) * ( - w(i) ) * dz_inv(i) );
-
-
-                // Pressure melting point as the upper bound.
-                theta_now(i,j) = min(theta_now(i,j), theta_max);
-            }
-            
-            // Boundary conditions. Geothermal heat flow at the base \
-            and prescribed T_air at the surface.
-            // We add friciton heat contribution Q_f_k.
-            //theta_now(i,0) = theta_now(i,1) + dz(i) * ( G_k + Q_f_k(i) ); 
-
-            // Geothermal heatflux and advection contribution??
-            theta_now(i,0) = theta_now(i,1) + dz(i) * ( G_k + Q_f_k(i) ) + \
-                             ( sigma(i) * dL_dt - ub(i) ) * \
-                             ( theta(i,0) - theta(i-1,0) ) * dx_inv; 
-
-            // w(z=0) = 0 right??
-            //theta_now(i,0) = theta_now(i,1) + dz(i) * ( G_k + Q_f_k(i) ) + \
-                             ( sigma(i) * dL_dt - ub(i) ) * \
-                             ( theta(i,0) - theta(i-1,0) ) * dx_inv + \
-                             ( theta(i,1) - theta(i,0) ) * ( - w(i) ) * dz_inv(i); 
-
-            // Surface.
-            theta_now(i,n_z-1) = T_air;
-
-            // Pressure melting point as the upper bound.
-            theta_now(i,0) = min(theta_now(i,0), theta_max);
-        }
-
-        // OPTIMIZE THIS!!!!!!!!
-        // Vertical loop for x = 0.
         for (int j=1; j<n_z-1; j++)
         {
-            theta_now(0,j) = theta(0,j) + dt * kappa * dz_2_inv(0) * \
-                            ( theta(0,j+1) - 2.0 * theta(0,j) + theta(0,j-1) ) ;
+            // Old formulation.
+            //theta_now(i,j) = theta(i,j) + dt * ( kappa * dz_2_inv(i) * \
+                            ( theta(i,j+1) - 2.0 * theta(i,j) + theta(i,j-1) ) + \
+                            - ub(i) * ( theta(i,j) - theta(i-1,j) ) * dx_inv );
+
+            
+            // Just vertical difussion.
+            //theta_now(i,j) = theta(i,j) + dt * kappa * dz_2_inv(i) * \
+                            ( theta(i,j+1) - 2.0 * theta(i,j) + theta(i,j-1) );
+
+            // Horizontal advection. Correction for sigma coord.
+            // We have not considered the stagerred grid yet.
+            //theta_now(i,j) = theta(i,j) + dt * ( kappa * dz_2_inv(i) * \
+                            ( theta(i,j+1) - 2.0 * theta(i,j) + theta(i,j-1) ) + \
+                            ( sigma(i) * dL_dt - ub(i) ) * \
+                            ( theta(i,j) - theta(i-1,j) ) * dx_inv );
+
+            // Prescribed vertical advection.
+            // account for sigma coordinate correction?
+            // Since w < 0 we need an opposite discretization scheme in theta.
+            theta_now(i,j) = theta(i,j) + dt * ( kappa * dz_2_inv(i) * \
+                            ( theta(i,j+1) - 2.0 * theta(i,j) + theta(i,j-1) ) + \
+                            ( sigma(i) * dL_dt - ub(i) ) * \
+                            ( theta(i,j) - theta(i-1,j) ) * dx_inv + \
+                            ( theta(i,j+1) - theta(i,j) ) * ( - w(i) ) * dz_inv(i) );
+
+
+            // Pressure melting point as the upper bound.
+            theta_now(i,j) = min(theta_now(i,j), theta_max);
         }
         
-        // Boundary condition at x = 0.
-        theta_now(0,0)     = theta_now(0,1) + dz(0) * G_k; 
-        theta_now(0,n_z-1) = T_air;
-        theta_now(0,0)     = min(theta_now(0,0), theta_max);
+        // Boundary conditions. Geothermal heat flow at the base \
+        and prescribed T_air at the surface.
+        // We add friciton heat contribution Q_f_k.
+        //theta_now(i,0) = theta_now(i,1) + dz(i) * ( G_k + Q_f_k(i) ); 
 
-        // LAST POINT IN SUPPOSED TO BE ATTACHED TO THE ICE SHELF!
+        // Geothermal heatflux and advection contribution??
+        theta_now(i,0) = theta_now(i,1) + dz(i) * ( G_k + Q_f_k(i) ) + \
+                            ( sigma(i) * dL_dt - ub(i) ) * \
+                            ( theta(i,0) - theta(i-1,0) ) * dx_inv; 
+
+        // w(z=0) = 0 right??
+        //theta_now(i,0) = theta_now(i,1) + dz(i) * ( G_k + Q_f_k(i) ) + \
+                            ( sigma(i) * dL_dt - ub(i) ) * \
+                            ( theta(i,0) - theta(i-1,0) ) * dx_inv + \
+                            ( theta(i,1) - theta(i,0) ) * ( - w(i) ) * dz_inv(i); 
+
+        // Surface.
+        theta_now(i,n_z-1) = T_air;
+
+        // Pressure melting point as the upper bound.
+        theta_now(i,0) = min(theta_now(i,0), theta_max);
     }
 
-    // No integration while equilibration.
-    else
+    // OPTIMIZE THIS!!!!!!!!
+    // Vertical loop for x = 0.
+    for (int j=1; j<n_z-1; j++)
     {
-        theta_now = theta;
+        theta_now(0,j) = theta(0,j) + dt * kappa * dz_2_inv(0) * \
+                        ( theta(0,j+1) - 2.0 * theta(0,j) + theta(0,j-1) ) ;
     }
-
     
+    // Boundary condition at x = 0.
+    theta_now(0,0)     = theta_now(0,1) + dz(0) * G_k; 
+    theta_now(0,n_z-1) = T_air;
+    theta_now(0,0)     = min(theta_now(0,0), theta_max);
+
+    // LAST POINT IN SUPPOSED TO BE ATTACHED TO THE ICE SHELF!
 
     return theta_now;
 }
@@ -1525,6 +1501,10 @@ int main()
     /////////////////////////////////////////////////////////////////////////////////
     // Initialize flowline.
 
+    // Select experiment.
+    // 0: MISMIP, 1: MISMIP-THERM, 2: TRANSITION INDICATORS.
+    int const exp = 1;
+
     // GENERAL PARAMETERS.
     double const sec_year = 3.154e7;                // Seconds in a year.
 
@@ -1536,7 +1516,7 @@ int main()
 
    
     // GROUNDING LINE.
-    double L = 50.0e3;                              // Grounding line position [m] exp1 = 694.5e3, exp3 = (479.1e3), 50.0e3
+    double L = 694.5e3;                              // Grounding line position [m] exp1 = 694.5e3, exp3 = (479.1e3), ews = 50.0e3
     double dL_dt;                                   // GL migration rate [m/yr]. 
     int const dL_dt_num_opt = 1;                    // GL migration numerator discretization opt.
     int const dL_dt_den_opt = 1;                    // GL migration denominator discretization opt.
@@ -1558,27 +1538,28 @@ int main()
 
     // SIMULATION PARAMETERS.
     int const n   = 250;                             // 150. Number of horizontal points 350, 500, 1000, 1500
-    int const n_z = 20;                              // Number vertical layers. 10, 20.
+    int const n_z = 10;                              // Number vertical layers. 10, 20.
     
     double const ds     = 1.0 / n;                   // Normalized spatial resolution.
     double const ds_inv = n;
 
     double const t0   = 0.0;                         // Starting time [yr].
-    double const tf   = 4.0e4;                       // 3.5e4, 2.0e4, Ending time [yr]. 56.5e4.
+    double const tf   = 54.0e4;                       // 1.0e4, 2.0e4, Ending time [yr]. 56.5e4. 30.0e4
     double t;                                        // Time variable [yr].
 
     // Time variables.
     double const t_eq     = 2.0e3;                   // Equilibration time: visc, vel, theta, etc. 0.2 * tf
+    int const A_rate = 0;                            // Boolean to apply forcing.
     double const t0_A     = 2.0e4;                   // Start time to apply increase in ice rate factor. 3.0e4
     double const tf_A     = 4.0e4;
     double const t0_stoch = 3.0e3;                   // Start time to apply stochastic BC. 2.0e4
 
     // VELOCITY SOLVER.
-    int const vel_meth = 1;                          // Vel solver choice: 0 = cte, 1 = SSA, 2 = DIVA.
+    int const vel_meth = 2;                          // Vel solver choice: 0 = cte, 1 = SSA, 2 = DIVA.
 
     // TIME STEPING. Quite sensitive (use fixed dt in case of doubt).
     // For stochastic perturbations. dt = 0.1 and n = 250.
-    int const dt_meth = 0;                           // Time-stepping method. Fixed, 0; adapt, 1.
+    int const dt_meth = 1;                           // Time-stepping method. Fixed, 0; adapt, 1.
     double dt;                                       // Time step [yr].
     double dt_CFL;                                   // Courant-Friedrichs-Lewis condition [yr].
     double dt_tilde;                                 // New timestep. 
@@ -1591,7 +1572,7 @@ int main()
     double const dt_noise = 1.0;                     // Assumed time step in stochastic_anom.py 
 
     // OUTPUT DEFINITIONS.
-    int const out_hr = 1;                            // Allow high resolution output.
+    int const out_hr = 0;                            // Allow high resolution output.
     int const t_n = 100;                             // Number of output frames. 30.
 
     // BEDROCK
@@ -1605,7 +1586,7 @@ int main()
     double const y_0 = 70.0;                         // Initial bedrock elevation (x=0) [m].
     
     // SURFACE MASS BALANCE.
-    int const stoch = 1;                             // Stochastic SBM.
+    int const stoch = 0;                             // Stochastic SBM.
     double const S_0      = 0.3;                     // SMB at x = 0 (and during equilibration) [m/yr]. 0.7
     double const dlta_smb = -4.0;                    // Difference between interior and terminus SMB [m/yr]. 
     double const x_acc    = 300.0e3;                 // Position at which accumulation starts decreasing [m]. 300.0, 355.0
@@ -1622,7 +1603,8 @@ int main()
     // THERMODYNAMICS.
     // Vertical advection is the key to obtain oscillations.
     // It provides with a feedback to cool down the ice base and balance frictional heat.
-    int const thermodynamics = 0;                    // Apply thermodynamic solver at each time step.
+    int const thermodynamics   = 1;                  // Apply thermodynamic solver at each time step.
+    int const thermodynamics_w = 0;                  // Vertical advection in therm. solver. 0: no advection, 1: constant/linear adv.
     double const k = 2.0;                            // Thermal conductivity of ice [W / m · ºC].
     double const G = 0.05;                           // Geothermal heat flow [W / m^2] = [J / s · m^2].
     double const G_k = G / k;                        // [K / m] 
@@ -1630,7 +1612,7 @@ int main()
     double const theta_max = 273.15;                 // Max temperature of ice [K].
     double const theta_act = 263.15;                 // Threshold temperature for the two regimes in activation energy [K]
     double const R = 8.314;                          // Universal gas constant [J / K mol]
-    double const T_air = 243.15;                     // BC: prescribed air temperature. 253.15
+    double T_air = 243.15;                     // BC: prescribed air temperature. 253.15
     double const w_min = -0.25;                    // Prescribed vertical advection at x=0 in theta. 0.0
     double const w_max = 0.0;                      // Prescribed vertical advection at x=L in theta. 5.0
     
@@ -1642,7 +1624,7 @@ int main()
     double const C_thw = 0.5 * C_frz;                // Thawed friction coeff. [Pa m^-1/3 yr^1/3]
 
     // VISCOSITY-THERM
-    int const visc_therm = 0;                        // Temperature-dependent viscosity.
+    int const visc_therm = 1;                        // Temperature-dependent viscosity.
     Array2d Q_act, A_0; 
     Q_act << 60.0, 139.0;                            // Activation energies [kJ/mol].
     Q_act = 1.0e3 * Q_act;                           // [kJ/mol] --> [J/mol] 
@@ -1658,15 +1640,15 @@ int main()
     double u2_dif;                                   // Difference between analytical and numerical.
 
     // CALVING.
-    int const calving_meth = 1;                      // 0, no calving; 1, Christian et al. (2022).
+    int const calving_meth = 0;                      // 0, no calving; 1, Christian et al. (2022).
     double const m_dot = 30.0;                       // Mean frontal ablation [m/yr]. 30.0
     double H_f;
 
     // MISMIP EXPERIMENT CHOICE.
     // Following Pattyn et al. (2012) the overdeepening hysterisis uses n = 250.
-    // exp = "mismip_1", "mismip_3", "galcier_ews"
+    // exp = 1: "mismip_1", 3: "mismip_3", 4: "galcier_ews"
     //int const mismip = 1;
-    int experiment = 4;
+    int const bed_exp = 1;
     double A, B;
 
     // PICARD ITERATION
@@ -1684,7 +1666,7 @@ int main()
 
     // MISMIP EXPERIMENTS FORCING.
     // Number of steps in the A forcing.
-    int const n_s = 21;  // 3, 21
+    int const n_s = 17;  // 3, Exp_3: 21, Exp_1-2: 17
 
 
     // PREPARE VARIABLES.
@@ -1721,8 +1703,8 @@ int main()
     VectorXd c_u_bar_2(n);
 
     // MISMIP FORCING.
-    //ArrayXd A_s(n_s);                    // Rarte factor values for MISMIP exp.
-    //ArrayXd t_s(n_s);                    // Time length for each step of A.
+    ArrayXd A_s(n_s);                    // Rarte factor values for MISMIP exp.
+    ArrayXd t_s(n_s);                    // Time length for each step of A.
 
     // MATRICES.
     ArrayXXd sol(2,n);                     // Matrix output.
@@ -1767,7 +1749,7 @@ int main()
     
     // Viscosity from constant A value. u2 = 0 initialization.
     // 4.6416e-24, 4.227e-25 [Pa^-3 s^-1] ==> [Pa^-3 yr^-1]
-    A = 4.6416e-24 * sec_year;               // 4.23e-25
+    A = 5.0e-25 * sec_year;               // 4.23e-25
     B = pow(A, ( -1 / n_gln ) );
 
     // Temperature initial conditions (-25ºC).
@@ -1781,54 +1763,67 @@ int main()
     dz = H / n_z;
 
     // Initialize vertical velocity (only x-dependency).
-    //w = ArrayXd::LinSpaced(n, w_min, w_max);
-    w = ArrayXd::Constant(n, w_min);
+    if ( thermodynamics_w == 0 )
+    {
+        w = ArrayXd::Zero(n);
+    }
+    else if ( thermodynamics_w == 1 )
+    {
+        //w = ArrayXd::LinSpaced(n, w_min, w_max);
+        w = ArrayXd::Constant(n, w_min);
+    }
 
     /////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////
 
     // MISMIP EXPERIMENTS FORCING.
-    /*
-    // Number of steps in the A forcing.
-    ArrayXd A_s(n_s);  
-    ArrayXd t_s(n_s); 
+    if ( exp == 0 || exp == 1 )
+    {
+        // Number of steps in the A forcing.
+        //ArrayXd A_s(n_s);  
+        //ArrayXd t_s(n_s); 
 
-    // Exp 3 hysteresis forcing.
-    // Rate factor.
-    
-    A_s << 5.0e-25, 4.0e-25, 3.0e-25, 2.5e-25, 2.0e-25, 1.5e-25, 1.0e-25, 5.0e-26, 2.5e-26, 
-           5.0e-26, 1.0e-25, 1.5e-25, 2.0e-25, 2.5e-25, 3.0e-25, 3.5e-25, 4.0e-25, 4.25e-25, 
-           4.5e-25, 4.75e-25, 5.0e-25; 
+        // Exps 1-2 hysteresis forcing.
+        // Rate factor.
+        A_s << 4.6416e-24, 2.1544e-24, 1.0e-24, 4.6416e-25, 2.1544e-25, 1.0e-25,
+                4.6416e-26, 2.1544e-26, 1.0e-26,
+                2.1544e-26, 4.6416e-26, 1.0e-25, 2.1544e-25, 4.6416e-25, 1.0e-24,
+                2.1544e-24, 4.6416e-24; 
 
-    // Time length for a certain A value. 
-    t_s << 3.0e4, 6.0e4, 9.0e4, 11.5e4, 14.0e4, 16.5e4, 19.0e4, 21.5e4, 24.0e4, 
-           26.5e4, 29.0e4, 31.5e4, 34.0e4, 36.5e4, 39.0e4, 41.5e4, 44.0e4, 46.5e4, 
-           49.0e4, 51.5e4, 54.0e4;
-    
-    */
-    
+        // Time length for a certain A value. 
+        t_s << 3.0e4, 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4,
+               30.0e4, 33.0e4, 36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4;
 
+        // Exp 3 hysteresis forcing.
+        // Rate factor.
+        /*
+        A_s << 5.0e-25, 4.0e-25, 3.0e-25, 2.5e-25, 2.0e-25, 1.5e-25, 1.0e-25, 5.0e-26, 2.5e-26, 
+            5.0e-26, 1.0e-25, 1.5e-25, 2.0e-25, 2.5e-25, 3.0e-25, 3.5e-25, 4.0e-25, 4.25e-25, 
+            4.5e-25, 4.75e-25, 5.0e-25; 
 
-    /////////////////////////////////////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////////////////////////////
+        // Time length for a certain A value. 
+        t_s << 3.0e4, 6.0e4, 9.0e4, 11.5e4, 14.0e4, 16.5e4, 19.0e4, 21.5e4, 24.0e4, 
+            26.5e4, 29.0e4, 31.5e4, 34.0e4, 36.5e4, 39.0e4, 41.5e4, 44.0e4, 46.5e4, 
+            49.0e4, 51.5e4, 54.0e4;
+        */
+    }   
 
     // TRANSITION INDICATORS EXPERIMENTS.
-    int const A_rate = 1;         // 0: constant A, 1: linear increase in A.
+    else if ( exp == 2 )
+    {
+        int const A_rate = 1;         // 0: constant A, 1: linear increase in A.
 
-    ArrayXd A_s(2);  
-    ArrayXd t_s(1); 
-    //A_s << 2.0e-25, 20.0e-25; // Christian: 4.23e-25. 2.0e-25 is right at the peak for ewr.
-    
-    // WE NEED TO TUNE THIS NUMBER TOGEHTER WITH THE FLUX DISCRETIAZTION TO OBTAIN THE SAME EXTENT.
-    A_s << 0.5e-26, 5.0e-25; // 4.227e-25, (1.0e-25, 10.0e-25)
-    t_s << 2.0e4;
+        ArrayXd A_s(2);  
+        ArrayXd t_s(1); 
+        //A_s << 2.0e-25, 20.0e-25; // Christian: 4.23e-25. 2.0e-25 is right at the peak for ewr.
+        
+        // WE NEED TO TUNE THIS NUMBER TOGEHTER WITH THE FLUX DISCRETIAZTION TO OBTAIN THE SAME EXTENT.
+        A_s << 0.5e-26, 5.0e-25; // 4.227e-25, (1.0e-25, 10.0e-25)
+        t_s << 2.0e4;
 
-    // FORCING CAN BE IMPOSED DIRECTLY ON A_s (i.e., an increase in temperature) or
-    // on the calving at the front as a consequence of ocean warming.
-
-    /////////////////////////////////////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////////////////////////////
-    
+        // FORCING CAN BE IMPOSED DIRECTLY ON A_s (i.e., an increase in temperature) or
+        // on the calving at the front as a consequence of ocean warming.
+    }
     
     /////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////
@@ -1839,7 +1834,7 @@ int main()
     cout << " \n tf = " << tf;
 
     // Call nc read function.
-    noise = f_nc_read(N);
+    //noise = f_nc_read(N);
     //cout << "\n noise_ocn = " << noise;
 
     // Call nc write function.
@@ -1879,58 +1874,72 @@ int main()
     // Time integration.
     while (t < tf)
     {
-        /*
-        ////////////////////////////////////////////////////////////////////////
-        ////////////////////////////////////////////////////////////////////////
         // MISMIP EXPERIMENTS.
-        // Update rate factor value.
-        if ( t > t_s(c_s) )
+        if ( exp == 0 )
         {
-            c_s = min(c_s + 1, n_s - 1);
+            // Update rate factor value.
+            if ( t > t_s(c_s) )
+            {
+                c_s = min(c_s + 1, n_s - 1);
+            }
+            
+            // Ice hardness.
+            A = A_s(c_s) * sec_year;
+            B = pow(A, ( -1 / n_gln ) );
         }
-        
-        // Ice hardness.
-        A = A_s(c_s) * sec_year;
-        B = pow(A, ( -1 / n_gln ) );
-        ////////////////////////////////////////////////////////////////////////
-        ////////////////////////////////////////////////////////////////////////
-        */        
 
-        ////////////////////////////////////////////////////////////////////////
-        ////////////////////////////////////////////////////////////////////////
+        // MISMIP-THERM EXPERIMENTS.
+        else if ( exp == 1 )
+        {
+            
+            // Update rate factor value.
+            if ( t > t_s(c_s) )
+            {
+                c_s = min(c_s + 1, n_s - 1);
+
+                // Ice hardness.
+                A = A_s(c_s) * sec_year;
+
+                // Convert A forcing to air temperature (ºC --> K).
+                T_air = - (R / Q_act(0)) * log(A / A_0(0)) + 273.15;
+            }
+            
+            // Ice hardness.
+            //A = A_s(c_s) * sec_year;
+            
+            // Convert A forcing to air temperature.
+            //T_air = - (R / Q_act(0)) * log(A / A_0(0)) + 273.15;
+        }
+
         // TRANSITION INDICATORS EXPERIMENTS.
+        else if ( exp == 2 )
+        {
+            // Equilibrate with constant A.
+            if ( t < t0_A || A_rate == 0 )
+            {
+                A = A_s(0);
+            }
+            
+            // Update rate factor value with current timestep.
+            else if ( t >= t0_A && t <= tf_A && A_rate == 1 )
+            {
+                A = A_s(0) + ( A_s(1) - A_s(0) ) * (t - t0_A) / (tf_A - t0_A);
+            }
 
-        // Equilibrate with constant A.
-        if ( t < t0_A || A_rate == 0 )
-        {
-            A = A_s(0);
+            else if ( t > tf_A && A_rate == 1 )
+            {
+                A = A_s(1);
+            }
+            
+            // Ice hardness.
+            A = A * sec_year;
+            B = pow(A, ( -1 / n_gln ) );
         }
-        
-        // Update rate factor value with current timestep.
-        else if ( t >= t0_A && t <= tf_A && A_rate == 1 )
-        {
-            A = A_s(0) + ( A_s(1) - A_s(0) ) * (t - t0_A) / (tf_A - t0_A);
-        }
-
-        else if ( t > tf_A && A_rate == 1 )
-        {
-            A = A_s(1);
-        }
-        
-        // Ice hardness.
-        A = A * sec_year;
-        B = pow(A, ( -1 / n_gln ) );
-        ////////////////////////////////////////////////////////////////////////
-        ////////////////////////////////////////////////////////////////////////
+    
 
 
         // Update bedrock with new domain extension L.
-        bed = f_bed(L, n, experiment, y_0, y_p, x_1, x_2);
-
-        if ( smooth_bed == 1 )
-        {
-            bed = gaussian_filter(bed, sigma_gauss, L, ds, n);
-        }
+        bed = f_bed(L, n, bed_exp, y_0, y_p, x_1, x_2, smooth_bed, sigma_gauss, ds);
 
         // Friction coefficient.
         C_bed = f_C_bed(C_ref, theta, H, t, t_eq, theta_max, \
@@ -2128,7 +2137,7 @@ int main()
         dz = H / n_z;
 
         // Apply thermodynamic solver if desired.
-        if ( thermodynamics == 1 )
+        if ( thermodynamics == 1 && t > t_eq)
         {
             // Integrate Fourier heat equation.
             theta = f_theta(theta, ub, H, tau_b, Q_fric, sigma, dz, theta_max, T_air, kappa, \
