@@ -18,9 +18,9 @@ from scipy import signal
 
 
 
-path_fig  = '/home/dmoreno/figures/transition_indicators/A_rates/bed_peak/frames/'
+path_fig  = '/home/dmoreno/figures/mismip_therm/exp_1-2_dt.adapt_long/'
 #path_now = '/home/dmoreno/flowline/ewr/rate/n.350_A.2.0e-25_n-1_n-2/'
-path_now = '/home/dmoreno/flowline/mismip_therm/exp_1-2_dt.adapt_long/'
+path_now = '/home/dmoreno/flowline/mismip_therm/test_A_long/'
 path_stoch  = '/home/dmoreno/flowline/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
@@ -30,16 +30,16 @@ file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
 # Select plots to be saved (boolean integer).
 save_series        = 1
-save_series_comp   = 0
+save_series_comp   = 1
 save_shooting      = 0
-save_domain        = 0
-save_var_frames    = 0
+save_domain        = 1
+save_var_frames    = 1
 save_series_frames = 0
 save_theta         = 0
 save_visc          = 0
 save_u_der         = 0
 save_F_n           = 0
-save_L             = 1
+save_L             = 0
 save_fig           = False
 read_stoch_nc      = False
 
@@ -52,10 +52,10 @@ exp_name = ['mismip_1', 'mismip_3', 'glacier_ews']
 idx = 0
 exp = exp_name[idx]
 
-
-new = 0
-if new == 1:
-	os.makedirs(path_fig) 
+# Create figures directory if it does not exist.
+if not os.path.exists(path_fig):
+	os.makedirs(path_fig)
+	print(f"Directory '{path_fig}' created.")
 
 # Open nc file in read mode.
 nc_SSA = os.path.join(get_datadir(), path_now+'flowline.nc')
@@ -118,6 +118,15 @@ eps   = 1.0e-12**2             # 1.0e-21
 n = s[2]
 
 
+# Obtain the corresponding T_air temperatures from the A forcing (MISMIP).
+R = 8.314                  # [J / K mol]
+Q_act = 60.0 * 1.0e3       # [kJ/mol] --> [J/mol]
+A_0   = 3.985e-13 * sec_year         # [Pa^-3 s^-1]
+T_air_s = - Q_act / ( R * np.log(A_s / A_0) ) - 273.15
+
+
+#print('A_s = ', A_s)
+#print('T_air_s = ', T_air_s)
 
 def f_bed(x, exp, n):
 	
@@ -246,13 +255,10 @@ if save_series == 1:
 	y_p = np.full(len(t_plot), 350)
 
 	# Mean variables.
-	theta_bar = np.mean(theta[:,0,:], axis=1)
+	theta_bar = np.mean(theta[:,s[1]-1,:], axis=1)
 	visc_bar_mean  = np.mean(visc_bar, axis=1)
 	
 	# Figure.
-	fig = plt.figure(dpi=600, figsize=(5.5,4.5))
-
-	"""
 	fig = plt.figure(dpi=600, figsize=(5.5,6))
 
 	ax = fig.add_subplot(311)
@@ -261,12 +267,16 @@ if save_series == 1:
 	ax4 = ax2.twinx()
 	ax3 = fig.add_subplot(313)
 	ax5 = ax3.twinx()
+	
+
 	"""
+	fig = plt.figure(dpi=600, figsize=(5.5,4.5))
 
 	ax = fig.add_subplot(211)
 	ax6 = ax.twinx()
 	ax2 = fig.add_subplot(212)
 	ax4 = ax2.twinx()
+	"""
 	
 	plt.rcParams['text.usetex'] = True
 
@@ -307,15 +317,15 @@ if save_series == 1:
 
 	#ax4.plot(t_plot, theta_bar, linestyle='-', color='darkgreen', marker='None', \
 	#		 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
-	#ax3.plot(t_plot, dL_dt, linestyle='-', color='darkgreen', marker='None', \
-	#		 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+	ax3.plot(t_plot, T_air_s, linestyle='-', color='purple', marker='None', \
+			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 
 	#ax3.plot(t_plot, visc_bar_mean, linestyle='-', color='brown', marker='None', \
 	#		 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 	ax4.plot(t_plot, A_s, linestyle='-', color='darkgreen', marker='None', \
 			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
-	#ax5.plot(t_plot, q[:,n-1], linestyle='-', color='purple', marker='None', \
-	#		 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+	ax5.plot(t_plot, theta_bar, linestyle='-', color='orange', marker='None', \
+			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 
 		
 	#ax6.plot(t, u_x_0, linestyle='-', color='darkgreen', marker='None', \
@@ -345,8 +355,8 @@ if save_series == 1:
 	#ax6.set_ylim(0.0, 300.0)
 	#ax4.set_ylim(A_s[0]*(1.0 - 0.2), A_s[l-1]*(1.0 + 0.05))
 
-	#ax.set_xlim(15.0, t_plot[l-1])
-	#ax2.set_xlim(15.0, t_plot[l-1])
+	#ax.set_xlim(0, 470)
+	#ax2.set_xlim(0, 470)
 	
 	ax.set_ylabel(r'$L \ (\mathrm{km})$', fontsize=18)
 	ax2.set_ylabel(r'$H_{gl} \ (\mathrm{km})$', fontsize=18)
@@ -703,7 +713,7 @@ if save_domain == 1:
 
 if save_var_frames == 1:
 	
-	for i in range(0, l, 1): # (0, l, 10), (l-1, l, 20)
+	for i in range(l-1, l, 1): # (0, l, 10), (l-1, l, 20)
 		
 		L_plot  = np.linspace(0, L[i], n)
 		x_tilde = L_plot / 750.0  
@@ -851,7 +861,7 @@ if save_theta == 1:
 	theta_min = np.round(np.min(theta), 0)
 	theta_max = 0.0
 
-	cb_ticks = np.linspace(theta_min, theta_max, 6)
+	cb_ticks = np.round(np.linspace(theta_min, theta_max, 6),1)
 	
 	for i in range(0, l, 5):
 
@@ -1314,13 +1324,13 @@ if save_L == 1:
 	for i in indices:
 
 		# Current path.
-		ax.plot(A_s[i], 1.0e-3*L[i], markeredgecolor=[col_1[i],0,0], marker='o', \
-					markersize=7.0, markerfacecolor='None', alpha=0.5, label=r'$ \mathrm{Flowline} $') 
+		ax.plot(A_s[i], 1.0e-3*L[i], markeredgecolor=[col_1[i],0,0], marker='o', markeredgewidth=2, \
+					markersize=7.0, markerfacecolor='None', alpha=1.0, label=r'$ \mathrm{Flowline} $') 
 
 
 
-	ax.set_xlabel(r'$A$', fontsize=18)
-	ax.set_ylabel(r'$L$', fontsize=18)
+	ax.set_xlabel(r'$A \ (\mathrm{Pa}^{-3} \ \mathrm{s}^{-1}) $', fontsize=18)
+	ax.set_ylabel(r'$L \ (\mathrm{km})$', fontsize=18)
 
 
 	#ax.legend(loc='best', ncol = 1, frameon = True, framealpha = 1.0, \
@@ -1333,6 +1343,7 @@ if save_L == 1:
 
 
 	ax.grid(axis='x', which='major', alpha=0.85)
+	ax.grid(axis='x', which='minor', alpha=0.50)
 
 	#ax.set_xlim(180, 1020)
 	#ax.set_ylim(100, 400)
@@ -1340,6 +1351,9 @@ if save_L == 1:
 	plt.xscale('log')
 
 	plt.tight_layout()
+
+	if save_fig == True:
+		plt.savefig(path_fig+'gl_A.png', bbox_inches='tight')
 
 	plt.show()
 	plt.close(fig)
