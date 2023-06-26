@@ -15,12 +15,14 @@ from dimarray import get_datadir
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy import signal
+import pylab as plt_lab
 
 
+path_fig  = '/home/dmoreno/flowline/mismip_therm/visc_theta/theta_on_visc_on_eps.1.0e-5/'
+#path_fig  = '/home/dmoreno/figures/transition_indicators/A_rates/bed_peak/'
+#path_now = '/home/dmoreno/flowline/ewr/A_rates/bed_peak/hr/y_p.44_tf_A.2.5e4_A.0.5e-26_5.0e-25/'
 
-path_fig  = '/home/dmoreno/figures/mismip_therm/exp_1-2_dt.adapt_long/'
-#path_now = '/home/dmoreno/flowline/ewr/rate/n.350_A.2.0e-25_n-1_n-2/'
-path_now = '/home/dmoreno/flowline/mismip_therm/test_A_long/'
+path_now = '/home/dmoreno/flowline/mismip_therm/visc_theta//theta_on_visc_on_eps.1.0e-5_long/'
 path_stoch  = '/home/dmoreno/flowline/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
@@ -30,12 +32,12 @@ file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
 # Select plots to be saved (boolean integer).
 save_series        = 1
-save_series_comp   = 1
+save_series_comp   = 0
 save_shooting      = 0
 save_domain        = 1
 save_var_frames    = 1
 save_series_frames = 0
-save_theta         = 0
+save_theta         = 1
 save_visc          = 0
 save_u_der         = 0
 save_F_n           = 0
@@ -67,13 +69,15 @@ flowline_name = ['u_bar', 'ub', 'u_x', 'u_z', 'u', 'H', 'visc_bar', 'tau_b', 'ta
 				 'L', 'dL_dt', 't', 'b', 'C_bed', 'dudx_bc', \
 				 'BC_error', 'u2_0_vec', 'u2_dif_vec', 'picard_error', \
 				 'c_picard', 'dt', 'mu', 'omega', 'A', 'theta', 'S', \
-				 'm_stoch', 'smb_stoch', 'Q_fric', 'beta', 'visc', 'u_x_diva', 'F_1', 'F_2']
+				 'm_stoch', 'smb_stoch', 'Q_fric', 'beta', 'visc', 'u_x_diva', 'F_1', 'F_2', \
+				 'A_theta']
 
 var_name 	  = ['u_bar', 'ub', 'u_x', 'u_z', 'u', 'H', 'visc_bar', 'tau_b', 'tau_d', \
 				 'L', 'dL_dt', 't', 'b', 'C_bed', 'u_x_bc', \
 				 'dif', 'u2_0_vec', 'u2_dif_vec', 'picard_error', \
 				 'c_picard', 'dt', 'mu', 'omega_picard', 'A_s', 'theta', 'S', \
-				 'm_stoch', 'smb_stoch', 'Q_fric', 'beta', 'visc', 'u_x_diva', 'F_1', 'F_2']
+				 'm_stoch', 'smb_stoch', 'Q_fric', 'beta', 'visc', 'u_x_diva', 'F_1', 'F_2', \
+				 'A_theta']
 
 # Dimension.
 l_var = len(var_name)
@@ -116,7 +120,7 @@ eps   = 1.0e-12**2             # 1.0e-21
 
 # Number of points and domain.
 n = s[2]
-
+n = 1000
 
 # Obtain the corresponding T_air temperatures from the A forcing (MISMIP).
 R = 8.314                  # [J / K mol]
@@ -255,8 +259,8 @@ if save_series == 1:
 	y_p = np.full(len(t_plot), 350)
 
 	# Mean variables.
-	theta_bar = np.mean(theta[:,s[1]-1,:], axis=1)
-	visc_bar_mean  = np.mean(visc_bar, axis=1)
+	theta_bar     = np.mean(theta[:,s[1]-1,:], axis=1)
+	visc_bar_mean = np.mean(visc_bar, axis=1)
 	
 	# Figure.
 	fig = plt.figure(dpi=600, figsize=(5.5,6))
@@ -293,7 +297,7 @@ if save_series == 1:
 		u_x_0[i] = u_x[i,0] # u_x[i,n-1]
 
 
-	ax6.plot(t_plot, u_bar[:,n-1], linestyle='-', color='blue', marker='None', \
+	ax6.plot(t_plot, u_bar[:,s[2]-1], linestyle='-', color='blue', marker='None', \
 			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 
 	ax.plot(t_plot, L, linestyle='-', color='red', marker='None', \
@@ -303,7 +307,7 @@ if save_series == 1:
 	#ax.plot(t_plot, y_p, linestyle='--', color='red', marker='None', \
 	#		markersize=3.0, linewidth=1.5, alpha=1.0, label=r'$u_{b}(x)$') 
 	
-	ax2.plot(t_plot, H[:,n-1], linestyle='-', color='black', marker='None', \
+	ax2.plot(t_plot, H[:,s[2]-1], linestyle='-', color='black', marker='None', \
 			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 	
 
@@ -322,9 +326,9 @@ if save_series == 1:
 
 	#ax3.plot(t_plot, visc_bar_mean, linestyle='-', color='brown', marker='None', \
 	#		 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
-	ax4.plot(t_plot, A_s, linestyle='-', color='darkgreen', marker='None', \
+	ax4.plot(t_plot, theta_bar, linestyle='-', color='darkgreen', marker='None', \
 			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
-	ax5.plot(t_plot, theta_bar, linestyle='-', color='orange', marker='None', \
+	ax5.plot(t_plot, visc_bar_mean, linestyle='-', color='brown', marker='None', \
 			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 
 		
@@ -355,8 +359,8 @@ if save_series == 1:
 	#ax6.set_ylim(0.0, 300.0)
 	#ax4.set_ylim(A_s[0]*(1.0 - 0.2), A_s[l-1]*(1.0 + 0.05))
 
-	#ax.set_xlim(0, 470)
-	#ax2.set_xlim(0, 470)
+	#ax.set_xlim(10, 40)
+	#ax2.set_xlim(10, 40)
 	
 	ax.set_ylabel(r'$L \ (\mathrm{km})$', fontsize=18)
 	ax2.set_ylabel(r'$H_{gl} \ (\mathrm{km})$', fontsize=18)
@@ -370,7 +374,10 @@ if save_series == 1:
 	#ax5.set_ylabel(r'$ q \ (\mathrm{m}^2 / \mathrm{yr})$', fontsize=18)
 	ax6.set_ylabel(r'$ \bar{u}(L) \ (\mathrm{m/yr})$', fontsize=18)
 	#ax3.set_xlabel(r'$\mathrm{Time} \ (\mathrm{kyr})$', fontsize=18)
-	ax2.set_xlabel(r'$\mathrm{Time} \ (\mathrm{kyr})$', fontsize=18)
+	ax3.set_xlabel(r'$\mathrm{Time} \ (\mathrm{kyr})$', fontsize=18)
+
+	#ax.set_xticks([0, 10, 20, 30, 40])
+	#ax.set_xticklabels(['', '', '', '', ''], fontsize=15)
 	
 		
 	ax.yaxis.label.set_color('red')
@@ -381,40 +388,23 @@ if save_series == 1:
 	ax6.yaxis.label.set_color('blue')
 	
 	ax.set_xticklabels([])
-	#ax2.set_xticklabels([])
+	ax2.set_xticklabels([])
 
-	"""
-	ax2.set_xticks([15, 20, 25, 30, 35, t_plot[l-1]])
-	ax2.set_xticklabels(['$15$', '$20$', \
-                         '$25$', '$30$', '$35$', 
-                         '$40$'], fontsize=14)
-	
 
-	ax.set_yticks([280, 300, 320, 340, 340])
-	ax.set_yticklabels(['$280$', '$300$', \
-                         '$320$', '$340$', '$360$'], fontsize=14)
-	
-	ax6.set_yticks([0, 100, 200, 300])
-	ax6.set_yticklabels(['$0$', '$100$','$200$', '$300$'], fontsize=14)
-
-	ax2.set_yticks([0.4, 0.42, 0.44, 0.46, 0.48, 0.5])
-	ax2.set_yticklabels(['$0.40$', '$0.42$','$0.44$', '$0.46$',\
-						 '$0.48$', '$0.50$'], fontsize=14)
-	
-	#ax4.set_yticklabels([0.0, 0.5e-17, 1.0e-17, 1.5e-17])
-	ax4.set_yticklabels(['$0.0$', '$0.0$', '$0.5$', '$1.0$', '$1.5$'], fontsize=14)
-	"""
-
-	ax.tick_params(axis='y', which='major', length=4, colors='red')
-	ax2.tick_params(axis='y', which='major', length=4, colors='black')
-	ax4.tick_params(axis='y', which='major', length=4, colors='darkgreen')
-	#ax3.tick_params(axis='y', which='major', length=4, colors='brown')
-	#ax5.tick_params(axis='y', which='major', length=4, colors='purple')
-	ax6.tick_params(axis='y', which='major', length=4, colors='blue')
+	ax.tick_params(axis='y', which='major', length=4, colors='red', labelsize=16)
+	ax2.tick_params(axis='y', which='major', length=4, colors='black', labelsize=16)
+	ax2.tick_params(axis='x', which='major', length=4, colors='black', labelsize=16)
+	ax3.tick_params(axis='y', which='major', length=4, colors='purple', labelsize=16)
+	ax3.tick_params(axis='x', which='major', length=4, colors='black', labelsize=16)
+	ax4.tick_params(axis='y', which='major', length=4, colors='darkgreen', labelsize=16)
+	#ax3.tick_params(axis='y', which='major', length=4, colors='brown', labelsize=16)
+	ax5.tick_params(axis='y', which='major', length=4, colors='brown', labelsize=16)
+	ax6.tick_params(axis='y', which='major', length=4, colors='blue', labelsize=16)
 	
 	ax.grid(axis='x', which='major', alpha=0.85)
 	ax2.grid(axis='x', which='major', alpha=0.85)
 	#ax3.grid(axis='x', which='major', alpha=0.85)
+
 	
 	plt.tight_layout()
 
@@ -589,17 +579,17 @@ if save_shooting == 1:
 
 if save_domain == 1:
 	
-	for i in range(0, l, 5): # range(0, l, 2), (l-1, l, 20)
+	for i in range(0, l, 10): # range(0, l, 2), (l-1, l, 20)
 		
 		# Horizontal dimension [km].
-		L_plot  = np.linspace(0, L[i], n)
+		L_plot  = np.linspace(0, L[i], s[2])
 		
 		# Ice surface elevation [km].
 		z_s = H[i,:] + b[i,:]
 		
 		# Vertical gray line in ice front.
 		n_frnt = 50
-		frnt   = np.linspace(b[i,n-1], z_s[n-1], n_frnt)
+		frnt   = np.linspace(b[i,s[2]-1], z_s[s[2]-1], n_frnt)
 		frnt_L = np.full(n_frnt, L[i])
 		
 		# Ocean.
@@ -641,16 +631,102 @@ if save_domain == 1:
 	 						   facecolor='blue', alpha=0.4)
 		ax.fill_between(x_plot, bed, -2.5e3,\
 	 						   facecolor='brown', alpha=0.4)
-		ax.fill_between(L_plot, b[i,:], z_s,\
-	 						   facecolor='grey', alpha=0.4)
-	
-	
-		ax.set_ylabel(r'$z \ (\mathrm{km})$', fontsize=30)
-		ax.set_xlabel(r'$x \ (\mathrm{km}) $', fontsize=30)
+		#ax.fill_between(L_plot, b[i,:], z_s,\
+	 	#					   facecolor='grey', alpha=0.4)
+		
+		########################################################################
+		########################################################################
+		# PLOT DOMAIN WITH A COLOUR MAP THAT REPRESENTS THE TEMPERATURE WITHIN THE ICE SHEET.
+		# Create the colored plot
+		theta_min = np.min(theta)
+		theta_max = np.max(theta)
+
+		color_theta = theta[i,:,:]
+
+		# Plot a rectangle.
+		def rect(ax, x, y, w, h, c,**kwargs):
+			
+			# Varying only in x.
+			if len(c.shape) is 1:
+				rect = plt_lab.Rectangle((x, y), w, h, color=c, ec=c,**kwargs)
+				ax.add_patch(rect)
+			
+			# Varying in x and y.
+			else:
+				# Split into a number of bins
+				N = c.shape[0]
+				hb = h/float(N); yl = y - hb # yl = y
+				for i in range(N):
+					yl += hb
+					rect = plt_lab.Rectangle((x, yl), w, hb, 
+										color=c[i,:], ec=c[i,:],**kwargs)
+					ax.add_patch(rect)
+
+
+		# Fill a contour between two lines.
+		def rainbow_fill_between(ax, X, Y1, Y2, colors=None, 
+								cmap=plt.get_cmap("plasma"),**kwargs):
+			
+			plt.plot(X,Y1,lw=0)  # Plot so the axes scale correctly
+
+			dx = X[1]-X[0]
+			N  = X.size
+
+			# Pad a float or int to same size as x.
+			if (type(Y2) is float or type(Y2) is int):
+				Y2 = np.array([Y2]*N)
+
+			# No colors -- specify linear.
+			if colors is None:
+				colors = []
+				for n in range(N):
+					colors.append(cmap(n/float(N)))
+			
+			# Varying only in x.
+			elif len(colors.shape) is 1:
+				colors = cmap((colors-colors.min())
+							/(colors.max()-colors.min()))
+			
+			# Varying only in x and y.
+			else:
+				cnp = np.array(colors)
+				colors = np.empty([colors.shape[0],colors.shape[1],4])
+				for i in range(colors.shape[0]):
+					for j in range(colors.shape[1]):
+						#colors[i,j,:] = cmap((cnp[i,j]-cnp[:,:].min())
+						#					/(cnp[:,:].max()-cnp[:,:].min()))
+						colors[i,j,:] = cmap((cnp[i,j]-cnp[:,:].min())
+											/(theta_max-theta_min))
+
+			colors = np.array(colors)
+
+			# Create the patch objects.
+			for (color,x,y1,y2) in zip(colors,X,Y1,Y2):
+				rect(ax,x,y2,dx,y1-y2,color,**kwargs)
+				#rect(ax,x,y2,dx,y2-y1,color,**kwargs)
+
+
+		# Data    
+		X  = L_plot
+		Y1 = b[i,:] 
+		Y2 = z_s
+		g  = color_theta
+
+		# Plot fill and curves changing in x and y.
+		colors = np.rot90(g,3)
+		rainbow_fill_between(ax, X, Y1, Y2, colors=colors)
+
+		########################################################################
+		########################################################################
+
+
+
+		ax.set_ylabel(r'$z \ (\mathrm{km})$', fontsize=20)
+		ax.set_xlabel(r'$x \ (\mathrm{km}) $', fontsize=20)
 	
 		ax.yaxis.label.set_color('black')
 	 	
-		ax.tick_params(axis='both', which='major', length=4, colors='black')
+		ax.tick_params(axis='both', which='major', length=4, colors='black', labelsize=20)
 	
 		if idx == 2:
 			"""
@@ -664,7 +740,9 @@ if save_domain == 1:
 			"""
 			ax.set_xlim(0, 400)
 			ax.set_ylim(-0.75, 3.0)
+		
 		else:
+			"""
 			ax.set_xticks([0, 250, 500, 750, 1000, 1250, 1500, 1750])
 			ax.set_xticklabels(['$0$', '$250$', '$500$', '$750$',\
 							'$1000$', '$1250$','$1500$', '$1750$'], fontsize=15)
@@ -672,17 +750,14 @@ if save_domain == 1:
 			ax.set_yticks([-1, 0, 1, 2, 3, 4, 5, 6])
 			ax.set_yticklabels(['$-1$', '$0$', '$1$',\
 							'$2$', '$3$','$4$','$5$','$6$'], fontsize=15)
-
+			"""
 			ax.set_xlim(0, 1750)
 			ax.set_ylim(-1.0, 5.0)
 		
-		#ax.set_title(r'$i = \ $'+str(i)+r'$, \ t = \ $'+str(np.round(t[i],2))+r'$ \ yr$', fontsize=16)
+		# Title.
+		ax.set_title(r'$i = \ $'+str(i)+r'$, \ t = \ $'+str(np.round(t[i],2))+r'$ \ yr$', fontsize=16)
 	 	
 		ax.grid(axis='x', which='major', alpha=0.85)
-
-		# Enlarge ticklabels without declaring the ticks as such.
-		ax.tick_params(axis='both', labelsize=20)
-	
 		
 		##### Frame name ########
 		if i < 10:
@@ -697,7 +772,7 @@ if save_domain == 1:
 		plt.tight_layout()
 		
 		if save_fig == True:
-			plt.savefig(path_fig+'fy_p.88_tf_A.2.5e4_A.0.5e-26_5.0e-25_'+frame+'.png', bbox_inches='tight')
+			plt.savefig(path_fig+'y_p.88_tf_A.2.5e4_A.0.5e-26_5.0e-25_'+frame+'.png', bbox_inches='tight')
 			print('Saved')
 		
 		plt.show()
@@ -713,9 +788,9 @@ if save_domain == 1:
 
 if save_var_frames == 1:
 	
-	for i in range(l-1, l, 1): # (0, l, 10), (l-1, l, 20)
+	for i in range(0, l, 10): # (0, l, 10), (l-1, l, 1)
 		
-		L_plot  = np.linspace(0, L[i], n)
+		L_plot  = np.linspace(0, L[i], s[2])
 		x_tilde = L_plot / 750.0  
 		bed_L   = ( 729.0 - 2184.8 * x_tilde**2 + \
 			              + 1031.72 * x_tilde**4 + \
@@ -723,7 +798,8 @@ if save_var_frames == 1:
 		
 
 		# Vertically averaged du/dx.
-		u_x_bar = np.mean(u_x_diva[i,:,:], axis=0)
+		u_x_bar   = np.mean(u_x_diva[i,:,:], axis=0)
+		theta_bar = np.mean(theta[i,:,:], axis=0)
 			
 		######################################
 		######################################
@@ -742,7 +818,9 @@ if save_var_frames == 1:
 	
 		ax.plot(L_plot, u_bar[i,:], linestyle='-', color='blue', marker='None', \
 	 			linewidth=2.0, alpha=1.0, label=r'$u_{b}(x)$') 
-		ax5.plot(L_plot, u_x_bar, linestyle='-', color='darkgreen', marker='None', \
+		#ax5.plot(L_plot, u_x_bar, linestyle='-', color='darkgreen', marker='None', \
+	 	#		linewidth=2.0, alpha=1.0, label=r'$\partial u_{b}/\partial x$')  
+		ax5.plot(L_plot, theta_bar, linestyle='-', color='darkgreen', marker='None', \
 	 			linewidth=2.0, alpha=1.0, label=r'$\partial u_{b}/\partial x$')  
 		ax3.plot(L_plot, visc_bar[i,:], linestyle='-', color='purple', marker='None', \
 	  	 		linewidth=2.0, alpha=1.0, label=r'$\partial H/\partial x$') 
@@ -762,7 +840,8 @@ if save_var_frames == 1:
 		ax3.set_ylabel(r'$\bar{\eta} (x)\ (\mathrm{Pa \cdot s})$',fontsize=16)
 		#ax4.set_ylabel(r'$ Q_{\mathrm{fric}}(x) \ (W/m^2)$',fontsize=16)
 		ax4.set_ylabel(r'$ \beta(x) \ (\mathrm{kPa \ yr/m})$',fontsize=16)
-		ax5.set_ylabel(r'$\partial \bar{u}_{b}/\partial x $',fontsize=16)
+		#ax5.set_ylabel(r'$\partial \bar{u}_{b}/\partial x $',fontsize=16)
+		ax5.set_ylabel(r'$ \bar{\theta}_{b} \ (^{\circ} \mathrm{C}) $',fontsize=16)
 		ax2.set_ylabel(r'$H(x) \ (\mathrm{km})$', fontsize=16)
 		ax6.set_ylabel(r'$\tau_{b}(x) \ (\mathrm{kPa})$', fontsize=16)
 		ax3.set_xlabel(r'$x \ (\mathrm{km}) $',fontsize=16)
@@ -849,7 +928,7 @@ if save_theta == 1:
 
 	# Number of x ticks.
 	n_ticks = 5
-	x_ticks = np.linspace(0, n, n_ticks)
+	x_ticks = np.linspace(0, s[2], n_ticks)
 	n_z     = np.shape(theta)[1]
 	z_ticks = int(0.2 * n_z + 1)
 
@@ -858,12 +937,12 @@ if save_theta == 1:
 	y_labels = np.linspace(0, n_z, z_ticks, dtype=int)
 
 	# Theta limits.
-	theta_min = np.round(np.min(theta), 0)
+	theta_min = np.round(np.min(theta), 1)
 	theta_max = 0.0
 
 	cb_ticks = np.round(np.linspace(theta_min, theta_max, 6),1)
 	
-	for i in range(0, l, 5):
+	for i in range(0, l, 10):
 
 		# Update x_labels as domain extension changes in each iteration.
 		x_labels  = np.linspace(0, L[i], n_ticks, dtype=int)
@@ -926,7 +1005,7 @@ if save_theta == 1:
 if save_visc == 1:
 
 	# Units 10⁶ Pa·s.
-	visc = 1.0e-6 * visc
+	#visc = 1.0e-6 * visc
 
 	# Number of x ticks.
 	n_ticks = 5
@@ -946,7 +1025,7 @@ if save_visc == 1:
 
 	cb_ticks = np.linspace(var_min, var_max, 6)
 	
-	for i in range(l-1, l, 1):
+	for i in range(0, l, 10):
 
 		# Update x_labels as domain extension changes in each iteration.
 		x_labels  = np.linspace(0, L[i], n_ticks, dtype=int)
@@ -976,10 +1055,8 @@ if save_visc == 1:
 		ax.set_xticks(x_ticks)
 		ax.set_xticklabels(list(x_labels), fontsize=15)
 
-		
 		ax.set_yticks(y_ticks)
 		ax.set_yticklabels(list(y_labels[::-1]), fontsize=15)
-		
 	
 		ax.set_title(r'$i = \ $'+str(i)+r'$, \ t =  \ $'+str(np.round(t[i],2))+r'$ \ yr$', fontsize=16)
 		plt.tight_layout()

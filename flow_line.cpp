@@ -917,34 +917,43 @@ ArrayXd f_dhdx(ArrayXd dH, ArrayXd b, int n)
 }
 
 
-ArrayXXd f_visc(ArrayXXd theta, ArrayXXd visc, ArrayXd H, ArrayXd tau_b, \
-                ArrayXd beta, ArrayXd u_bar, ArrayXd dz, \
+ArrayXXd f_visc(ArrayXXd theta, ArrayXd H, ArrayXd tau_b, ArrayXd u_bar, ArrayXd dz, \
                 double theta_act, double ds, double L, \
                 Array2d Q_act, Array2d A_0, double n_gln, double R, double B, double n_exp, \
                 double eps, double t, double t_eq, double sec_year, \
-                int n, int n_z, int vel_meth, double A, int visc_therm)
+                int n, int n_z, int vel_meth, double A, int visc_therm, double t_eq_A_theta, double visc_min, \
+                double visc_max)
 {
-    ArrayXXd out(n,5*n_z+2), u_x_diva(n,n_z), u_z(n,n_z), \
+    ArrayXXd out(n,5*n_z+2), visc(n,n_z), u_x_diva(n,n_z), u_z(n,n_z), \
              strain_diva(n,n_z), A_theta(n,n_z), B_theta(n,n_z);
     ArrayXd u_x(n), u_bar_z(n), strain(n), visc_bar(n), visc_H_inv(n), B_theta_bar(n);
 
+    
     // Equilibration and constant viscosity experiments.
     if ( t < t_eq )
     {
+        // Full viscosity.
         visc = ArrayXXd::Constant(n, n_z, 1.0e8); // 1.0e15, 0.5e17
         
         // Vertically-averaged viscosity.
-        //visc_bar = visc.rowwise().mean();
         visc_bar = ArrayXd::Constant(n, 1.0e8);
 
-        // We assume a constant rate factor during equilibration.
+        // We assume a constant ice rate factor during equilibration.
         A_theta = ArrayXXd::Constant(n, n_z, A);
     }
+    
+    // After equilibration.
     else 
     {
         // Potential viscosity dependency on temperature.
         // We calculate B from A(T,p).
-        if ( visc_therm == 1 )
+        if ( visc_therm == 0 )
+        {
+            // We assume a constant ice rate factor during equilibration.
+            A_theta = ArrayXXd::Constant(n, n_z, A);
+        }
+        
+        else if ( visc_therm == 1 )
         {
             // Calculate temperature-dependent rate factor if thermodynamics is switched on.
             // Arrhenius law A(T,p) equivalent to A(T').
@@ -965,15 +974,17 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd visc, ArrayXd H, ArrayXd tau_b, \
                 }
             }
 
-            // Associated rate factor. A: [Pa^-3 yr^-1]
-            B_theta = pow(A_theta, ( -1 / n_gln ) );
-
-            // Vertically averaged B for the SSA.
-            B_theta_bar = B_theta.rowwise().mean();
         }
 
+        // Associated rate factor. A: [Pa^-3 yr^-1]
+        B_theta = pow(A_theta, (-1 / n_gln) );
+
+        // Vertically averaged B for the SSA.
+        B_theta_bar = B_theta.rowwise().mean();
+
+        
         // SSA solver.
-        else if ( vel_meth == 1 )
+        if ( vel_meth == 1 )
         {
             // Horizontal derivatives.
             for (int i=1; i<n-1; i++)
@@ -991,15 +1002,8 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd visc, ArrayXd H, ArrayXd tau_b, \
             // Regularization term to avoid division by 0. 
             strain = pow(u_x,2) + eps;
 
-            // Viscosity option dependending on visc_term. 
-            if ( visc_therm == 0 )
-            {
-                visc_bar = 0.5 * B * pow(strain, n_exp);
-            }
-            else if ( visc_therm == 1 )
-            {
-                visc_bar = 0.5 * B_theta_bar * pow(strain, n_exp);
-            }
+            // Viscosity potentially dependending on visc_term. 
+            visc_bar = 0.5 * B_theta_bar * pow(strain, n_exp);
         }
 
         // DIVA solver.
@@ -1035,18 +1039,19 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd visc, ArrayXd H, ArrayXd tau_b, \
             strain_diva = pow(u_x_diva,2) + 0.25 * pow(u_z,2) + eps;
 
             // Viscosity option dependending on visc_term.
-            if ( visc_therm == 0 )
-            {
-                visc = 0.5 * B * pow(strain_diva, n_exp);
-            }
-            else if ( visc_therm == 1 )
-            {
-                visc = 0.5 * B_theta * pow(strain_diva, n_exp);
-            }
+            visc = 0.5 * B_theta * pow(strain_diva, n_exp);
 
             // Vertically averaged viscosity.
             visc_bar = visc_bar.rowwise().mean();
         }
+    
+        // Ensure viscosity is between reasonable limits.
+        visc = (visc < visc_min).select(visc_min, visc);
+        visc = (visc > visc_max).select(visc_max, visc);
+
+        visc_bar = (visc_bar < visc_min).select(visc_min, visc_bar);
+        visc_bar = (visc_bar > visc_max).select(visc_max, visc_bar);
+
     }
 
     // Allocate output variables.
@@ -1125,7 +1130,6 @@ ArrayXXd f_theta(ArrayXXd theta, ArrayXd ub, ArrayXd H, ArrayXd tau_b, ArrayXd Q
     double dx_inv;
  
     // Evenly-spaced vertical grid, though x-dependency via ice thickness.
-    //dz       = H / n_z;
     dz_inv   = 1.0 / dz;
     dz_2_inv = pow(dz_inv, 2);
     dx_inv   = 1.0 / (ds * L);
@@ -1136,6 +1140,7 @@ ArrayXXd f_theta(ArrayXXd theta, ArrayXd ub, ArrayXd H, ArrayXd tau_b, ArrayXd Q
     // Zero frictional heat test.
     //Q_f_k = ArrayXd::Zero(n);
 
+    // Temperature integration.
     for (int i=1; i<n; i++)
     {
         for (int j=1; j<n_z-1; j++)
@@ -1195,6 +1200,10 @@ ArrayXXd f_theta(ArrayXXd theta, ArrayXd ub, ArrayXd H, ArrayXd tau_b, ArrayXd Q
     // Pressure melting point as the upper bound.
     // theta = (theta.array() > 273.15).select(273.15, theta);
     theta_now = (theta_now.array() > theta_max).select(theta_max, theta_now);
+
+
+    // Test for the grounding line column.
+    theta_now.row(n-1) = theta_now.row(n-2);
 
     return theta_now;
 }
@@ -1456,8 +1465,6 @@ ArrayXXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc_bar
     //cout << "\n visc(n-1) = " << visc(n-1);
     // Now:
     //u_x_bc = 0.125 * g * H(n-1) * L * rho * ( rho_w - rho ) / ( rho_w * visc(n-1) );
-    // Old:
-    //u_x_bc = 0.5 * c1(n-1) * g * L * ( rho * pow(H(n-1),2) - rho_w * pow(D,2) );
 
     // Pattyn.
 
@@ -1480,7 +1487,7 @@ ArrayXXd vel_solver(ArrayXd H, double ds, double ds_inv, int n, ArrayXd visc_bar
     
 
     // TEST THIS
-    //u_x_bc = L * A_ice * pow( 0.25 * ( rho * g * H(n-1) * (1.0 - rho / rho_w) ), n_gln);
+   //u_x_bc = L * A_ice * pow( 0.25 * ( rho * g * H(n-1) * (1.0 - rho / rho_w) ), n_gln);
     
 
     // TRIDIAGONAL SOLVER.
@@ -1519,7 +1526,7 @@ int main()
 
     // SELECT EXPERIMENT.
     // 0: MISMIP, 1: MISMIP-THERM, 2: TRANSITION INDICATORS.
-    int const exp = 1;
+    int const exp = 0;
 
     // GENERAL PARAMETERS.
     double const sec_year = 3.154e7;                // Seconds in a year.
@@ -1546,7 +1553,10 @@ int main()
     // eps is fundamental for GL, velocities, thickness, etc. 1.0e-10, 1.0e-5
     // Values above 1.0e-7 are unstable for the ewr domain (much smaller than MISMIP).
     // DIVA: 1.0e-6, 1.0e-5
-    double const eps = 1.0e-9;                            
+    // For Transition Indicators:
+    //double const eps = 1.0e-9; 
+    // MISMIP:
+    double const eps = 1.0e-5;                           
 
     // BASAL FRICTION.
     double const m = 1.0 / 3.0;                      // Friction exponent.
@@ -1560,11 +1570,11 @@ int main()
     double const ds_inv = n;
 
     double const t0   = 0.0;                         // Starting time [yr].
-    double const tf   = 10.0e4;                       // 54.0e4, 2.0e4, Ending time [yr]. 56.5e4. 30.0e4
+    double const tf   = 50.0e3;                       // 2.0e3, 54.0e4, 2.0e4, Ending time [yr]. 56.5e4. 30.0e4
     double t;                                        // Time variable [yr].
 
     // Time variables.
-    double const t_eq     = 2.0e3;                   // Equilibration time: visc, vel, theta, etc. 0.2 * tf
+    double const t_eq     = 1.0e3;                   // 2.0e3 Equilibration time: visc, vel, theta, etc. 0.2 * tf
     int const A_rate = 0;                            // Boolean to apply forcing.
     double const t0_A     = 2.0e4;                   // Start time to apply increase in ice rate factor. 3.0e4
     double const tf_A     = 4.0e4;
@@ -1575,11 +1585,11 @@ int main()
 
     // TIME STEPING. Quite sensitive (use fixed dt in case of doubt).
     // For stochastic perturbations. dt = 0.1 and n = 250.
-    int const dt_meth = 1;                           // Time-stepping method. Fixed, 0; adapt, 1.
+    int const dt_meth = 0;                           // Time-stepping method. Fixed, 0; adapt, 1.
     double dt;                                       // Time step [yr].
     double dt_CFL;                                   // Courant-Friedrichs-Lewis condition [yr].
     double dt_tilde;                                 // New timestep. 
-    double const t_eq_dt = 2.0 * t_eq;               // Eq. time until adaptative timestepis applied.
+    double const t_eq_dt = 2.0 * t_eq;               // Eq. time until adaptative timestep is applied.
     double const dt_min = 0.1;                       // Minimum time step [yr]. 0.1
     double const dt_max = 2.0;                       // Maximum time step [yr]. 2.0
     double const rel = 0.7;                          // Relaxation between interations [0,1]. 0.5
@@ -1630,9 +1640,9 @@ int main()
     double const theta_act = 263.15;                 // Threshold temperature for the two regimes in activation energy [K]
                      
     double const R = 8.314;                          // Universal gas constant [J / K mol]
-    double T_air = 243.15;                     // BC: prescribed air temperature. 253.15
-    double const w_min = -0.25;                    // Prescribed vertical advection at x=0 in theta. 0.0
-    double const w_max = 0.0;                      // Prescribed vertical advection at x=L in theta. 5.0
+    double T_air = 253.15;                           // BC: prescribed air temperature. 253.15
+    double const w_min = -0.25;                      // Prescribed vertical advection at x=0 in theta. 0.0
+    double const w_max = 0.0;                        // Prescribed vertical advection at x=L in theta. 5.0
     
 
     // BEDROCK PARAMETRIZATION: f_C_bed.
@@ -1643,7 +1653,12 @@ int main()
 
     // VISCOSITY-THERM
     int const visc_therm = 1;                        // Temperature-dependent viscosity.
+    double const t_eq_A_theta = t_eq;                // Eq. time to start applying Arrhenius dependency.
     double const A_act = 4.9e-25 * sec_year;         // Threshold rate factor for the two regimes in activation energy [Pa^-3 s^-1] 
+    
+    double const visc_min = 1.0e6;
+    double const visc_max = 1.0e8;
+    
     Array2d Q_act, A_0; 
     Q_act << 60.0, 139.0;                            // Activation energies [kJ/mol].
     Q_act = 1.0e3 * Q_act;                           // [kJ/mol] --> [J/mol] 
@@ -1756,8 +1771,10 @@ int main()
     C_ref = ArrayXd::Constant(n, 7.0e6/ pow(sec_year, m) );    // [Pa m^-1/3 yr^1/3] 7.0e6
 
     // We assume a constant viscosity in the first iteration. 1.0e13 Pa s.
-    visc     = ArrayXXd::Constant(n, n_z, 1.0e8 / sec_year);            // [Pa yr]
-    visc_bar = ArrayXd::Constant(n, 1.0e8 / sec_year);
+    //visc     = ArrayXXd::Constant(n, n_z, 1.0e13 / sec_year);            // [Pa yr]
+    //visc_bar = ArrayXd::Constant(n, 1.0e13 / sec_year);
+    visc     = ArrayXXd::Constant(n, n_z, 1.0e8);            // [Pa yr]
+    visc_bar = ArrayXd::Constant(n, 1.0e8);
 
     // Implicit initialization.
     ub    = ArrayXd::Constant(n, 1.0);               // [m / yr] 
@@ -1771,11 +1788,11 @@ int main()
     
     // Viscosity from constant A value. u2 = 0 initialization.
     // 4.6416e-24, 4.227e-25 [Pa^-3 s^-1] ==> [Pa^-3 yr^-1]
-    A = 5.0e-25 * sec_year;               // 4.23e-25
-    B = pow(A, ( -1 / n_gln ) );
+    //A = 5.0e-25 * sec_year;               // 4.23e-25
+    //B = pow(A, ( -1 / n_gln ) );
 
     // Temperature initial conditions (-25ºC).
-    //theta = ArrayXXd::Constant(n, n_z, 248.0);
+    theta = ArrayXXd::Constant(n, n_z, 253.15);
 
     // Intialize ice thickness and SMB.
     H = ArrayXd::Constant(n, 10.0); // 10.0
@@ -1799,7 +1816,7 @@ int main()
     /////////////////////////////////////////////////////////////////////////////////
 
     // MISMIP EXPERIMENTS FORCING.
-    if ( exp == 0 || exp == 1 )
+    if ( exp == 0 )
     {
         // Exps 1-2 hysteresis forcing.
         // Rate factor [Pa^-3 s^-1].
@@ -1808,7 +1825,25 @@ int main()
                 2.1544e-26, 4.6416e-26, 1.0e-25, 2.1544e-25, 4.6416e-25, 1.0e-24,
                 2.1544e-24, 4.6416e-24; 
 
-        // [Pa^-3 s^-1] --> [Pa^-3 yr^-1].
+        // Unit conversion: [Pa^-3 s^-1] --> [Pa^-3 yr^-1].
+        A_s = A_s * sec_year;   
+
+        // Time length for a certain A value. 
+        t_s << 3.0e4, 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4,
+               30.0e4, 33.0e4, 36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4;
+    }
+    
+    // MISMIP THERMODYNAMICS.
+    else if ( exp == 1 )
+    {
+        // Exps 1-2 hysteresis forcing.
+        // Rate factor [Pa^-3 s^-1].
+        A_s << 4.6416e-24, 2.1544e-24, 1.0e-24, 4.6416e-25, 2.1544e-25, 1.0e-25,
+                4.6416e-26, 2.1544e-26, 1.0e-26,
+                2.1544e-26, 4.6416e-26, 1.0e-25, 2.1544e-25, 4.6416e-25, 1.0e-24,
+                2.1544e-24, 4.6416e-24; 
+
+        // Unit conversion: [Pa^-3 s^-1] --> [Pa^-3 yr^-1].
         A_s = A_s * sec_year;   
 
         // Time length for a certain A value. 
@@ -1842,11 +1877,19 @@ int main()
        }
 
        // Temperature initial conditions (-25ºC).
-       theta = ArrayXXd::Constant(n, n_z, T_air_s(0));
+       //theta = ArrayXXd::Constant(n, n_z, T_air_s(0));
+
+       // Initialize temperature with T = -25.0ºC.
+       theta = ArrayXXd::Constant(n, n_z, T_air);
 
        // Convert to kelvin.
        //T_air_s = T_air_s - 273.15;
        cout << "\n Air temperatures = " << T_air_s;
+
+        // Initialization.
+        T_air   = T_air_s(0);
+        A       = A_s(0);
+        A_theta = ArrayXXd::Constant(n, n_z, A);
 
     }   
 
@@ -1874,6 +1917,7 @@ int main()
     cout << " \n h = " << ds;
     cout << " \n n = " << n;
     cout << " \n tf = " << tf;
+    //cout << " \n theta = " << theta;
 
     // Call nc read function.
     //noise = f_nc_read(N);
@@ -1887,20 +1931,6 @@ int main()
     // Wall time for computational speed.
     auto begin = std::chrono::high_resolution_clock::now();
 
-    // Initilize ice thickness and accumulation.
-    /*
-    for (int i=0; i<n; i++)
-    {
-        // Initial ice thickness H0.
-        //H(i) = 1.8e3 * (1.0 - pow(sigma(i), 2.5)) + 1.2e3;
-
-        // Initial ice thickness H0 [m].
-        H(i) = 100.0;         
-        //S(i) = S_0; 
-
-    }
-    */
-   
     // Counters to write solution.
     int c    = 0;
     int c_hr = 0;
@@ -1912,11 +1942,8 @@ int main()
     t  = t0;
     dt = dt_min;
 
-    // Initialization.
-    A     = A_s(0);
-    T_air = T_air_s(0);
-    
-    // Time integration.
+
+    // TIME INTEGRATION.
     while (t < tf)
     {
         // MISMIP EXPERIMENTS.
@@ -1929,8 +1956,8 @@ int main()
             }
             
             // Ice hardness.
-            A = A_s(c_s) * sec_year;
-            B = pow(A, ( -1 / n_gln ) );
+            A = A_s(c_s);
+            B = pow(A, (-1 / n_gln) );
         }
 
         // MISMIP-THERM EXPERIMENTS.
@@ -1942,8 +1969,8 @@ int main()
                 c_s = min(c_s + 1, n_s - 1);
 
                 // Ice hardness.
-                //A = A_s(c_s) * sec_year;
                 A = A_s(c_s);
+                B = pow(A, (-1 / n_gln) );
 
                 // Air temperature as a BC.
                 T_air = T_air_s(c_s);
@@ -1976,6 +2003,10 @@ int main()
         }
     
 
+        //cout << " \n A = " << A;
+        //cout << " \n B = " << B;
+        //cout << " \n theta = " << theta;
+        //cout << " \n visc = " << visc;
 
         // Update bedrock with new domain extension L.
         bed = f_bed(L, n, bed_exp, y_0, y_p, x_1, x_2, smooth_bed, sigma_gauss, ds);
@@ -2019,8 +2050,6 @@ int main()
             
             // Implicit solver.
             // If SSA solver ub = u_bar.
-            // To do: note that A must change here as well when thermodynamics is applied!
-            // WE CANNOT IMPOSE "A" HERE! IT SHOULD BE GIVEN FROM THE THERMODYNAMIC SOLVER!!!!!
             sol = vel_solver(H, ds, ds_inv, n, visc_bar, bed, rho, rho_w, g, L, \
                              C_bed, t, beta, A, A_theta, n_gln, visc_therm);
             
@@ -2032,17 +2061,20 @@ int main()
             // Update beta with new velocity.
             fric_all = f_u(u_bar, beta, C_bed, visc, H, dz, sec_year, m, vel_meth, n_z, n);
             beta     = fric_all.col(0);
-            //u        = fric_all.block(0,6,n,n_z);
 
             // Update viscosity with new velocity.
-            visc_all = f_visc(theta, visc, H, tau_b, beta, u_bar, dz, \
+            // THERE IS A PROBLEMHERE WITH THE VISC_THERM METHOD.
+            // VISCOSITY TAKES WEIRD VALUES DUE TO THE TEMPERATURE DEPENDENCY.
+            // TEMPERATURE IS NOT CORRECT EITHER!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!?????
+            visc_all = f_visc(theta, H, tau_b, u_bar, dz, \
                                 theta_act, ds, L, Q_act, A_0, n_gln, R, B, n_exp, \
-                                    eps, t, t_eq, sec_year, n, n_z, vel_meth, A, visc_therm);
+                                    eps, t, t_eq, sec_year, n, n_z, vel_meth, A, \
+                                        visc_therm, t_eq_A_theta, visc_min, visc_max);
             
             // Allocate variables.
             visc     = visc_all.block(0,0,n,n_z);
             visc_bar = visc_all.block(0,n_z,n,1);
-            A_theta  = visc_all.block(0,4*n_z+1,n,n_z);
+            
             
             // Current error (vector class required to compute norm). 
             // Eq. 12 (De-Smedt et al., 2010).
@@ -2097,8 +2129,6 @@ int main()
             // Update number of iterations.
             ++c_picard;
         }
-
-        //cout << "\n visc_bar = " << visc_bar;
         
         // CONSISTENCY CHECK. Search for NaN values.
         // Count number of true positions in u_bar.isnan().
@@ -2111,7 +2141,7 @@ int main()
             f_write(c, u_bar_old_1, ub, u_x, H, visc_bar, S, tau_b, beta, tau_d, bed, \
                     C_bed, Q_fric, u2_dif_vec, u2_0_vec, L, t, u_x_bc, u2_dif, \
                     error, dt, c_picard, mu, omega, theta, visc, u_z, u_x_diva, u, A, dL_dt, \
-                    F_1, F_2, m_stoch, smb_stoch);
+                    F_1, F_2, m_stoch, smb_stoch, A_theta);
 
             // Close nc file. 
             if ((retval = nc_close(ncid)))
@@ -2135,6 +2165,7 @@ int main()
         u_x_diva = visc_all.block(0,n_z+2,n,n_z);
         u_z      = visc_all.block(0,2*n_z+1,n,n_z);
         strain_diva = visc_all.block(0,3*n_z+1,n,n_z);
+        A_theta     = visc_all.block(0,4*n_z+1,n,n_z);
         
         // Ice flux calculation. Flotation thickness H_f.
         H_f = D * ( rho_w / rho );
@@ -2155,7 +2186,7 @@ int main()
             f_write(c, u_bar, ub, u_x, H, visc_bar, S, tau_b, beta, tau_d, bed, \
                     C_bed, Q_fric, u2_dif_vec, u2_0_vec, L, t, u_x_bc, u2_dif, \
                     error, dt, c_picard, mu, omega, theta, visc, u_z, u_x_diva, u, A, dL_dt, \
-                    F_1, F_2, m_stoch, smb_stoch);
+                    F_1, F_2, m_stoch, smb_stoch, A_theta);
 
             ++c;
         }  
@@ -2179,9 +2210,14 @@ int main()
         dz = H / n_z;
 
         // Apply thermodynamic solver if desired.
-        if ( thermodynamics == 1 && t > t_eq)
+        if ( thermodynamics == 0 || t < t_eq )
         {
-            // Integrate Fourier heat equation.
+            theta = ArrayXXd::Constant(n, n_z, 253.15);
+        }
+        
+        // Integrate Fourier heat equation.
+        else if ( thermodynamics == 1 && t >= t_eq )
+        {
             theta = f_theta(theta, ub, H, tau_b, Q_fric, sigma, dz, theta_max, T_air, kappa, \
                             k, dt, G_k, ds, L, dL_dt, t, t_eq, w, n, n_z, vel_meth, strain_diva);
         }

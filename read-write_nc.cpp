@@ -7,7 +7,7 @@
 // NETCDF PARAMETERS.
 /* This is the name of the data file we will create. */
 //#define FILE_NAME "output/mismip/exp3/exp3_n.250/exp3_n.250.nc"
-#define FILE_NAME "/home/dmoreno/flowline/mismip_therm/test_A_theta_long_dt.const/flowline.nc"
+#define FILE_NAME "/home/dmoreno/flowline/mismip_therm/visc_theta/theta_on_visc_on_eps.1.0e-5_long/flowline.nc"
 #define FILE_NAME_HR "/home/dmoreno/flowline/ewr/A_rates/bed_peak/hr/y_p.44_tf_A.4.0e4_A.0.5e-26_5.0e-25/flowline_hr.nc"
 #define FILE_NAME_READ "/home/dmoreno/flowline/data/noise_sigm_ocn.12.0.nc"
 
@@ -34,6 +34,7 @@
 #define VISC_NAME "visc"
 #define VISC_BAR_NAME "visc_bar"
 #define A_NAME "A"
+#define A_THETA_NAME "A_theta"
 #define S_NAME "S"
 #define TAU_NAME "tau_b"
 #define BETA_NAME "beta"
@@ -75,6 +76,7 @@
 #define VISC_UNITS "Pa s"
 #define VISC_BAR_UNITS "Pa s"
 #define A_UNITS "Pa^-3 s^-1"
+#define A_THETA_UNITS "Pa^-3 s^-1"
 #define S_UNITS "mm/day"
 #define TAU_UNITS "Pa"
 #define BETA_UNITS "Pa yr / m"
@@ -114,7 +116,7 @@ int retval;
 /* IDs for the netCDF file, dimensions, and variables. */
 int ncid, x_dimid, z_dimid, time_dimid;
 int x_varid, z_varid, u_bar_varid, ub_varid, u_x_varid, u_x_diva_varid, u_z_varid, u_varid,H_varid, \
-    visc_varid, visc_bar_varid, a_varid, s_varid, \
+    visc_varid, visc_bar_varid, a_varid, a_theta_varid, s_varid, \
     tau_varid, beta_varid, lmbd_varid, taud_varid, b_varid, L_varid, dL_dt_varid, dt_varid, \
     c_pic_varid, t_varid, mu_varid, omega_varid, u2_bc_varid, u2_dif_varid, \
     picard_error_varid, u2_0_vec_varid, u2_dif_vec_varid, theta_varid, C_bed_varid, Q_fric_varid, \
@@ -331,6 +333,9 @@ int f_nc(int N, int N_Z)
     if ((retval = nc_def_var(ncid, U_NAME, NC_DOUBLE, NDIMS_Z,
                     dimids_z, &u_varid)))
         ERR(retval);
+    if ((retval = nc_def_var(ncid, A_THETA_NAME, NC_DOUBLE, NDIMS_Z,
+                    dimids_z, &a_theta_varid)))
+        ERR(retval);
 
     /* Assign units attributes to the netCDF variables. */
     if ((retval = nc_put_att_text(ncid, u_bar_varid, UNITS,
@@ -440,6 +445,9 @@ int f_nc(int N, int N_Z)
         ERR(retval);
     if ((retval = nc_put_att_text(ncid, u_varid, UNITS,
                     strlen(U_UNITS), U_UNITS)))
+        ERR(retval);
+     if ((retval = nc_put_att_text(ncid, a_theta_varid, UNITS,
+                    strlen(A_THETA_UNITS), A_THETA_UNITS)))
         ERR(retval);
         
     /* End define mode. */
@@ -663,7 +671,7 @@ int f_write(int c, ArrayXd u_bar, ArrayXd ub, ArrayXd u_x, ArrayXd H, ArrayXd vi
             double L, double t, double u2_bc, double u2_dif, double error, \
             double dt, int c_picard, double mu, double omega, ArrayXXd theta, \
             ArrayXXd visc, ArrayXXd u_z, ArrayXXd u_x_diva, ArrayXXd u, double A, double dL_dt, \
-            ArrayXd F_1, ArrayXd F_2, double m_stoch, double smb_stoch)
+            ArrayXd F_1, ArrayXd F_2, double m_stoch, double smb_stoch, ArrayXXd A_theta)
 {
     start[0]   = c;
     start_0[0] = c;
@@ -742,6 +750,8 @@ int f_write(int c, ArrayXd u_bar, ArrayXd ub, ArrayXd u_x, ArrayXd H, ArrayXd vi
     if ((retval = nc_put_vara_double(ncid, u_x_diva_varid, start_z, cnt_z, &u_x_diva(0,0))))
     ERR(retval);
     if ((retval = nc_put_vara_double(ncid, u_varid, start_z, cnt_z, &u(0,0))))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid, a_theta_varid, start_z, cnt_z, &A_theta(0,0))))
     ERR(retval);
 
 
