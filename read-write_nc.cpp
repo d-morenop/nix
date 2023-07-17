@@ -7,7 +7,7 @@
 // NETCDF PARAMETERS.
 /* This is the name of the data file we will create. */
 //#define FILE_NAME "output/mismip/exp3/exp3_n.250/exp3_n.250.nc"
-#define FILE_NAME "/home/dmoreno/flowline/mismip_therm/visc_theta/theta_on_visc_on_eps.1.0e-5_long/flowline.nc"
+#define FILE_NAME "/home/dmoreno/flowline/mismip_therm/T_oce/no.refreez_T_air.193_delta_T/flowline.nc"
 #define FILE_NAME_HR "/home/dmoreno/flowline/ewr/A_rates/bed_peak/hr/y_p.44_tf_A.4.0e4_A.0.5e-26_5.0e-25/flowline_hr.nc"
 #define FILE_NAME_READ "/home/dmoreno/flowline/data/noise_sigm_ocn.12.0.nc"
 
@@ -52,6 +52,7 @@
 #define U2_DIF_NAME "BC_error"
 #define PICARD_ERROR_NAME "picard_error"
 #define THETA_NAME "theta"
+#define T_OCE_NAME "T_oce"
 #define C_BED_NAME "C_bed"
 #define Q_FRIC_NAME "Q_fric"
 #define U2_DIF_VEC_NAME "u2_dif_vec"
@@ -94,6 +95,7 @@
 #define U2_DIF_UNITS "1/yr"
 #define PICARD_ERROR_UNITS "1/yr"
 #define THETA_UNITS "K"
+#define T_OCE_UNITS "K"
 #define C_BED_UNITS "Pa m^-1/3 yr^1/3"
 #define Q_FRIC_UNITS "W/m^2"
 #define U2_DIF_VEC_UNITS "1/yr"
@@ -119,7 +121,7 @@ int x_varid, z_varid, u_bar_varid, ub_varid, u_x_varid, u_x_diva_varid, u_z_vari
     visc_varid, visc_bar_varid, a_varid, a_theta_varid, s_varid, \
     tau_varid, beta_varid, lmbd_varid, taud_varid, b_varid, L_varid, dL_dt_varid, dt_varid, \
     c_pic_varid, t_varid, mu_varid, omega_varid, u2_bc_varid, u2_dif_varid, \
-    picard_error_varid, u2_0_vec_varid, u2_dif_vec_varid, theta_varid, C_bed_varid, Q_fric_varid, \
+    picard_error_varid, u2_0_vec_varid, u2_dif_vec_varid, theta_varid, T_oce_varid, C_bed_varid, Q_fric_varid, \
     F_1_varid, F_2_varid, m_stoch_varid, smb_stoch_varid;
 
 int dimids[NDIMS];
@@ -317,6 +319,9 @@ int f_nc(int N, int N_Z)
     if ((retval = nc_def_var(ncid, SMB_STOCH_NAME, NC_DOUBLE, NDIMS_0,
                     dimids_0, &smb_stoch_varid)))
         ERR(retval);
+    if ((retval = nc_def_var(ncid, T_OCE_NAME, NC_DOUBLE, NDIMS_0,
+                    dimids_0, &T_oce_varid)))
+        ERR(retval);
 
     if ((retval = nc_def_var(ncid, THETA_NAME, NC_DOUBLE, NDIMS_Z,
                     dimids_z, &theta_varid)))
@@ -429,6 +434,9 @@ int f_nc(int N, int N_Z)
         ERR(retval);
     if ((retval = nc_put_att_text(ncid, smb_stoch_varid, UNITS,
                     strlen(SMB_STOCH_UNITS), SMB_STOCH_UNITS)))
+        ERR(retval);
+    if ((retval = nc_put_att_text(ncid, T_oce_varid, UNITS,
+                    strlen(T_OCE_UNITS), T_OCE_UNITS)))
         ERR(retval);
 
     if ((retval = nc_put_att_text(ncid, theta_varid, UNITS,
@@ -671,7 +679,7 @@ int f_write(int c, ArrayXd u_bar, ArrayXd ub, ArrayXd u_x, ArrayXd H, ArrayXd vi
             double L, double t, double u2_bc, double u2_dif, double error, \
             double dt, int c_picard, double mu, double omega, ArrayXXd theta, \
             ArrayXXd visc, ArrayXXd u_z, ArrayXXd u_x_diva, ArrayXXd u, double A, double dL_dt, \
-            ArrayXd F_1, ArrayXd F_2, double m_stoch, double smb_stoch, ArrayXXd A_theta)
+            ArrayXd F_1, ArrayXd F_2, double m_stoch, double smb_stoch, ArrayXXd A_theta, double T_oce)
 {
     start[0]   = c;
     start_0[0] = c;
@@ -738,6 +746,8 @@ int f_write(int c, ArrayXd u_bar, ArrayXd ub, ArrayXd u_x, ArrayXd H, ArrayXd vi
     if ((retval = nc_put_vara_double(ncid, m_stoch_varid, start_0, cnt_0, &m_stoch)))
     ERR(retval);
     if ((retval = nc_put_vara_double(ncid, smb_stoch_varid, start_0, cnt_0, &smb_stoch)))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid, T_oce_varid, start_0, cnt_0, &T_oce)))
     ERR(retval);
 
     // 3D variables.
