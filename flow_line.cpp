@@ -630,13 +630,13 @@ double f_melt(double T_oce, double T_0, double rho, double rho_w, \
     // Linear.
     if ( meth == 0 )
     {
-        M = ( T_0 - T_oce ) * gamma_T * ( rho_w * c_po ) / ( rho * L_i );
+        M = ( T_oce - T_0 ) * gamma_T * ( rho_w * c_po ) / ( rho * L_i );
     }
 
     // Quadratic.
     else if ( meth == 1 )
     {
-        M = pow((T_0 - T_oce), 2) * gamma_T * pow( ( rho_w * c_po ) / ( rho * L_i ), 2);
+        M = pow((T_oce - T_0), 2) * gamma_T * pow( ( rho_w * c_po ) / ( rho * L_i ), 2);
     }
     
     return M;
@@ -691,7 +691,7 @@ ArrayXd f_smb(ArrayXd sigma, double L, double S_0, \
 
 
 ArrayXd f_q(ArrayXd u_bar, ArrayXd H, double H_f, double t, double t_eq, double D, \
-               double rho, double rho_w, double m_dot, int calving_meth, int n)
+               double rho, double rho_w, double m_dot, double M, int calving_meth, int n)
 {
     // Local variables.
     ArrayXd q(n);
@@ -749,7 +749,7 @@ ArrayXd f_q(ArrayXd u_bar, ArrayXd H, double H_f, double t, double t_eq, double 
             // Ice flux at GL computed on the ice thickness grid. Schoof (2007).
             // Too retreated
             // LAST ATTEMPT.
-            // ALMOST GOOD,A BIT TOO RETREATED FOR N=350 POINTS.
+            // ALMOST GOOD, A BIT TOO RETREATED FOR N=350 POINTS.
             q(n-1) = H(n-1) * 0.5 * ( u_bar(n-1) + u_bar(n-2) + ( H_f / H(n-1) ) * m_dot );
 
             // Ice flux at GL computed on the ice thickness grid. Schoof (2007).
@@ -775,6 +775,24 @@ ArrayXd f_q(ArrayXd u_bar, ArrayXd H, double H_f, double t, double t_eq, double 
             // H_n.
             // Too retreated.
             //q(n-1) = H(n-1) * ( ub(n-1) + m_dot );
+        }
+    }
+
+    // Deterministic calving from sub-shelf melting (e.g., Favier et al., 2019).
+    else if ( calving_meth == 2 )
+    {
+        // No calving during equilibration.
+        if ( t < t_eq )
+        {
+            // Vieli and Payne (2005).
+            q(n-1) = u_bar(n-1) * H(n-1);
+        }
+        
+        // Calving after equilibration.
+        else
+        {
+            q(n-1) = H(n-1) * ( u_bar(n-1) + M );
+            //q(n-1) = ( H(n-1) + M ) * u_bar(n-1);
         }
     }
 
@@ -898,17 +916,19 @@ ArrayXd f_H(ArrayXd u_bar, ArrayXd H, ArrayXd S, ArrayXd sigma, \
         H_now(0) = H_now(2);
         
         // Lateral boundary: sigma(n-1) = 1.
-        //H_now(n-1) = H(n-1) + dt * ( ds_inv * L_inv * \
-        //                                (  dL_dt * ( H(n-1) - H(n-2) ) + \
-        //                                    - ( q(n-1) - q(n-2) ) ) + S(n-1) );
-        
-        // Account for potential sub-shelf melt at the grounding line M.
+        // Sub-shelf melt directly on the flux.
         H_now(n-1) = H(n-1) + dt * ( ds_inv * L_inv * \
                                         (  dL_dt * ( H(n-1) - H(n-2) ) + \
-                                            - ( q(n-1) - q(n-2) ) ) + S(n-1) - M );
+                                            - ( q(n-1) - q(n-2) ) ) + S(n-1) );
+        
+        // Account for potential sub-shelf melt at the grounding line M.
+        //H_now(n-1) = H(n-1) + dt * ( ds_inv * L_inv * \
+        //                                (  dL_dt * ( H(n-1) - H(n-2) ) + \
+        //                                    - ( q(n-1) - q(n-2) ) ) + S(n-1) + M );
         
         // Make sure that grounding line thickness is above minimum?
         //H_now(n-1) = max( (rho_w/rho)*D, H_now(n-1));
+        //H_now(n-1) = min( (rho_w/rho)*D, H_now(n-1));
     }
     
     // Implicit scheme.
@@ -1121,20 +1141,11 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXd H, ArrayXd tau_b, ArrayXd u_bar, ArrayXd
 
         }
     
-        /*
-        // Ensure viscosity is between reasonable limits for thermodynamics on.
-        visc = (visc < visc_min).select(visc_min, visc);
-        visc = (visc > visc_max).select(visc_max, visc);
-
-        visc_bar = (visc_bar < visc_min).select(visc_min, visc_bar);
-        visc_bar = (visc_bar > visc_max).select(visc_max, visc_bar);
-        */
-
         // Symmetry as it is defined in the same grid as the ice thickness.
         //visc_bar(0) = visc_bar(2);
 
         // Viscosity must be symetric as velocitiy, since it comes from velocity gradients?
-        visc_bar(0) = visc_bar(1);
+        //visc_bar(0) = visc_bar(1);
 
     }
 
@@ -1637,7 +1648,7 @@ int main()
 
    
     // GROUNDING LINE.
-    double L = 479.1e3;                              // Grounding line position [m] exp1 = 694.5e3, exp3 = (479.1e3), ews = 50.0e3
+    double L = 476.1e3;                              // Grounding line position [m] exp1 = 694.5e3, exp3 = (479.1e3), ews = 50.0e3
     double dL_dt;                                   // GL migration rate [m/yr]. 
     int const dL_dt_num_opt = 1;                    // GL migration numerator discretization opt.
     int const dL_dt_den_opt = 1;                    // 1. GL migration denominator discretization opt.
@@ -1668,7 +1679,7 @@ int main()
     double const ds_inv = n;
 
     double const t0   = 0.0;                         // Starting time [yr].
-    double const tf   = 51.0e4;                       // 18.0e4, 54.0e4, 2.0e4, Ending time [yr]. 56.5e4. 30.0e4
+    double const tf   = 93.0e4;                       // 15.0e4, 21.0e4, Ending time [yr]. 56.5e4. 30.0e4
     double t;                                        // Time variable [yr].
 
     // Time variables.
@@ -1772,20 +1783,23 @@ int main()
     double u2_dif;                                   // Difference between analytical and numerical.
 
     // CALVING.
-    int const calving_meth = 0;                      // 0, no calving; 1, Christian et al. (2022).
+    int const calving_meth = 2;                      // 0, no calving; 1, Christian et al. (2022), 2: deterministic Favier et al. (2019)
     double const m_dot = 30.0;                       // Mean frontal ablation [m/yr]. 30.0
     double H_f;
 
     // Sub-shelf melt.
     bool const shelf_melt = true; 
-    int const melt_meth  = 0;                         // Melt parametrization. 0: linear; 1: quadratic.
+    int const melt_meth  = 1;                         // Melt parametrization. 0: linear; 1: quadratic.
+    double const t0_oce  = 2.5e4;                    // Start time of ocean warming.
+    double const tf_oce  = 27.5e4;                   // End time of applied ocean forcing.
     double const c_po    = 3974.0;                    // J / (kg K)
     double const L_i     = 3.34e5;                    // J / kg 
-    double const gamma_T = 1.5e-8 * sec_year;        // 0.77-2.03. [m/s] --> [m/yr]
+    double const gamma_T = 36.23e-5 * sec_year;        // Linear: 2.0e-5, Quad: 36.23e-5. [m/s] --> [m/yr]
     double const T_0     = 273.15;                    // K
     double T_oce; 
     double const delta_T_oce = 2.0;                    // Amplitude of ocean temperature anomalies. 
     double M = 0.0;                                   // Sub-shelf melt [m/yr]. 
+    double const delta_M = 150.0;                      // Amplitude of sub-shelf melting.                         
 
 
     // MISMIP EXPERIMENT CHOICE.
@@ -1810,7 +1824,7 @@ int main()
 
     // MISMIP EXPERIMENTS FORCING.
     // Number of steps in the A forcing.
-    int const n_s = 17;  //  Exp_3: 13, Exp_1-2: 17. T_air: 17, T_oce: 10.
+    int const n_s = 29;  //  Exp_3: 13, Exp_1-2: 17. T_air: 17, T_oce: 9. T_oce_f_q: 25
 
 
     // PREPARE VARIABLES.
@@ -1846,8 +1860,11 @@ int main()
     VectorXd c_u_bar_1(n);                   // Correction vector Picard relaxed iteration.
     VectorXd c_u_bar_2(n);
 
+    // FRONTAL ABLATION.
+    ArrayXd M_s(n_s); 
+
     // MISMIP FORCING.
-    ArrayXd A_s(n_s);                    // Rarte factor values for MISMIP exp.
+    ArrayXd A_s(n_s);                    // Rate factor values for MISMIP exp.
     ArrayXd t_s(n_s);                    // Time length for each step of A.
     ArrayXd T_air_s(n_s);                // Corresponding air temperature values to A_s. 
     ArrayXd T_oce_s(n_s);                // Ocean temperature forcing.   
@@ -1966,20 +1983,21 @@ int main()
     else if ( exp == 1 )
     {
         // Time length for each forcing step. 
-        //t_s << 3.0e4, 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4,
-        //       30.0e4, 33.0e4, 36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4;
-
-        //t_s = t_s / 2.0;
 
 
         // ICE RATE FACTOR FORCING. [Pa^-3 s^-1].
         // Exps 1-2 hysteresis forcing.
+        /*
+        t_s << 3.0e4, 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4,
+               30.0e4, 33.0e4, 36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4;
+
+        A_s << 4.6416e-24, 2.1544e-24, 1.0e-24, 4.6416e-25, 2.1544e-25, 1.0e-25,
+                4.6416e-26, 2.1544e-26, 1.0e-26,
+                2.1544e-26, 4.6416e-26, 1.0e-25, 2.1544e-25, 4.6416e-25, 1.0e-24,
+                2.1544e-24, 4.6416e-24; 
         
-        //A_s << 4.6416e-24, 2.1544e-24, 1.0e-24, 4.6416e-25, 2.1544e-25, 1.0e-25,
-        //        4.6416e-26, 2.1544e-26, 1.0e-26,
-        //        2.1544e-26, 4.6416e-26, 1.0e-25, 2.1544e-25, 4.6416e-25, 1.0e-24,
-        //        2.1544e-24, 4.6416e-24; 
-        
+        A_s = A_s * sec_year;   
+        */
         
         /*
         // Exp 3 hysteresis forcing.
@@ -1995,7 +2013,7 @@ int main()
         */
         
         
-        // ICE HARDNESS CONVERSION TO TEMPERATURE..
+        // ICE HARDNESS CONVERSION TO TEMPERATURE.
         // Corresponding temperature amplitude is not wide enough for advance/retreate.
         /*
         for (int i=0; i<n_s; i++)
@@ -2017,16 +2035,63 @@ int main()
         // Change of sign in (T_0-T_oce) to produce advance/retreate.
         // Make sure length of positive/negative anomalies is the same
         // to retireve the initial state. Close hysteresis loop.
-        
-        //t_s << 6.0e4, 7.5e4, 9.0e4, 10.5e4, 12.0e4, 13.5e4, 15.0e4, 16.5e4, 18.0e4, 19.5e4;
-        
-        //T_oce_s << 273.15, 273.65, 274.15, 274.65, 275.15, 275.65,
-        //           274.65, 274.15, 273.65, 273.15;
+        /*
+        t_s << 6.0e4, 7.5e4, 9.0e4, 10.5e4, 12.0e4, 13.5e4, 15.0e4, 16.5e4, 18.0e4, 19.5e4;
+        T_oce_s << 273.15, 273.65, 274.15, 274.65, 275.15, 275.65,
+                   274.65, 274.15, 273.65, 273.15;
+        */
 
-        T_air_s = ArrayXd::Constant(n_s, 193.15);
+        /*
+        t_s << 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4, 30.0e4;
+        T_oce_s << 273.15, 274.15, 275.15, 276.15, 277.15, 276.15, 275.15, 274.15, 273.15;
+        T_air_s = ArrayXd::Constant(n_s, 203.15);
+        */
         
         
+        t_s << 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4, 30.0e4,
+               33.0e4, 36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4, 54.0e4, 57.0e4,
+               60.0e4, 63.0e4, 66.0e4, 69.0e4, 72.0e4, 75.0e4, 78.0e4, 81.0e4, 84.0e4, 
+               87.0e4, 90.0e4;
         
+        T_oce_s << 273.15, 273.65, 274.15, 274.65, 275.15, 275.65, 276.15, 276.65, 277.15, \
+                   277.65, 278.15, 278.65, 279.15, 279.65, 280.15,
+                   279.65, 279.15, 278.68, 278.15, 277.65, 277.15, 
+                   276.65, 276.15, 275.65, 275.15, 274.65, 274.15, 273.65, 273.15;
+
+        T_air_s = ArrayXd::Constant(n_s, 193.15); // 193.15
+        
+
+
+        // FORCING DIRECTLY ON MELTING AND THEN TRANSFORM TO TEMPERATURE TO PLOT.
+        /*
+        t_s << 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4, 30.0e4,
+               33.0e4, 36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4, 54.0e4, 57.0e4,
+               60.0e4, 63.0e4, 66.0e4, 69.0e4, 72.0e4, 75.0e4, 78.0e4;
+        
+        M_s << 0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0, 50.0, 55.0, 
+               60.0, 55.0, 50.0, 45.0, 40.0, 35.0, 30.0, 25.0, 20.0, 15.0, 10.0, 5.0, 0.0;
+        T_air_s = ArrayXd::Constant(n_s, 193.15); // 193.15
+        */
+        
+
+        // COMBINED OCEAN + AIR FORCING.
+        // Factor of 0.25 for ocean temperatures compared to air (Golledge) (1/0.25).
+        /*
+        t_s << 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4, 30.0e4;
+        T_oce_s << 273.15, 274.15, 275.15, 276.15, 277.15, 276.15, 275.15, 274.15, 273.15;
+
+        T_air_s = 200.15 + ( 4.0 * ( T_oce_s - T_0 ) );
+        //T_air_s = 193.15 + ( 4.0 * ( T_oce_s - T_0 ) );
+        */
+        
+
+       /*
+        t_s << 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4, 30.0e4, \
+               33.0e4, 36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4, 54.0e4;
+        T_oce_s << 273.15, 273.65, 274.15, 274.65, 275.15, 275.65, 276.15, 276.65, 277.15, \
+                   276.65, 276.15, 275.65, 275.15, 274.65, 274.15, 273.65, 273.15;
+        T_air_s = 193.15 + ( 4.0 * ( T_oce_s - T_0 ) );
+        */
         
         /*
         // TRY THE OCEAN FORCING WITHOUT REFREEZING. JUST POSITIVE ANOMALIES.
@@ -2042,20 +2107,21 @@ int main()
 
         // AIR TEMPERATURES FORCING.
         // Stable forcing.
+        /*
         t_s << 3.0e4, 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4,
                30.0e4, 33.0e4, 36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4;
 
-        //T_air_s << 253.15, 243.15, 233.15, 223.15, 213.15, 203.15, 198.15, 193.15, 193.15,
-        //           198.15, 203.15, 213.15, 223.15, 233.15, 243.15, 253.15, 253.15;
-       
-       //T_air_s = ArrayXd::Constant(n_s, 253.15);
+        T_air_s << 253.15, 243.15, 233.15, 223.15, 213.15, 203.15, 198.15, 193.15, 193.15,
+                   198.15, 203.15, 213.15, 223.15, 233.15, 243.15, 253.15, 253.15;
+        */
+        
 
        // Temperature initial conditions (-25ºC).
        //theta = ArrayXXd::Constant(n, n_z, T_air_s(0));
 
        // Convert to kelvin.
        //cout << "\n Air temperatures = " << T_air_s;
-       cout << "\n ocean temperatures = " << T_oce_s;
+       //cout << "\n ocean temperatures = " << T_oce_s;
 
         // Initialization.
         T_air   = T_air_s(0);
@@ -2089,7 +2155,6 @@ int main()
     cout << " \n h = " << ds;
     cout << " \n n = " << n;
     cout << " \n tf = " << tf;
-    //cout << " \n theta = " << theta;
 
     // Call nc read function.
     //noise = f_nc_read(N);
@@ -2148,14 +2213,31 @@ int main()
                 T_air = T_air_s(c_s);
 
                 // Ocean temperature as a BC.
-                //T_oce = T_oce_s(c_s);
+                T_oce = T_oce_s(c_s);
                 cout << " \n T_oce = " << T_oce;
+
+                // Directly on frontal ablation.
+                M = M_s(c_s);
             }
 
             // Ocean temperature as a BC (quadratic on time).
-            T_oce = T_0 + delta_T_oce * 0.25 * t * ( tf - t ) / pow(tf,2);
-
-            //cout << " \n T_oce = " << T_oce;
+            // Factor 10 for an amplitude of 1ºC.
+            /*
+            if ( t < t0_oce || t > tf_oce )
+            {
+                //T_oce = T_0;
+                M = 0.0;
+            }
+            else
+            {
+                //T_oce = T_0 + 10.0 * delta_T_oce * 0.25 * ( t - t0_oce ) * ( tf_oce - t ) \
+                //                / pow(tf_oce-t0_oce, 2);
+                M = 10.0 * delta_M * 0.25 * ( t - t0_oce ) * ( tf_oce - t ) \
+                                / pow(tf_oce-t0_oce, 2);
+            }
+            */
+            
+            
         }
 
         // TRANSITION INDICATORS EXPERIMENTS.
@@ -2343,7 +2425,7 @@ int main()
         
         // Ice flux calculation. Flotation thickness H_f.
         H_f = D * ( rho_w / rho );
-        q   = f_q(u_bar, H, H_f, t, t_eq, D, rho, rho_w, m_stoch, calving_meth, n);
+        q   = f_q(u_bar, H, H_f, t, t_eq, D, rho, rho_w, m_stoch, M, calving_meth, n);
         
         // Update grounding line position with new velocity field.
         L_out = f_L(H, q, S, bed, dt, L, ds, n, rho, rho_w, M, dL_dt_num_opt, dL_dt_den_opt);

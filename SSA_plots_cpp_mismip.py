@@ -16,11 +16,10 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy import signal
 import pylab as plt_lab
+from scipy.ndimage import gaussian_filter1d
 
-
-path_fig        = '/home/dmoreno/figures/flowline/mismip_therm/T_oce/no.refreez_T_air.193_delta_T/'
-path_now        = '/home/dmoreno/flowline/mismip_therm/T_oce/no.refreez_T_air.193_delta_T/'
-path_stoch      = '/home/dmoreno/flowline/data/'
+path_fig        = '/home/dmoreno/figures/flowline/mismip_therm/exp_1-2/n.1000/frames/'
+path_now        = '/home/dmoreno/flowline/mismip_therm/T_oce_f_q/steps/n.250_T_air.193_T_oce_max.280_linear/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
 
@@ -29,9 +28,10 @@ file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
 # Select plots to be saved (boolean integer).
 save_series        = 1
-save_series_comp   = 1
+save_series_comp   = 0
 save_shooting      = 0
 save_domain        = 0
+coloured_domain    = 0
 save_var_frames    = 0
 save_series_frames = 0
 save_theta         = 0
@@ -245,7 +245,7 @@ sl    = np.zeros(n)
 if save_series == 1:
 
 	# Avoid large values for visualization.
-	dL_dt[0] = np.nan
+	#dL_dt[0] = np.nan
 
 	# Kyr to plot.
 	t_plot = 1.0e-3 * t
@@ -330,7 +330,10 @@ if save_series == 1:
 
 	#ax3.plot(t_plot, visc_bar_mean, linestyle='-', color='brown', marker='None', \
 	#		 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
-	ax4.plot(t_plot, theta_bar, linestyle='-', color='darkgreen', marker='None', \
+	#ax4.plot(t_plot, theta[:,s[1]-1,0], linestyle='-', color='darkgreen', marker='None', \
+#			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+
+	ax4.plot(t_plot, m_stoch, linestyle='-', color='darkgreen', marker='None', \
 			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 	ax5.plot(t_plot, visc_bar_mean, linestyle='-', color='brown', marker='None', \
 			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
@@ -363,6 +366,8 @@ if save_series == 1:
 	#ax6.set_ylim(0.0, 300.0)
 	#ax4.set_ylim(A_s[0]*(1.0 - 0.2), A_s[l-1]*(1.0 + 0.05))
 
+	ax.set_ylim(0.0, 1500.0)
+
 	ax.set_xlim(0, t_plot[s[0]-1])
 	ax2.set_xlim(0, t_plot[s[0]-1])
 	ax3.set_xlim(0, t_plot[s[0]-1])
@@ -374,9 +379,10 @@ if save_series == 1:
 	#ax3.set_ylabel(r'$ T{\mathrm{air}} \ (^{\circ} \mathrm{C})$', fontsize=18)
 	ax3.set_ylabel(r'$ \Delta T_{\mathrm{oce}} \ (^{\circ} \mathrm{C})$', fontsize=18)
 	
-	#ax4.set_ylabel(r'$ A \ (Pa^{-3} s^{-1})$', fontsize=18)
-	ax4.set_ylabel(r'$ A \ (10^{-17} \ \mathrm{Pa}^{-3} \mathrm{yr}^{-1})$', fontsize=17)
-	ax5.set_ylabel(r'$ \bar{\eta} \ (\mathrm{Pa \ s}) $', fontsize=18)
+	#ax4.set_ylabel(r'$  \theta(0,H) \ (^{\circ} \mathrm{C})$', fontsize=17)
+	#ax4.set_ylabel(r'$ A \ (10^{-17} \ \mathrm{Pa}^{-3} \mathrm{yr}^{-1})$', fontsize=17)
+	ax4.set_ylabel(r'$  M \ (\mathrm{m/yr})$', fontsize=17)
+	ax5.set_ylabel(r'$ \bar{\eta} \ (\mathrm{Pa \cdot s}) $', fontsize=18)
 	ax6.set_ylabel(r'$ \bar{u}(L) \ (\mathrm{m/yr})$', fontsize=18)
 	#ax3.set_xlabel(r'$\mathrm{Time} \ (\mathrm{kyr})$', fontsize=18)
 	ax3.set_xlabel(r'$\mathrm{Time} \ (\mathrm{kyr})$', fontsize=18)
@@ -467,7 +473,7 @@ if save_series_comp == 1:
 	
 	ax.set_ylabel(r'$N_{\mathrm{pic}}$',fontsize=18)
 	ax2.set_ylabel(r'$ \Delta t \ (yr)$',fontsize=18)
-	ax4.set_ylabel(r'$ \mathrm{log} (\varepsilon) $',fontsize=18)
+	ax4.set_ylabel(r'$ \mathrm{log}_{10} (\varepsilon) $',fontsize=18)
 	ax3.set_ylabel(r'$ \omega \ (\mathrm{rad}) $',fontsize=18)
 	ax5.set_ylabel(r'$ \mu $',fontsize=18)
 	ax6.set_ylabel(r'$ \eta \ (Pa \cdot s) $',fontsize=18)
@@ -500,7 +506,7 @@ if save_series_comp == 1:
 	
 	plt.tight_layout()
 	if save_fig == True:
-		plt.savefig(path_fig+'time_series.png', bbox_inches='tight')
+		plt.savefig(path_fig+'time_series_comp.png', bbox_inches='tight')
 	plt.show()
 	plt.close(fig)
 
@@ -584,13 +590,18 @@ if save_shooting == 1:
 
 if save_domain == 1:
 	
-	for i in range(40, l, 10): # range(0, l, 2), (l-1, l, 20)
+	for i in range(0, l, 2): # range(0, l, 2), (l-1, l, 20)
 		
 		# Horizontal dimension [km].
 		L_plot  = np.linspace(0, L[i], s[2])
 		
 		# Ice surface elevation [km].
+		H[i,1] = H[i,2]
+		H[i,0] = H[i,2]
 		z_s = H[i,:] + b[i,:]
+		
+		# Gaussian smooth for resolution jiggling.
+		z_s = gaussian_filter1d(z_s, 1.0)
 		
 		# Vertical gray line in ice front.
 		n_frnt = 100
@@ -633,135 +644,138 @@ if save_domain == 1:
 	 						   facecolor='blue', alpha=0.4)
 		ax.fill_between(x_plot, bed, -2.5e3,\
 	 						   facecolor='saddlebrown', alpha=0.4)
-		#ax.fill_between(L_plot, b[i,:], z_s,\
-	 	#					   facecolor='grey', alpha=0.4)
+		
+		if coloured_domain == 0:
+			ax.fill_between(L_plot, b[i,:], z_s,\
+								facecolor='grey', alpha=0.4)
 		
 		########################################################################
 		########################################################################
 		# PLOT DOMAIN WITH A COLOUR MAP THAT REPRESENTS THE TEMPERATURE WITHIN THE ICE SHEET.
 		# Create the colored plot
-		theta_min = np.min(-theta)
-		theta_max = np.max(-theta)
-		#theta_min = 30.0
-		#theta_max = 90.0
+		elif coloured_domain == 1:
+			theta_min = np.min(-theta)
+			theta_max = np.max(-theta)
+			#theta_min = 30.0
+			#theta_max = 90.0
 
-		# Minus sign just for visualization purposes.
-		color_theta = - np.flip(theta[i,:,:],axis=0)
+			# Minus sign just for visualization purposes.
+			color_theta = - np.flip(theta[i,:,:],axis=0)
 
-		# Plot a rectangle.
-		def rect(ax, x, b, y, w, h, c,**kwargs):
-			
-			# Varying only in x.
-			if len(c.shape) is 1:
-				rect = plt_lab.Rectangle((x, y), w, h, color=c, ec=c,**kwargs)
-				ax.add_patch(rect)
-			
-			# Varying in x and y.
-			else:
-				# Split into a number of bins
-				N = c.shape[0]
-				#hb = h/float(N); yl = y - hb    
+			# Plot a rectangle.
+			def rect(ax, x, b, y, w, h, c,**kwargs):
 				
-				# Consider a non-evenly spaced vertical grid.
-				#dz = np.linspace(0.0,1.0,N+1)**2
-				dz = np.linspace(0.0,1.0,N+1)
-				hb = dz * h; yl = y - hb
-
-				for i in range(N-1):
-					dz_H = hb[i+1]-hb[i]
-					#yl += hb
-					#rect = plt_lab.Rectangle((x, yl), w, hb, 
-					#					color=c[i,:], ec=c[i,:],**kwargs)
+				# Varying only in x.
+				if len(c.shape) is 1:
+					rect = plt_lab.Rectangle((x, y), w, h, color=c, ec=c,**kwargs)
+					ax.add_patch(rect)
+				
+				# Varying in x and y.
+				else:
+					# Split into a number of bins
+					N = c.shape[0]
+					#hb = h/float(N); yl = y - hb    
 					
-					rect = plt_lab.Rectangle((x, b-hb[i+1]), w, dz_H, 
-										color=c[i,:], ec=c[i,:],**kwargs)
+					# Consider a non-evenly spaced vertical grid.
+					#dz = np.linspace(0.0,1.0,N+1)**2
+					dz = np.linspace(0.0,1.0,N+1)
+					hb = dz * h; yl = y - hb
+
+					for i in range(N-1):
+						dz_H = hb[i+1]-hb[i]
+						#yl += hb
+						#rect = plt_lab.Rectangle((x, yl), w, hb, 
+						#					color=c[i,:], ec=c[i,:],**kwargs)
+						
+						rect = plt_lab.Rectangle((x, b-hb[i+1]), w, dz_H, 
+											color=c[i,:], ec=c[i,:],**kwargs)
+						ax.add_patch(rect)
+
+					# Plot the uppermost region as len(dz_H)=N+1 but the loop goes to N-1.
+					rect = plt_lab.Rectangle((x, b-hb[N]), w, dz_H, 
+											color=c[N-1,:], ec=c[N-1,:],**kwargs)
 					ax.add_patch(rect)
 
-				# Plot the uppermost region as len(dz_H)=N+1 but the loop goes to N-1.
-				rect = plt_lab.Rectangle((x, b-hb[N]), w, dz_H, 
-										color=c[N-1,:], ec=c[N-1,:],**kwargs)
-				ax.add_patch(rect)
+			# Fill a contour between two lines.
+			def rainbow_fill_between(ax, X, Y1, Y2, colors=None, 
+									cmap=plt.get_cmap("Spectral").reversed(),**kwargs):
+				
+				plt.plot(X,Y1,lw=0)  # Plot so the axes scale correctly
 
-		# Fill a contour between two lines.
-		def rainbow_fill_between(ax, X, Y1, Y2, colors=None, 
-								cmap=plt.get_cmap("Spectral").reversed(),**kwargs):
-			
-			plt.plot(X,Y1,lw=0)  # Plot so the axes scale correctly
+				dx = X[1]-X[0]
+				N  = X.size
 
-			dx = X[1]-X[0]
-			N  = X.size
+				# Pad a float or int to same size as x.
+				if (type(Y2) is float or type(Y2) is int):
+					Y2 = np.array([Y2]*N)
 
-			# Pad a float or int to same size as x.
-			if (type(Y2) is float or type(Y2) is int):
-				Y2 = np.array([Y2]*N)
+				# No colors -- specify linear.
+				if colors is None:
+					colors = []
+					for n in range(N):
+						colors.append(cmap(n/float(N)))
+				
+				# Varying only in x.
+				elif len(colors.shape) is 1:
+					colors = cmap((colors-colors.min())
+								/(colors.max()-colors.min()))
+				
+				# Varying only in x and y.
+				else:
+					cnp = np.array(colors)
+					colors = np.empty([colors.shape[0],colors.shape[1],4])
+					for i in range(colors.shape[0]):
+						for j in range(colors.shape[1]):
+							#colors[i,j,:] = cmap(1.0 - (cnp[i,j]-cnp[:,:].min())
+							#					/(cnp[:,:].max()-cnp[:,:].min()))
+							
+							#colors[i,j,:] = cmap(1.0 - ( (cnp[i,j]-cnp[:,:].min())
+							#					 / (theta_max-theta_min) ) )
 
-			# No colors -- specify linear.
-			if colors is None:
-				colors = []
-				for n in range(N):
-					colors.append(cmap(n/float(N)))
-			
-			# Varying only in x.
-			elif len(colors.shape) is 1:
-				colors = cmap((colors-colors.min())
-							/(colors.max()-colors.min()))
-			
-			# Varying only in x and y.
-			else:
-				cnp = np.array(colors)
-				colors = np.empty([colors.shape[0],colors.shape[1],4])
-				for i in range(colors.shape[0]):
-					for j in range(colors.shape[1]):
-						#colors[i,j,:] = cmap(1.0 - (cnp[i,j]-cnp[:,:].min())
-						#					/(cnp[:,:].max()-cnp[:,:].min()))
+							colors[i,j,:] = cmap(1.0 - ( abs(cnp[i,j]-theta_min)
+												/ abs(theta_max-theta_min) ) )
+
 						
-						#colors[i,j,:] = cmap(1.0 - ( (cnp[i,j]-cnp[:,:].min())
-						#					 / (theta_max-theta_min) ) )
+							
 
-						colors[i,j,:] = cmap(1.0 - ( abs(cnp[i,j]-theta_min)
-											 / abs(theta_max-theta_min) ) )
+				colors = np.array(colors)
+				#colors = 1.0 - np.array(colors)
 
-					
-						
-
-			colors = np.array(colors)
-			#colors = 1.0 - np.array(colors)
-
-			# Create the patch objects.
-			for (color,x,y1,y2) in zip(colors,X,Y1,Y2):
-				rect(ax,x,y1,y2,dx,y1-y2,color,**kwargs)
+				# Create the patch objects.
+				for (color,x,y1,y2) in zip(colors,X,Y1,Y2):
+					rect(ax,x,y1,y2,dx,y1-y2,color,**kwargs)
 
 
-		# Data    
-		X  = L_plot
-		Y1 = b[i,:] 
-		Y2 = z_s
-		g  = color_theta
+			# Data    
+			X  = L_plot
+			Y1 = b[i,:] 
+			Y2 = z_s
+			g  = color_theta
 
-		# Colourmap.
-		cmap = plt.get_cmap("Spectral")
-		reversed_cmap = cmap.reversed()
+			# Colourmap.
+			cmap = plt.get_cmap("Spectral")
+			reversed_cmap = cmap.reversed()
 
-		# Plot fill and curves changing in x and y.
-		colors = np.rot90(g,3)
-		rainbow_fill_between(ax, X, Y1, Y2, colors=colors)
+			# Plot fill and curves changing in x and y.
+			colors = np.rot90(g,3)
+			rainbow_fill_between(ax, X, Y1, Y2, colors=colors)
+
+			# Add a colorbar based on the colormap
+			#cbar_ax = fig.add_axes([1.025, 0.17, 0.045, 0.779]) 
+			cbar_ax = fig.add_axes([1.01, 0.19, 0.045, 0.76]) 
+			cb = fig.colorbar(plt.cm.ScalarMappable(cmap=reversed_cmap), cax=cbar_ax, extend='neither')
+
+			# Set the modified ticks and tick labels
+			ticks = np.linspace(0, 1, 5)
+			ticks_lab = np.round(np.linspace(-theta_max, -theta_min, 5), 0)
+			cb.set_ticks(ticks)
+			cb.set_ticklabels([r'$-80$', r'$-60$', r'$-40$', r'$-20$', r'$0$',], \
+								fontsize=13)
+
+			cb.set_label(r'$ \theta (x,z) \ (^{\circ} \mathrm{C}) $', rotation=90, labelpad=8, fontsize=22)
 
 		########################################################################
 		########################################################################
-
-
-		# Add a colorbar based on the colormap
-		cbar_ax = fig.add_axes([1.025, 0.2, 0.045, 0.7]) 
-		cb = fig.colorbar(plt.cm.ScalarMappable(cmap=reversed_cmap), cax=cbar_ax, extend='neither')
-
-		# Set the modified ticks and tick labels
-		ticks = np.linspace(0, 1, 5)
-		ticks_lab = np.round(np.linspace(-theta_max, -theta_min, 5), 0)
-		cb.set_ticks(ticks)
-		cb.set_ticklabels(ticks_lab)
-
-		cb.set_label(r'$ \theta (x,z) \ (^{\circ} \mathrm{C}) $', rotation=90, labelpad=8, fontsize=20)
-
 
 		ax.set_ylabel(r'$z \ (\mathrm{km})$', fontsize=20)
 		ax.set_xlabel(r'$x \ (\mathrm{km}) $', fontsize=20)
@@ -784,7 +798,6 @@ if save_domain == 1:
 			ax.set_ylim(-0.75, 3.0)
 		
 		else:
-			"""
 			ax.set_xticks([0, 250, 500, 750, 1000, 1250, 1500, 1750])
 			ax.set_xticklabels(['$0$', '$250$', '$500$', '$750$',\
 							'$1000$', '$1250$','$1500$', '$1750$'], fontsize=15)
@@ -792,9 +805,8 @@ if save_domain == 1:
 			ax.set_yticks([-1, 0, 1, 2, 3, 4, 5, 6])
 			ax.set_yticklabels(['$-1$', '$0$', '$1$',\
 							'$2$', '$3$','$4$','$5$','$6$'], fontsize=15)
-			"""
 			ax.set_xlim(0, 1750)
-			ax.set_ylim(-1.0, 5.0)
+			ax.set_ylim(-1.0, 6.0)
 		
 		# Title.
 		#ax.set_title(r'$i = \ $'+str(i)+r'$, \ t = \ $'+str(np.round(t[i],2))+r'$ \ yr$', fontsize=16)

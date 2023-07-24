@@ -25,7 +25,7 @@ from subprocess import Popen, PIPE, STDOUT
 
 # User defined directories.
 path_flowline = "/home/dmoreno/scr/flowline/"
-path_output   = "/home/dmoreno/flowline/mismip_therm/T_oce/no.refreez_T_air.193_delta_T/"
+path_output   = "/home/dmoreno/flowline/mismip_therm/T_oce_f_q/steps/n.250_T_air.193_T_oce_max.280_quad/"
 path_input    = "/home/dmoreno/c++/flowline/output/glacier_ews/"
 
 
@@ -47,9 +47,11 @@ else:
     
     # Make clean if path does exist.
     if isfile == True:
-        subprocess.run("rm "+path_output+"*.o", shell=True, check=True, \
-                       stdout=subprocess.PIPE, universal_newlines=True)
+        #subprocess.run("rm "+path_output+"*.o", shell=True, check=True, \
+        #               stdout=subprocess.PIPE, universal_newlines=True)
     
+        subprocess.run("rm "+path_output+"*", shell=True, check=True, \
+                       stdout=subprocess.PIPE, universal_newlines=True)
 
 # Copy main script and write_nc to the output folder for compilation therein.
 shutil.copyfile(path_flowline+'flow_line.cpp', path_output+'flow_line.cpp')
