@@ -101,82 +101,19 @@ ArrayXd gaussian_filter(ArrayXd w, double sigma, double L, double ds, int n)
         for (int j = 0; j < n; j++)
         {
             y = j * h_L;
-            summ(i) += w(j) * exp(-pow((x - y) / sigma, 2) / 2.0);
+            summ(i) += w(j) * exp(- 0.5 * pow((x - y) / sigma, 2) );
         }
     }
 
     // Normalizing Kernel.
-    smth = A * summ * h_L;
+    //smth = A * summ * h_L;
+    smth = A * summ;
 
     return smth;
 }
 
 
-ArrayXd f_median(ArrayXXd x, int n, int n_z)
-{
-    ArrayXd arr(n_z), median(n);
 
-    for (int i=0; i<n; i++)
-    {
-        arr = x.row(i);
-
-        // Convert Eigen array to std::vector
-        std::vector<double> vec(arr.data(), arr.data() + arr.size());
-
-        // Sort the vector
-        std::sort(vec.begin(), vec.end());
-
-        // Convert std::vector back to Eigen array
-        Eigen::Map<Eigen::ArrayXd> sortedArr(vec.data(), arr.size());
-
-        // Consider an even/odd number of array entries.
-        if (sortedArr.size() % 2 == 0)
-        {
-            // Array size is even
-            median(i) = (sortedArr(sortedArr.size() / 2 - 1) + sortedArr(sortedArr.size() / 2)) / 2.0;
-        }
-        else
-        {
-            // Array size is odd
-            median(i) = sortedArr(sortedArr.size() / 2);
-        }
-    }
-
-    return median;
-}
-
-/*
-ArrayXd gaussian_filter(ArrayXd w, double sigma, double L, double ds, int n) 
-{
-    //int n = w.size();
-    ArrayXd gauss(n);
-    double dx = ds * L;
-    double normalization = 1.0 / (sigma * sqrt(2 * M_PI));
-
-    for (int i = 0; i < n; i++) {
-        double x = dx * i;
-        gauss(i) = normalization * exp(-(x * x) / (2 * sigma * sigma));
-    }
-
-    ArrayXd filter = w * gauss;
-    ArrayXd weierstrass = ArrayXd::Zero(n);
-    double a = 0.5;
-    double b = 2.0 / 3.0;
-    int iterations = 10;
-
-    for (int i = 0; i < iterations; i++) {
-        double c = pow(b, i);
-        for (int j = 0; j < n; j++) {
-            double x = dx * j;
-            double value = cos(c * M_PI * x / dx);
-            weierstrass(j) += a * c * value;
-        }
-    }
-    return weierstrass * filter;
-}
-*/
-
-/*
 ArrayXd running_mean(ArrayXd x, int p, int n)
 {
     ArrayXd y(n);
@@ -203,225 +140,6 @@ ArrayXd running_mean(ArrayXd x, int p, int n)
     return y;
 }
 
-
-// half_step(dhdx, visc, dH, d_visc, c1, c2, C_bed, H, n);
-MatrixXd half_step(ArrayXd dhdx, ArrayXd visc, \
-                   ArrayXd dH, ArrayXd d_visc, ArrayXd c1, \
-                   ArrayXd c2, ArrayXd C_bed, ArrayXd H, int n)
-{
-    // Function that return a vector of length n-1 with the average of 
-    // every contiguous elements.
-    MatrixXd x(n+1,8), x_n2(n+1,8), half_n2(n+1,8), half(n-1,8); 
-    
-    // Allocate x matrix (every variable in a column).
-    x.block(0,0,n,1) = dhdx;
-    x.block(0,1,n,1) = visc;
-    x.block(0,2,n,1) = dH;
-    x.block(0,3,n,1) = d_visc;
-    x.block(0,4,n,1) = c1;
-    x.block(0,5,n,1) = c2;
-    x.block(0,6,n,1) = C_bed;
-    x.block(0,7,n,1) = H;
-
-    // Allocate shifted matrix (one row below).
-    x_n2.block(1, 0, n, 8) = x.block(0, 0, n, 8);
-
-    half_n2 = 0.5 * (x + x_n2);
-    half    = half_n2.block(1, 0, n-1, 8);
-
-    return half;
-}
-
-
-MatrixXd deriv_sigma(ArrayXd x, ArrayXd y, ArrayXd z,\
-                     int n, double ds_inv, double L)
-{   
-    MatrixXd grad(n, 3), x_min(n+2, 3), \
-             x_plu(n+2, 3), grad_n2(n+2, 3);
-    
-    //double dx = L * ds;           // ds = 1 / n.
-    //double dx_inv = 1.0 / dx;
- 
-    x_plu.block(0,0,n,1) = x;
-    x_plu.block(0,1,n,1) = y;
-    x_plu.block(0,2,n,1) = z;
-
-    x_min.block(2,0,n,1) = x;
-    x_min.block(2,1,n,1) = y;
-    x_min.block(2,2,n,1) = z;
-
-    // CORRECTION INCLUDED:
-    // These are d/d(sigma) derivatives, O(h²). No L corrections!
-    grad_n2 = 0.5 * (x_plu - x_min);
-
-    grad.block(1, 0, n-2, 3) = grad_n2.block(2, 0, n-2, 3);
-
-    // Derivatives at the boundaries sigma = 0, 1. O(h).
-    grad.block(0,0,1,3)   = x_plu.block(1,0,1,3) - x_plu.block(0,0,1,3);
-    grad.block(n-1,0,1,3) = x_plu.block(n-1,0,1,3) - x_plu.block(n-2,0,1,3);
-
-    // Horizontal resolution in the derivative.
-    grad = grad * ds_inv;
-    //grad = grad * dx_inv;
-
-	return grad;
-}
-
-
-MatrixXd rungeKutta(double ub_0, double u2_0, double u_0, ArrayXd H, \
-                    double ds, double ds_inv, int n, ArrayXd visc, \
-                    ArrayXd bed, double rho, double rho_w, double g, double L, double m, \
-                    ArrayXd C_bed, double t_eq, ArrayXd tau_b)
-{
-    ArrayXd ub(n), u2(n), dhds(n), dvisc_H(n), visc_dot_H(n), \
-            c1(n), c2(n), h(n), dH(n), d_visc(n), \
-            dhds_h2(n-1), d_visc_h2(n-1), visc_h2(n), H_h2(n), dH_h2(n), \
-            c1_h2(n-1), c2_h2(n-1), ub_h2(n-1), u2_h2(n-1), C_bed_h2(n-1);
-
-    MatrixXd dff(n,3), out(7,n), half(n-1,8);
-
-    Array2d k1, k2, k3, k4, u_sol;
-    double pre, D, u_x_bc, vareps, tol, u2_dif, u2_dif_now;
-
-
-    // Define for convenience.
-    visc_dot_H = 4.0 * visc * H;
-    c1         = 1.0 / visc_dot_H;      
-    c2         = rho * g * H;
-	pre        = 1.0 / 6.0;
-    h          = bed + H;           // Ice surface elevation.
-    
-    // Numerical differentiation (sigma coord.) of H, bed and 4 * visc * H.
-    dff     = deriv_sigma(h, H, visc, n, ds_inv, L);
-    dhds    = dff.col(0);
-    dH      = dff.col(1);
-    d_visc  = dff.col(2);
-
-    // Prepare variables in half-step (i + 1/2).
-    half       = half_step(dhds, visc, dH, d_visc, c1, c2, C_bed, H, n);
-    dhds_h2    = half.col(0);
-    visc_h2    = half.col(1);
-    dH_h2      = half.col(2);
-    d_visc_h2  = half.col(3);
-    c1_h2      = half.col(4);
-    c2_h2      = half.col(5);
-    C_bed_h2   = half.col(6);
-    H_h2       = half.col(7);
-
-    // Boundary condition at sigma = 1 (x = L).
-    // Following Bassis et al. (2017).
-    D = abs( min(0.0, bed(n-1)) );      // u_min is just double32 0.0.
-
-    // Equivalent (Greve and Blatter 6.64).
-    // Original:
-    //u_x_bc = 0.125 * g * H(n-1) * L * rho * ( rho_w - rho ) / ( rho_w * visc(n-1) );
-    // New:
-    u_x_bc = 0.5 * c1(n-1) * g * L * ( rho * pow(H(n-1),2) - rho_w * pow(D,2) );
-
-
-    // We include a shooting method. Let now u2(x0) be a degree of freedom 
-    // so that we can sample it to match the BC at x = L. We perform RK4 with a given 
-    // threshold in the solution at x = L. We also add a max number of iterations 
-    // to scape loop and continue with the following time step.
-
-    int c = 0;
-    int s = 0;
-
-    int n_c = 1; // 5
-
-    ArrayXd u2_0_vec   = ArrayXd::Zero(n);
-    ArrayXd u2_dif_vec = ArrayXd::Zero(n);
-
-    while ( c < n_c ) // c < 10, 15.
-    {
-        // Allocate initial conditions.
-        u_sol(0) = ub_0;
-        u_sol(1) = u2_0;   // u2_0
-        ub(0)    = ub_0;
-        u2(0)    = u2_0;   // u2_0
-        
-        // Runge-Kutta 4th order iteration.
-        for (int i=0; i<n-1; i++)
-        {
-            // Apply Runge-Kutta scheme. ub = u_sol(0), u2 = u_sol(1).
-            // k1(0) = dub/ds, k1(1) = du2/ds. L * 
-            k1 = ds * du2_ds(u_sol(0), u_sol(1), dhds(i), visc(i), \
-		    			        c1(i), c2(i), u_0, m, L, C_bed(i), \
-                                    dH(i), d_visc(i), H(i));
-            
-            k2 = ds * du2_ds(u_sol(0) + 0.5 * k1(0), u_sol(1) + 0.5 * k1(1), \
-                                dhds_h2(i), visc_h2(i), c1_h2(i), \
-                                    c2_h2(i), u_0, m, L, C_bed_h2(i), \
-                                        dH_h2(i), d_visc_h2(i), H_h2(i));
-            
-            k3 = ds * du2_ds(u_sol(0) + 0.5 * k2(0), u_sol(1) + 0.5 * k2(1), \
-                                dhds_h2(i), visc_h2(i), c1_h2(i), \
-                                    c2_h2(i), u_0, m, L, C_bed_h2(i), \
-                                        dH_h2(i), d_visc_h2(i), H_h2(i));
-            
-            k4 = ds * du2_ds(u_sol(0) + k3(0), u_sol(1) + k3(1), dhds(i+1), \
-                                visc(i+1), c1(i+1), c2(i+1), u_0, \
-                                m, L, C_bed(i+1), dH(i+1), d_visc(i+1), H(i+1));
-
-            u_sol = u_sol + pre * (k1 + 2.0 * k2 + 2.0 * k3 + k4);
-            
-            ub(i+1) = max(0.0, u_sol(0));
-            u2(i+1) = u_sol(1); 
-        }
-
-
-        // Update IVP perturbation.
-        u2_dif_now = u2(n-1) - u_x_bc;
-        vareps     = 2.0e-8;           // Perturbation in u2_0. 1.0e-8
-        tol        = 1.0e-7;           // 1.0e-7
-
-        // See iteration plots. u2_0 is always zero. \
-        Thus, u2_dif increases with time. Maybe we can just sample a range of \
-        u2_0 for every t and get the value that minimizes u2_dif.
-
-        if ( t > t_eq )
-        {
-            if ( u2_dif_now < - tol )
-            {
-                u2_0 = u2_0 + vareps;
-            }
-            else if ( u2_dif_now > tol )
-            {
-                u2_0 = max(u2_0 - vareps, u_min);
-            }
-        }
-        else
-        {
-            break;
-        }
-
-        // Save initial condition and difference in current iteration.
-        u2_dif_vec(c) = u2_dif_now;
-        u2_0_vec(c)   = u2_0;
-
-        ++c;
-    }
-
-    // Update shear stress from current velocity.
-    tau_b = C_bed * pow(ub, m);
-    
-    // Allocate solutions.
-    out.row(0) = ub;
-    out.row(1) = u2;
-    out.row(2) = tau_b;
-    out.row(3) = c2 * dhds;
-    out(4,0)   = D;
-    out(4,1)   = u_x_bc;
-    out(4,2)   = u2_dif_now;
-    
-    // Shooting convergence.
-    out.row(5) = u2_0_vec;
-    out.row(6) = u2_dif_vec;
-    
-    return out;
-}
-
-*/
 
 ArrayXd tridiagonal_solver(ArrayXd A, ArrayXd B, ArrayXd C, \
                            ArrayXd F, int n)
@@ -1679,7 +1397,7 @@ int main()
     double const ds_inv = n;
 
     double const t0   = 0.0;                         // Starting time [yr].
-    double const tf   = 93.0e4;                       // 15.0e4, 21.0e4, Ending time [yr]. 56.5e4. 30.0e4
+    double const tf   = 90.0e4;                       // 15.0e4, 21.0e4, Ending time [yr]. 56.5e4. 30.0e4
     double t;                                        // Time variable [yr].
 
     // Time variables.
@@ -1789,12 +1507,12 @@ int main()
 
     // Sub-shelf melt.
     bool const shelf_melt = true; 
-    int const melt_meth  = 1;                         // Melt parametrization. 0: linear; 1: quadratic.
+    int const melt_meth  = 0;                         // Melt parametrization. 0: linear; 1: quadratic.
     double const t0_oce  = 2.5e4;                    // Start time of ocean warming.
     double const tf_oce  = 27.5e4;                   // End time of applied ocean forcing.
     double const c_po    = 3974.0;                    // J / (kg K)
     double const L_i     = 3.34e5;                    // J / kg 
-    double const gamma_T = 36.23e-5 * sec_year;        // Linear: 2.0e-5, Quad: 36.23e-5. [m/s] --> [m/yr]
+    double const gamma_T = 2.2e-5 * sec_year;        // Linear: 2.0e-5, Quad: 36.23e-5. [m/s] --> [m/yr]
     double const T_0     = 273.15;                    // K
     double T_oce; 
     double const delta_T_oce = 2.0;                    // Amplitude of ocean temperature anomalies. 
@@ -2214,7 +1932,7 @@ int main()
 
                 // Ocean temperature as a BC.
                 T_oce = T_oce_s(c_s);
-                cout << " \n T_oce = " << T_oce;
+                //cout << " \n T_oce = " << T_oce;
 
                 // Directly on frontal ablation.
                 M = M_s(c_s);

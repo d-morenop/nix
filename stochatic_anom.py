@@ -222,8 +222,10 @@ if plot_time_series == True:
 
 
     fig = plt.figure(dpi=400, figsize=(10,4))
-    ax1 = fig.add_subplot(211)
-    ax2 = fig.add_subplot(212)
+    ax1 = fig.add_subplot(111)
+    #ax2 = fig.add_subplot(212)
+
+    ax2 = ax1.twinx()
 
     plt.rcParams['text.usetex'] = True
 
@@ -231,37 +233,44 @@ if plot_time_series == True:
 
     ax2.bar(t, noise_smb, width=2.5, bottom=None, align='center', data=None, color='red')
 
-    ax1.set_ylabel(r'$ \dot{m}  \ (\mathrm{m/yr}) $', fontsize=17)
-    ax2.set_ylabel(r'$ \mathrm{SMB}  \ (\mathrm{m/yr}) $', fontsize=17)
-    ax2.set_xlabel(r'$\mathrm{Time} \ (\mathrm{kyr}) $', fontsize=19)
+    #ax1.bar(1.0e-3*t, noise_ocn, width=0.5, bottom=None, align='center', data=None, color='blue')
+    #ax2.bar(1.0e-3*t, noise_smb, width=0.5, bottom=None, align='center', data=None, color='red')
 
-    ax1.set_xticks([])
+    ax1.set_ylabel(r'$ M \ (\mathrm{m/yr}) $', fontsize=20)
+    ax2.set_ylabel(r'$ \mathrm{SMB}  \ (\mathrm{m/yr}) $', fontsize=20)
+    ax1.set_xlabel(r'$\mathrm{Time} \ (\mathrm{kyr}) $', fontsize=20)
 
-    ax2.set_yticks([0.0, 10, 20, 30, 40, 50])
-    ax2.set_xticklabels(['$0$', '$10$', '$20$', \
-                         '$30$', '$40$', '$50$'], fontsize=17)
     
-    ax2.set_yticks([-1.0, -0.5, 0.0, 0.5, 1.0])
-    ax2.set_yticklabels(['$-1.0$', '$-0.5$', '$0.0$', \
-                         '$0.5$', '$1.0$'], fontsize=15)
-    
-    ax1.set_yticks([-30, -15, 0, 15, 30])
-    ax1.set_yticklabels(['$-30.0$', '$-15.0$', '$0.0$', \
-                         '$15.0$', '$30.0$'], fontsize=15)
+    #ax1.set_xticks([])
 
+    ax1.set_xticks([0, 10e3, 20e3, 30e3, 40e3, 50e3])
+    ax1.set_xticklabels(['$0$', '$10$', '$20$', \
+                            '$30$', '$40$', '$50$'], fontsize=17)
+
+    ax2.set_yticks([-1.0, 0.0, 1.0, 2.0, 3.0, 4.0])
+    ax2.set_yticklabels(['$-1$', '$0$', '$1$', \
+                            '$2$', '$3$','$4$'], fontsize=17)
+
+    ax1.set_yticks([-45, -30, -15, 0, 15, 30])
+    ax1.set_yticklabels(['$-45.0$', '$-30.0$', '$-15.0$', '$0.0$', \
+                            '$15.0$', '$30.0$'], fontsize=17)
+    
+    
     #ax.legend(loc='best', ncol = 1, frameon = True, framealpha = 1.0, \
     #            fontsize = 12, fancybox = True)
 
+    ax1.yaxis.label.set_color('blue')
+    ax2.yaxis.label.set_color('red')
 
-    ax1.tick_params(axis='y', which='major', length=4, colors='black')
-    ax2.tick_params(axis='both', which='major', length=4, colors='black')
+    ax1.tick_params(axis='y', which='major', length=4, colors='blue')
+    ax2.tick_params(axis='y', which='major', length=4, colors='red')
 
     #ax1.grid(axis='x', which='major', alpha=0.85)
 
     ax1.set_xlim(0, tf)
     ax2.set_xlim(0, tf)
-    ax1.set_ylim(-30, 30)
-    ax2.set_ylim(-1, 1)
+    ax1.set_ylim(-45, 30)
+    ax2.set_ylim(-1.0, 4)
 
     #plt.tight_layout()
 
