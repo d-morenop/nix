@@ -1848,7 +1848,7 @@ int main()
         //A_s << 2.0e-25, 20.0e-25; // Christian: 4.23e-25. 2.0e-25 is right at the peak for ewr.
         
         // WE NEED TO TUNE THIS NUMBER TOGEHTER WITH THE FLUX DISCRETIAZTION TO OBTAIN THE SAME EXTENT.
-        A_s << 4.227e-25, 4.227e-25; // 4.227e-25, (0.5e-26, 5.0e-25)
+        A_s << 0.5e-26, 5.0e-25; // 4.227e-25, (0.5e-26, 5.0e-25)
         t_s << 2.0e4;
 
         // FORCING CAN BE IMPOSED DIRECTLY ON A_s (i.e., an increase in temperature) or
