@@ -20,7 +20,7 @@ from scipy import signal
 
 path_fig  = '/home/dmoreno/figures/transition_indicators/A_rates/bed_peak/frames/'
 #path_now = '/home/dmoreno/flowline/ewr/rate/n.350_A.2.0e-25_n-1_n-2/'
-path_now = '/home/dmoreno/flowline/ewr/A_rates/bed_peak/hr/y_p.88.tf_A.2.5e4_A.0.5e-26_5.0e-25/'
+path_now = '/home/dmoreno/flowline/ewr/A_rates/bed_smooth/test/'
 path_stoch  = '/home/dmoreno/flowline/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
@@ -33,14 +33,14 @@ save_series        = 0
 save_series_comp   = 0
 save_shooting      = 0
 save_domain        = 1
-save_var_frames    = 0
+save_var_frames    = 1
 save_series_frames = 0
 save_theta         = 0
 save_visc          = 0	
 save_u_der         = 0
 save_F_n           = 0
 save_L             = 0
-save_fig           = True
+save_fig           = False
 read_stoch_nc      = False
 
 smth_series        = 0
@@ -701,7 +701,7 @@ if save_domain == 1:
 
 if save_var_frames == 1:
 	
-	for i in range(0, l, 1): # (0, l, 10), (l-1, l, 20)
+	for i in range(0, l, 10): # (0, l, 10), (l-1, l, 20)
 		
 		L_plot  = np.linspace(0, L[i], n)
 		x_tilde = L_plot / 750.0  

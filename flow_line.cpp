@@ -1601,7 +1601,7 @@ int main()
     double const t0_gauss = 1.5e4;                   // Init time to apply gaussian filter.
     double const x_1 = 346.0e3;                      // Peak beginning [m].
     double const x_2 = 350.0e3;                      // Peak end [m]. 88.0
-    double const y_p = 44.0;                         // Peak height [m]. 88.0, 176.0
+    double const y_p = 88.0;                         // Peak height [m]. 88.0, 176.0
     double const y_0 = 70.0;                         // Initial bedrock elevation (x=0) [m].
     
     // SURFACE MASS BALANCE.
