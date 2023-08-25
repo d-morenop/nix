@@ -89,59 +89,29 @@ ArrayXd gaussian_filter(ArrayXd w, double sigma, double L, double ds, int n)
     ArrayXd smth(n);
     ArrayXd summ = ArrayXd::Zero(n);
 
-    double x, y;
-    double h_L = ds * L;
+    double x, y, kernel;
+    double dx = ds * L;
     double A = 1.0 / (sqrt(2.0 * M_PI) * sigma);
 
     // Weierstrass transform.
     for (int i = 0; i < n; i++)
     {
-        x = i * h_L;
+        x = i * dx;
         for (int j = 0; j < n; j++)
         {
-            y = j * h_L;
-            summ(i) += w(j) * exp(-pow((x - y) / sigma, 2) / 2.0);
+            y = j * dx;
+            kernel = exp(-pow((x - y) / sigma, 2) / 2.0);
+            summ(i) += w(j) * kernel;
         }
     }
 
     // Normalizing Kernel.
-    smth = A * summ * h_L;
+    smth = A * summ;
 
     return smth;
 }
 
-/*
-ArrayXd gaussian_filter(ArrayXd w, double sigma, double L, double ds, int n) 
-{
-    //int n = w.size();
-    ArrayXd gauss(n);
-    double dx = ds * L;
-    double normalization = 1.0 / (sigma * sqrt(2 * M_PI));
 
-    for (int i = 0; i < n; i++) {
-        double x = dx * i;
-        gauss(i) = normalization * exp(-(x * x) / (2 * sigma * sigma));
-    }
-
-    ArrayXd filter = w * gauss;
-    ArrayXd weierstrass = ArrayXd::Zero(n);
-    double a = 0.5;
-    double b = 2.0 / 3.0;
-    int iterations = 10;
-
-    for (int i = 0; i < iterations; i++) {
-        double c = pow(b, i);
-        for (int j = 0; j < n; j++) {
-            double x = dx * j;
-            double value = cos(c * M_PI * x / dx);
-            weierstrass(j) += a * c * value;
-        }
-    }
-    return weierstrass * filter;
-}
-*/
-
-/*
 ArrayXd running_mean(ArrayXd x, int p, int n)
 {
     ArrayXd y(n);
@@ -152,7 +122,7 @@ ArrayXd running_mean(ArrayXd x, int p, int n)
     y = x;
 
     // Average.
-    k = 1.0 / ( p + 1.0 );
+    k = 1.0 / ( 2.0 * p + 1.0 );
  
     // Loop.
     for (int i=p; i<n-p; i++) 
@@ -168,7 +138,7 @@ ArrayXd running_mean(ArrayXd x, int p, int n)
     return y;
 }
 
-
+/*
 // half_step(dhdx, visc, dH, d_visc, c1, c2, C_bed, H, n);
 MatrixXd half_step(ArrayXd dhdx, ArrayXd visc, \
                    ArrayXd dH, ArrayXd d_visc, ArrayXd c1, \
@@ -544,6 +514,8 @@ ArrayXd f_bed(double L, int n, int experiment, \
             } 
         }
     }
+
+    bed = running_mean(bed, 2, n);
 
     return bed;
 }

@@ -18,7 +18,7 @@ from scipy import signal
 
 
 
-path_fig  = '/home/dmoreno/figures/transition_indicators/A_rates/bed_peak/frames/'
+path_fig  = '"/home/dmoreno/flowline/ewr/A_rates/bed_smooth/test/'
 #path_now = '/home/dmoreno/flowline/ewr/rate/n.350_A.2.0e-25_n-1_n-2/'
 path_now = '/home/dmoreno/flowline/ewr/A_rates/bed_smooth/test/'
 path_stoch  = '/home/dmoreno/flowline/data/'
@@ -29,7 +29,7 @@ file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 # /home/dmoren07/c++/flowline/output/glacier_ews/m_dot.30.0/
 
 # Select plots to be saved (boolean integer).
-save_series        = 0
+save_series        = 1
 save_series_comp   = 0
 save_shooting      = 0
 save_domain        = 1
@@ -577,7 +577,7 @@ if save_shooting == 1:
 
 if save_domain == 1:
 	
-	for i in range(0, l, 5): # range(0, l, 2), (l-1, l, 20)
+	for i in range(0, l, 10): # range(0, l, 2), (l-1, l, 20)
 		
 		# Horizontal dimension [km].
 		L_plot  = np.linspace(0, L[i], n)
@@ -734,7 +734,9 @@ if save_var_frames == 1:
 	 			linewidth=2.0, alpha=1.0, label=r'$\partial u_{b}/\partial x$')  
 		ax3.plot(L_plot, visc_bar[i,:], linestyle='-', color='purple', marker='None', \
 	  	 		linewidth=2.0, alpha=1.0, label=r'$\partial H/\partial x$') 
-		ax4.plot(L_plot, beta[i,:], linestyle='-', color='brown', marker='None', \
+		#ax4.plot(L_plot, beta[i,:], linestyle='-', color='brown', marker='None', \
+	  	# 		linewidth=2.0, alpha=1.0, label=r'$S(x) $') 
+		ax4.plot(L_plot, b[i,:], linestyle='-', color='brown', marker='None', \
 	  	 		linewidth=2.0, alpha=1.0, label=r'$S(x) $') 
 		ax2.plot(L_plot, H[i,:], linestyle='-', color='black', marker='None', \
 	   			linewidth=2.0, alpha=1.0, label=r'$H(x)$')  
@@ -749,7 +751,8 @@ if save_var_frames == 1:
 		ax.set_ylabel(r'$ \bar{u} (x) \ (\mathrm{m/yr})$',fontsize=16)
 		ax3.set_ylabel(r'$\bar{\eta} (x)\ (\mathrm{Pa \cdot s})$',fontsize=16)
 		#ax4.set_ylabel(r'$ Q_{\mathrm{fric}}(x) \ (W/m^2)$',fontsize=16)
-		ax4.set_ylabel(r'$ \beta(x) \ (\mathrm{kPa \ yr/m})$',fontsize=16)
+		ax4.set_ylabel(r'$ b(x) \ (\mathrm{km})$',fontsize=16)
+		#ax4.set_ylabel(r'$ \beta(x) \ (\mathrm{kPa \ yr/m})$',fontsize=16)
 		ax5.set_ylabel(r'$\partial \bar{u}_{b}/\partial x $',fontsize=16)
 		ax2.set_ylabel(r'$H(x) \ (\mathrm{km})$', fontsize=16)
 		ax6.set_ylabel(r'$\tau_{b}(x) \ (\mathrm{kPa})$', fontsize=16)
