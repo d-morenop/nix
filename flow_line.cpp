@@ -117,25 +117,29 @@ ArrayXd gaussian_filter(ArrayXd w, double sigma, double L, double ds, int n)
 ArrayXd running_mean(ArrayXd x, int p, int n)
 {
     ArrayXd y(n);
-
     double sum, k;
 
     // Assign values at the borders f(p).
     y = x;
 
     // Average.
-    k = 1.0 / ( p + 1.0 );
+    k = 1.0 / ( 2.0 * p + 1.0 );
  
     // Loop.
     for (int i=p; i<n-p; i++) 
     {
-        sum = 0;
+        sum = 0.0;
+
         for (int j=i-p; j<i+p+1; j++) 
         {
-            sum = sum + x(j);
+            //sum = sum + x(j);
+            sum += x(j);
         }
         y(i) = k * sum;
     }
+
+    // It cannot be out of the loop cause points at the boundaries arent averaged.
+    //y = k * sum;
  
     return y;
 }
@@ -253,7 +257,7 @@ ArrayXd f_bed(double L, int n, int bed_exp, \
                     + 1031.72 * pow(x, 4) + \
                     - 151.72 * pow(x, 6);
     }
-    else if (bed_exp = 4)
+    else if (bed_exp == 4)
     {
         // Variables.
         int c_x1 = 0;
@@ -277,7 +281,8 @@ ArrayXd f_bed(double L, int n, int bed_exp, \
                 if ( c_x1 == 0 )
                 {
                     y_1  = bed(i-1);
-                    c_x1 = c_x1 + 1	;
+                    //c_x1 = c_x1 + 1;
+                    c_x1 += 1;
                 }
                     
                 // Bedrock function.
@@ -291,7 +296,8 @@ ArrayXd f_bed(double L, int n, int bed_exp, \
                 if (c_x2 == 0)
                 {
                     y_2  = bed(i-1);
-                    c_x2 = c_x2 + 1;	
+                    //c_x2 = c_x2 + 1;
+                    c_x2 += 1;	
                 }
                     
                 // Bedrock function.
@@ -303,7 +309,9 @@ ArrayXd f_bed(double L, int n, int bed_exp, \
     // Potential smooth bed.
     if ( smooth_bed == 1 )
     {
-        bed = gaussian_filter(bed, sigma_gauss, L, ds, n);
+        //bed = gaussian_filter(bed, sigma_gauss, L, ds, n);
+        bed = running_mean(bed, 2, n);
+        //cout << "\n Bed smooth = " << bed;
     }
 
     return bed;
@@ -636,17 +644,12 @@ ArrayXd f_H(ArrayXd u_bar, ArrayXd H, ArrayXd S, ArrayXd sigma, \
         // Lateral boundary: sigma(n-1) = 1.
         // Sub-shelf melt directly on the flux.
         H_now(n-1) = H(n-1) + dt * ( ds_inv * L_inv * \
-                                        (  dL_dt * ( H(n-1) - H(n-2) ) + \
+                                        ( dL_dt * ( H(n-1) - H(n-2) ) + \
                                             - ( q(n-1) - q(n-2) ) ) + S(n-1) );
-        
-        // Account for potential sub-shelf melt at the grounding line M.
-        //H_now(n-1) = H(n-1) + dt * ( ds_inv * L_inv * \
-        //                                (  dL_dt * ( H(n-1) - H(n-2) ) + \
-        //                                    - ( q(n-1) - q(n-2) ) ) + S(n-1) + M );
+
         
         // Make sure that grounding line thickness is above minimum?
         //H_now(n-1) = max( (rho_w/rho)*D, H_now(n-1));
-        //H_now(n-1) = min( (rho_w/rho)*D, H_now(n-1));
     }
     
     // Implicit scheme.
@@ -732,7 +735,7 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXd H, ArrayXd tau_b, ArrayXd u_bar, ArrayXd
                 Array2d Q_act, Array2d A_0, double n_gln, double R, double B, double n_exp, \
                 double eps, double t, double t_eq, double sec_year, \
                 int n, int n_z, int vel_meth, double A, bool visc_therm, double t_eq_A_theta, double visc_min, \
-                double visc_max)
+                double visc_max, double visc_0)
 {
     ArrayXXd out(n,5*n_z+2), visc(n,n_z), u_x_diva(n,n_z), u_z(n,n_z), \
              strain_diva(n,n_z), A_theta(n,n_z), B_theta(n,n_z);
@@ -743,10 +746,10 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXd H, ArrayXd tau_b, ArrayXd u_bar, ArrayXd
     if ( t < t_eq )
     {
         // Full viscosity.
-        visc = ArrayXXd::Constant(n, n_z, 1.0e8); // 1.0e15, 0.5e17
+        visc = ArrayXXd::Constant(n, n_z, visc_0); // 1.0e15, 0.5e17
         
         // Vertically-averaged viscosity.
-        visc_bar = ArrayXd::Constant(n, 1.0e8);
+        visc_bar = ArrayXd::Constant(n, visc_0);
 
         // We assume a constant ice rate factor during equilibration.
         A_theta = ArrayXXd::Constant(n, n_z, A);
@@ -757,13 +760,13 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXd H, ArrayXd tau_b, ArrayXd u_bar, ArrayXd
     {
         // Potential viscosity dependency on temperature.
         // We calculate B from A(T,p).
-        if ( visc_therm == 0 )
+        if ( visc_therm == false )
         {
             // We assume a constant ice rate factor during equilibration.
             A_theta = ArrayXXd::Constant(n, n_z, A);
         }
         
-        else if ( visc_therm == 1 )
+        else if ( visc_therm == true )
         {
             // Calculate temperature-dependent rate factor if thermodynamics is switched on.
             // Arrhenius law A(T,p) equivalent to A(T').
@@ -1353,7 +1356,7 @@ int main()
 
     // SELECT EXPERIMENT.
     // 0: MISMIP, 1: MISMIP-THERM, 2: TRANSITION INDICATORS.
-    int const exp = 1;
+    int const exp = 2;
 
     // GENERAL PARAMETERS.
     double const sec_year = 3.154e7;                // Seconds in a year.
@@ -1366,7 +1369,7 @@ int main()
 
    
     // GROUNDING LINE.
-    double L = 476.1e3;                              // Grounding line position [m] exp1 = 694.5e3, exp3 = (479.1e3), ews = 50.0e3
+    double L = 50.0e3;                              // Grounding line position [m] exp1 = 694.5e3, exp3 = (479.1e3), ews = 50.0e3
     double dL_dt;                                   // GL migration rate [m/yr]. 
     int const dL_dt_num_opt = 1;                    // GL migration numerator discretization opt.
     int const dL_dt_den_opt = 1;                    // 1. GL migration denominator discretization opt.
@@ -1382,29 +1385,31 @@ int main()
     // DIVA: 1.0e-6, 1.0e-5
     // For Transition Indicators:
     //double const eps = 1.0e-9; 
-    // MISMIP:
-    double const eps = 1.0e-8; // 1.0e-8, 1.0e-9                          
+    // MISMIP: 1.0e-8
+    double const eps = 1.0e-8; // 1.0e-8                       
 
-    // BASAL FRICTION.
+    // Basal friction exponent.
     double const m = 1.0 / 3.0;                      // Friction exponent.
 
 
-    // SIMULATION PARAMETERS.
+    // Spatial resolution.
     int const n   = 250;                             // 250. Number of horizontal points 350, 500, 1000, 1500
     int const n_z = 25;                              // Number vertical layers. 10, 20, 25 (for T_air forcing!)
-    
     double const ds     = 1.0 / n;                   // Normalized spatial resolution.
     double const ds_inv = n;
 
-    double const t0   = 0.0;                         // Starting time [yr].
-    double const tf   = 90.0e4;                       // 15.0e4, 21.0e4, Ending time [yr]. 56.5e4. 30.0e4
-    double t;                                        // Time variable [yr].
 
     // Time variables.
-    double const t_eq     = 2.0e3;                   // 1.0e3 Equilibration time: visc, vel, theta, etc. 0.2 * tf
-    int const A_rate = 0;                            // Boolean to apply forcing.
+    double const t0   = 0.0;                         // Starting time [yr].
+    double const tf   = 2.0e3;                       // MISMIP-therm: 90.0e4, Ending time [yr]. EWR: 5.0e3
+    double const t_eq = 1.5e3;                   // 2.0e3 Equilibration time: visc, vel, theta, etc. 0.2 * tf
+    double t;                                        // Time variable [yr].
+
+    
+    // A rate forcing for Transition Indicators.
+    bool const A_rate = true;                            // Boolean to apply forcing.
     double const t0_A     = 2.0e4;                   // Start time to apply increase in ice rate factor. 3.0e4
-    double const tf_A     = 4.0e4;
+    double const tf_A     = 3.0e4;
     double const t0_stoch = 3.0e3;                   // Start time to apply stochastic BC. 2.0e4
 
     // VELOCITY SOLVER.
@@ -1412,7 +1417,7 @@ int main()
 
     // TIME STEPING. Quite sensitive (use fixed dt in case of doubt).
     // For stochastic perturbations. dt = 0.1 and n = 250.
-    int const dt_meth = 1;                           // Time-stepping method. Fixed, 0; adapt, 1.
+    int const dt_meth = 0;                           // Time-stepping method. Fixed, 0; adapt, 1.
     double dt;                                       // Time step [yr].
     double dt_CFL;                                   // Courant-Friedrichs-Lewis condition [yr].
     double dt_tilde;                                 // New timestep. 
@@ -1422,21 +1427,21 @@ int main()
     double const rel = 0.7;                          // Relaxation between interations [0,1]. 0.5
     
     // INPUT DEFINITIONS.   
-    int const N = 50000;                             // Number of time points in BC (input from noise.nc in glacier_ews).
+    int const N = 50000;                             // Number of time points in BC (input from noise.nc in glacier_ews), equivalent to time length..
     double const dt_noise = 1.0;                     // Assumed time step in stochastic_anom.py 
 
     // OUTPUT DEFINITIONS.
-    int const out_hr = 0;                            // Allow high resolution output.
+    bool const out_hr = false;                       // Allow high resolution output.
     int const t_n = 100;                             // Number of output frames. 30.
 
     // BEDROCK
     // Glacier ews option.
-    int const smooth_bed = 0;                        // Apply gaussian filter on bed topography. 
+    int const smooth_bed = 0;                        // Apply smooth (gaussian filter or running mean) on bed topography. 
     double const sigma_gauss = 10.0;                  // Sigma gaussian filter. 
     double const t0_gauss = 1.5e4;                   // Init time to apply gaussian filter.
     double const x_1 = 346.0e3;                      // Peak beginning [m].
     double const x_2 = 350.0e3;                      // Peak end [m]. 88.0
-    double const y_p = 44.0;                         // Peak height [m]. 88.0, 176.0
+    double const y_p = 88.0;                         // Peak height [m]. 44.0, 88.0, 176.0
     double const y_0 = 70.0;                         // Initial bedrock elevation (x=0) [m].
     
     // SURFACE MASS BALANCE.
@@ -1457,8 +1462,8 @@ int main()
     // THERMODYNAMICS.
     // Vertical advection is the key to obtain oscillations.
     // It provides with a feedback to cool down the ice base and balance frictional heat.
-    bool const thermodynamics  = true;                  // Apply thermodynamic solver at each time step.
-    int const thermodynamics_w = 1;                  // Vertical advection in therm. solver. 0: no advection, 1: constant/linear adv.
+    bool const thermodynamics  = false;              // Apply thermodynamic solver at each time step.
+    int const thermodynamics_w = 1;                  // Vertical advection in therm. 0: no advection, 1: constant/linear adv.
     double const k = 2.0;                            // Thermal conductivity of ice [W / m · ºC].
     double const G = 0.05;                           // Geothermal heat flow [W / m^2] = [J / s · m^2].
     double const G_k = G / k;                        // [K / m] 
@@ -1475,16 +1480,17 @@ int main()
     // BEDROCK PARAMETRIZATION: f_C_bed.
     int const fric_therm = 0;                        // Temperature-dependent friction.
     double const theta_frz = 268.15;
-    double const C_frz = 7.624e6 / pow(sec_year, m); // Frozen friction coeff. [Pa m^-1/3 yr^1/3]
+    double const C_frz = 7.624e6 / pow(sec_year, m); // Frozen friction coeff. 7.624e6 [Pa m^-1/3 yr^1/3]
     double const C_thw = 0.5 * C_frz;                // Thawed friction coeff. [Pa m^-1/3 yr^1/3]
 
     // VISCOSITY-THERM
-    bool const visc_therm = true;                        // Temperature-dependent viscosity. 0: no; 1: yes.
+    bool const visc_therm = false;                   // Temperature-dependent viscosity. 0: no; 1: yes.
     double const t_eq_A_theta = t_eq;                // Eq. time to start applying Arrhenius dependency.
     double const A_act = 4.9e-25 * sec_year;         // Threshold rate factor for the two regimes in activation energy [Pa^-3 s^-1] 
     
+    double const visc_0 = 1.0e8;                     // Initial viscosity [Pa·s]
     double const visc_min = 1.0e6;
-    double const visc_max = 1.0e11; // 1.0e8
+    double const visc_max = 1.0e11;                  // 1.0e8
     
     Array2d Q_act, A_0; 
     Q_act << 60.0, 139.0;                            // Activation energies [kJ/mol].
@@ -1497,16 +1503,16 @@ int main()
 
     // LATERAL BOUNDARY CONDITION.
     double D;                                        // Depth below the sea level [m].
-    double u_x_bc;                                    // Boundary condition on u2 = dub/dx.
+    double u_x_bc;                                   // Boundary condition on u2 = dub/dx.
     double u2_dif;                                   // Difference between analytical and numerical.
 
     // CALVING.
-    int const calving_meth = 2;                      // 0, no calving; 1, Christian et al. (2022), 2: deterministic Favier et al. (2019)
+    int const calving_meth = 0;                      // 0, no calving; 1, Christian et al. (2022), 2: deterministic Favier et al. (2019)
     double const m_dot = 30.0;                       // Mean frontal ablation [m/yr]. 30.0
     double H_f;
 
     // Sub-shelf melt.
-    bool const shelf_melt = true; 
+    bool const shelf_melt = false; 
     int const melt_meth  = 0;                         // Melt parametrization. 0: linear; 1: quadratic.
     double const t0_oce  = 2.5e4;                    // Start time of ocean warming.
     double const tf_oce  = 27.5e4;                   // End time of applied ocean forcing.
@@ -1523,8 +1529,7 @@ int main()
     // MISMIP EXPERIMENT CHOICE.
     // Following Pattyn et al. (2012) the overdeepening hysterisis uses n = 250.
     // exp = 1: "mismip_1", 3: "mismip_3", 4: "galcier_ews"
-    //int const mismip = 1;
-    int const bed_exp = 3;
+    int const bed_exp = 4;
     double A, B;
 
     // PICARD ITERATION
@@ -1532,7 +1537,7 @@ int main()
     double omega;                           // Angle between two consecutive velocities [rad]. 
     double mu;                              // Relaxation method within Picard iteration. 
     
-    int c_picard;                           // Number of Picard iterations.
+    int c_picard;                           // Counter of Picard iterations.
     int const n_picard = 10;                // Max number iter. Good results: 10.
     
     double const picard_tol = 1.0e-4;              // 1.0e-4, Convergence tolerance within Picard iteration. 1.0e-5
@@ -1568,7 +1573,7 @@ int main()
     ArrayXd F_1(n);                      // Integral for DIVA solver (Arthern et al., 2015)
     ArrayXd F_2(n);                      // Integral for DIVA solver (Arthern et al., 2015)
     
-    // Stochasticmatrices and vectors.
+    // Stochastic matrices and vectors.
     ArrayXXd noise(2,N);                            // Matrix to allocate stochastic BC.
     Array2d noise_now;                              // Two-entry vector with current stochastic noise.
     ArrayXd t_vec = ArrayXd::LinSpaced(N, 0.0, N);  // Time vector with dt_noise time step.
@@ -1613,27 +1618,18 @@ int main()
     //ArrayXd sigma_z = ArrayXd::LinSpaced(n_z+1, 0.0, 1.0);  // n_z+1 as we need spacing.
     //sigma_z = pow(sigma_z,2);
     
-    // Array with spacing between z-varying vertical coordinate.
-    /*
-    for (int i=0; i<n_z; i++)
-    {
-        dz_s(i) = sigma_z(i+1) - sigma_z(i);
-    }
-    */
     
     // Time steps in which the solution is saved. 
     ArrayXd a    = ArrayXd::LinSpaced(t_n, t0, tf);       // Array with output time frames.
     ArrayXd a_hr = ArrayXd::LinSpaced(int(tf), t0, tf);   // Array with high resolution time frames.    
 
     // EXPERIMENT. Christian et al (2022): 7.0e6
-    // Constant friction coeff. 7.624e6 [Pa m^-1/3 s^1/3]
-    C_ref = ArrayXd::Constant(n, 7.0e6/ pow(sec_year, m) );    // [Pa m^-1/3 yr^1/3] 7.0e6
+    // Constant friction coeff. 7.624e6, 7.0e6 [Pa m^-1/3 s^1/3]
+    C_ref = ArrayXd::Constant(n, 7.0e6/ pow(sec_year, m) );    // [Pa m^-1/3 yr^1/3] 7.0e6, MISMIP: 7.624e6
 
-    // We assume a constant viscosity in the first iteration. 1.0e13 Pa s.
-    //visc     = ArrayXXd::Constant(n, n_z, 1.0e13 / sec_year);            // [Pa yr]
-    //visc_bar = ArrayXd::Constant(n, 1.0e13 / sec_year);
-    visc     = ArrayXXd::Constant(n, n_z, 1.0e8);            // [Pa yr]
-    visc_bar = ArrayXd::Constant(n, 1.0e8);
+    // We assume a constant viscosity in the first iteration. 1.0e8 Pa s.
+    visc     = ArrayXXd::Constant(n, n_z, visc_0);            // [Pa yr]
+    visc_bar = ArrayXd::Constant(n, visc_0);
 
     // Implicit initialization.
     ub    = ArrayXd::Constant(n, 1.0);               // [m / yr] 
@@ -1642,13 +1638,6 @@ int main()
     beta  = ArrayXd::Constant(n, 5.0e3);             // [Pa yr / m]
     tau_b = beta * ub;
 
-    //ub    = ArrayXd::LinSpaced(n, 1.0, 5.0);
-    //u_bar = ArrayXd::LinSpaced(n, 1.0, 5.0);
-    
-    // Viscosity from constant A value. u2 = 0 initialization.
-    // 4.6416e-24, 4.227e-25 [Pa^-3 s^-1] ==> [Pa^-3 yr^-1]
-    //A = 5.0e-25 * sec_year;               // 4.23e-25
-    //B = pow(A, ( -1 / n_gln ) );
 
     // Temperature initial conditions (-25ºC).
     theta = ArrayXXd::Constant(n, n_z, 253.15);
@@ -1852,14 +1841,14 @@ int main()
     // TRANSITION INDICATORS EXPERIMENTS.
     else if ( exp == 2 )
     {
-        int const A_rate = 1;         // 0: constant A, 1: linear increase in A.
+        //int const A_rate = 1;         // 0: constant A, 1: linear increase in A.
 
         ArrayXd A_s(2);  
         ArrayXd t_s(1); 
         //A_s << 2.0e-25, 20.0e-25; // Christian: 4.23e-25. 2.0e-25 is right at the peak for ewr.
         
         // WE NEED TO TUNE THIS NUMBER TOGEHTER WITH THE FLUX DISCRETIAZTION TO OBTAIN THE SAME EXTENT.
-        A_s << 0.5e-26, 5.0e-25; // 4.227e-25, (1.0e-25, 10.0e-25)
+        A_s << 4.227e-25, 4.227e-25; // 4.227e-25, (0.5e-26, 5.0e-25)
         t_s << 2.0e4;
 
         // FORCING CAN BE IMPOSED DIRECTLY ON A_s (i.e., an increase in temperature) or
@@ -1875,8 +1864,12 @@ int main()
     cout << " \n tf = " << tf;
 
     // Call nc read function.
-    //noise = f_nc_read(N);
-    //cout << "\n noise_ocn = " << noise;
+    if ( stoch == true )
+    {
+        noise = f_nc_read(N);
+        //cout << "\n noise_ocn = " << noise;
+    }
+    
 
     // Call nc write function.
     f_nc(n, n_z);
@@ -1962,18 +1955,18 @@ int main()
         else if ( exp == 2 )
         {
             // Equilibrate with constant A.
-            if ( t < t0_A || A_rate == 0 )
+            if ( t < t0_A || A_rate == false )
             {
                 A = A_s(0);
             }
             
             // Update rate factor value with current timestep.
-            else if ( t >= t0_A && t <= tf_A && A_rate == 1 )
+            else if ( t >= t0_A && t <= tf_A && A_rate == true )
             {
                 A = A_s(0) + ( A_s(1) - A_s(0) ) * (t - t0_A) / (tf_A - t0_A);
             }
 
-            else if ( t > tf_A && A_rate == 1 )
+            else if ( t > tf_A && A_rate == true )
             {
                 A = A_s(1);
             }
@@ -2008,11 +2001,13 @@ int main()
             m_stoch   = max(0.0, noise_now(0)); 
             smb_stoch = noise_now(1);
 
+            //cout << "\n m_stoch = " << m_stoch;
+            //cout << "\n smb_sotch = " << smb_stoch;
+
             // Update SMB considering new domain extension and current stochastic term.
             S = f_smb(sigma, L, S_0, x_mid, x_sca, x_varmid, \
                       x_varsca, dlta_smb, var_mult, smb_stoch, t, t0_stoch , n, stoch);
         }
-
 
         // Picard initialization.
         error    = 1.0;
@@ -2042,7 +2037,7 @@ int main()
             visc_all = f_visc(theta, H, tau_b, u_bar, dz, \
                                 theta_act, ds, L, Q_act, A_0, n_gln, R, B, n_exp, \
                                     eps, t, t_eq, sec_year, n, n_z, vel_meth, A, \
-                                        visc_therm, t_eq_A_theta, visc_min, visc_max);
+                                        visc_therm, t_eq_A_theta, visc_min, visc_max, visc_0);
             
             // Allocate variables.
             visc     = visc_all.block(0,0,n,n_z);
@@ -2158,7 +2153,7 @@ int main()
 
             // Write solution in nc.
             // Sub-shelf melting as forcing of MISMIP+thermodynamics.
-            m_stoch = M;
+            //m_stoch = M;
 
             f_write(c, u_bar, ub, u_x, H, visc_bar, S, tau_b, beta, tau_d, bed, \
                     C_bed, Q_fric, u2_dif_vec, u2_0_vec, L, t, u_x_bc, u2_dif, \
@@ -2169,7 +2164,7 @@ int main()
         }  
 
         // Write solution with high resolution output frequency.
-        else if ( out_hr == 1 && c_hr == 0 || t > a_hr(c_hr) )
+        else if ( out_hr == true && c_hr == 0 || t > a_hr(c_hr) )
         {
             // Write solution in nc.
             f_write_hr(c_hr, u_bar(n-1), H(n-1), L, t, u_x_bc, u2_dif, \
@@ -2185,12 +2180,6 @@ int main()
         
         // Update vertical discretization.
         dz = H / n_z;
-        /*
-        for (int i=0; i<n; i++)
-        {
-            dz_H.row(i) = H(i) * dz_s;
-        }
-        */
 
         // Apply thermodynamic solver if desired.
         if ( thermodynamics == false || t < t_eq )
