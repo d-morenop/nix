@@ -91,22 +91,24 @@ ArrayXd gaussian_filter(ArrayXd w, double sigma, double L, double ds, int n)
     ArrayXd summ = ArrayXd::Zero(n);
 
     double x, y;
-    double h_L = ds * L;
+    double dx = 1.0e-3 * ds * L; // [m] --> [km]. L in metres but bed is in km.
     double A = 1.0 / (sqrt(2.0 * M_PI) * sigma);
+    double sigma_inv;
+
+    sigma_inv = 1.0 / ( 2.0 * dx );
 
     // Weierstrass transform.
     for (int i = 0; i < n; i++)
     {
-        x = i * h_L;
+        x = i * dx;
         for (int j = 0; j < n; j++)
         {
-            y = j * h_L;
-            summ(i) += w(j) * exp(- 0.5 * pow((x - y) / sigma, 2) );
+            y = j * dx;
+            summ(i) += w(j) * exp(- 0.5 * pow((x - y) * sigma_inv, 2) );
         }
     }
 
     // Normalizing Kernel.
-    //smth = A * summ * h_L;
     smth = A * summ;
 
     return smth;
@@ -1386,7 +1388,7 @@ int main()
     // For Transition Indicators:
     //double const eps = 1.0e-9; 
     // MISMIP: 1.0e-8
-    double const eps = 1.0e-8; // 1.0e-8                       
+    double const eps = 1.0e-9; // 1.0e-8                       
 
     // Basal friction exponent.
     double const m = 1.0 / 3.0;                      // Friction exponent.
@@ -1401,7 +1403,7 @@ int main()
 
     // Time variables.
     double const t0   = 0.0;                         // Starting time [yr].
-    double const tf   = 2.0e3;                       // MISMIP-therm: 90.0e4, Ending time [yr]. EWR: 5.0e3
+    double const tf   = 5.0e3;                       // MISMIP-therm: 90.0e4, Ending time [yr]. EWR: 5.0e3
     double const t_eq = 1.5e3;                   // 2.0e3 Equilibration time: visc, vel, theta, etc. 0.2 * tf
     double t;                                        // Time variable [yr].
 
@@ -1445,7 +1447,7 @@ int main()
     double const y_0 = 70.0;                         // Initial bedrock elevation (x=0) [m].
     
     // SURFACE MASS BALANCE.
-    bool const stoch = false;                        // Stochastic SBM.
+    bool const stoch = true;                        // Stochastic SBM.
     double const S_0      = 0.3;                     // SMB at x = 0 (and during equilibration) [m/yr]. 0.7
     double const dlta_smb = -4.0;                    // Difference between interior and terminus SMB [m/yr]. 
     double const x_acc    = 300.0e3;                 // Position at which accumulation starts decreasing [m]. 300.0, 355.0
@@ -1507,7 +1509,7 @@ int main()
     double u2_dif;                                   // Difference between analytical and numerical.
 
     // CALVING.
-    int const calving_meth = 0;                      // 0, no calving; 1, Christian et al. (2022), 2: deterministic Favier et al. (2019)
+    int const calving_meth = 1;                      // 0, no calving; 1, Christian et al. (2022), 2: deterministic Favier et al. (2019)
     double const m_dot = 30.0;                       // Mean frontal ablation [m/yr]. 30.0
     double H_f;
 
@@ -1547,7 +1549,7 @@ int main()
 
     // MISMIP EXPERIMENTS FORCING.
     // Number of steps in the A forcing.
-    int const n_s = 29;  //  Exp_3: 13, Exp_1-2: 17. T_air: 17, T_oce: 9. T_oce_f_q: 25
+    int const n_s = 2;  //  Exp_3: 13, Exp_1-2: 17. T_air: 17, T_oce: 9. T_oce_f_q: 29
 
 
     // PREPARE VARIABLES.
@@ -1625,7 +1627,7 @@ int main()
 
     // EXPERIMENT. Christian et al (2022): 7.0e6
     // Constant friction coeff. 7.624e6, 7.0e6 [Pa m^-1/3 s^1/3]
-    C_ref = ArrayXd::Constant(n, 7.0e6/ pow(sec_year, m) );    // [Pa m^-1/3 yr^1/3] 7.0e6, MISMIP: 7.624e6
+    C_ref = ArrayXd::Constant(n, 7.624e6/ pow(sec_year, m) );    // [Pa m^-1/3 yr^1/3] 7.0e6, MISMIP: 7.624e6
 
     // We assume a constant viscosity in the first iteration. 1.0e8 Pa s.
     visc     = ArrayXXd::Constant(n, n_z, visc_0);            // [Pa yr]
@@ -1843,13 +1845,13 @@ int main()
     {
         //int const A_rate = 1;         // 0: constant A, 1: linear increase in A.
 
-        ArrayXd A_s(2);  
-        ArrayXd t_s(1); 
+        //ArrayXd A_s(2);  
+        //ArrayXd t_s(1); 
         //A_s << 2.0e-25, 20.0e-25; // Christian: 4.23e-25. 2.0e-25 is right at the peak for ewr.
         
         // WE NEED TO TUNE THIS NUMBER TOGEHTER WITH THE FLUX DISCRETIAZTION TO OBTAIN THE SAME EXTENT.
         A_s << 0.5e-26, 5.0e-25; // 4.227e-25, (0.5e-26, 5.0e-25)
-        t_s << 2.0e4;
+        //t_s << 2.0e4;
 
         // FORCING CAN BE IMPOSED DIRECTLY ON A_s (i.e., an increase in temperature) or
         // on the calving at the front as a consequence of ocean warming.
@@ -1954,23 +1956,32 @@ int main()
         // TRANSITION INDICATORS EXPERIMENTS.
         else if ( exp == 2 )
         {
-            // Equilibrate with constant A.
-            if ( t < t0_A || A_rate == false )
+            // Constant A throughout the sim.
+            if ( A_rate == false )
             {
                 A = A_s(0);
             }
-            
-            // Update rate factor value with current timestep.
-            else if ( t >= t0_A && t <= tf_A && A_rate == true )
+
+            // Forcing in A.
+            else
             {
-                A = A_s(0) + ( A_s(1) - A_s(0) ) * (t - t0_A) / (tf_A - t0_A);
+                // Equilibration with constant A.
+                if ( t < t0_A )
+                {
+                    A = A_s(0);
+                }
+                
+                else if ( t >= t0_A && t <= tf_A )
+                {
+                    A = A_s(0) + ( A_s(1) - A_s(0) ) * (t - t0_A) / (tf_A - t0_A);
+                }
+
+                else if ( t > tf_A )
+                {
+                    A = A_s(1);
+                }
             }
 
-            else if ( t > tf_A && A_rate == true )
-            {
-                A = A_s(1);
-            }
-            
             // Ice hardness.
             A = A * sec_year;
             B = pow(A, ( -1 / n_gln ) );

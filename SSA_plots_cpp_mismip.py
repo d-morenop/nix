@@ -19,7 +19,7 @@ import pylab as plt_lab
 from scipy.ndimage import gaussian_filter1d
 
 path_fig        = '/home/dmoreno/figures/flowline/mismip_therm/exp_1-2/n.1000/frames/'
-path_now        = '/home/dmoreno/flowline/ewr/A_rates/bed_smooth/y_p.88_tf_A.3.0e4_A.0.5e-26_5.0e-25/'
+path_now        = '/home/dmoreno/flowline/ewr/A_rates/bed_smooth/running_mean/p.3_y_p.88_tf_A.2.5e4_A.0.5e-26_5.0e-25/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
 
@@ -40,7 +40,7 @@ save_u_der         = 0
 save_F_n           = 0
 save_L             = 0
 save_fig           = False
-read_stoch_nc      = False
+read_stoch_nc      = True
 
 smth_series        = 0
 
@@ -306,9 +306,6 @@ if save_series == 1:
 	ax.plot(t_plot, L, linestyle='-', color='red', marker='None', \
 			markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 
-	# Plot bed peak position.
-	#ax.plot(t_plot, y_p, linestyle='--', color='red', marker='None', \
-	#		markersize=3.0, linewidth=1.5, alpha=1.0, label=r'$u_{b}(x)$') 
 	
 	ax2.plot(t_plot, H[:,s[2]-1], linestyle='-', color='black', marker='None', \
 			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
@@ -348,6 +345,10 @@ if save_series == 1:
 	# Histograms for stochastic time series.
 	if read_stoch_nc == True:
 
+		# Plot bed peak position.
+		ax.plot(t_plot, y_p, linestyle='--', color='red', marker='None', \
+				markersize=3.0, linewidth=1.5, alpha=1.0, label=r'$u_{b}(x)$') 
+
 		#ax3.bar(t_plot, smb_stoch, width=0.5, bottom=None, align='center', data=None, color='darkgreen')
 		#ax5.bar(t_plot, m_stoch, width=0.5, bottom=None, align='center', data=None, color='purple')
 		ax3.bar(t_stoch, noise_smb, width=4.0, bottom=None, \
@@ -360,11 +361,11 @@ if save_series == 1:
 		ax3.set_ylabel(r'$ \mathrm{SMB} \ (m / yr) $', fontsize=18)
 		ax5.set_ylabel(r'$ \dot{m} \ (m/yr)$', fontsize=18)
 
-	# Axis limits.
-	#ax.set_ylim(280.0, 360.0)
-	#ax2.set_ylim(0.4, 0.5)
-	#ax6.set_ylim(0.0, 300.0)
-	#ax4.set_ylim(A_s[0]*(1.0 - 0.2), A_s[l-1]*(1.0 + 0.05))
+		# Axis limits.
+		ax.set_ylim(280.0, 360.0)
+		#ax2.set_ylim(0.4, 0.5)
+		#ax6.set_ylim(0.0, 300.0)
+		#ax4.set_ylim(A_s[0]*(1.0 - 0.2), A_s[l-1]*(1.0 + 0.05))
 
 	ax.set_ylim(0.0, 1500.0)
 
