@@ -19,8 +19,8 @@ from scipy import signal
 
 
 path_fig  = '"/home/dmoreno/flowline/ewr/A_rates/bed_smooth/test_gauss_2/'
-#path_now = '/home/dmoreno/flowline/ewr/A_rates/bed_smooth/running_mean/p.3_y_p.176_tf_A.3.0e4_A.0.5e-26_5.0e-25/'
-path_now = '/home/dmoreno/flowline/ewr/A_rates/bed_smooth/gauss_sigma.1dx/'
+path_now = '/home/dmoreno/flowline/ewr/A_rates/bed_smooth/running_mean/p.3_y_p.176_tf_A.3.0e4_A.0.5e-26_5.0e-25/'
+#path_now = '/home/dmoreno/flowline/ewr/A_rates/bed_smooth/gauss_sigma.1dx/'
 path_stoch  = '/home/dmoreno/flowline/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
@@ -347,7 +347,6 @@ if save_series == 1:
 
 	ax.set_xlim(15.0, t_plot[l-1])
 	ax2.set_xlim(15.0, t_plot[l-1])
-	ax3.set_xlim(15.0, t_plot[l-1])
 	ax4.set_xlim(15.0, t_plot[l-1])
 	
 	ax.set_ylabel(r'$L \ (\mathrm{km})$', fontsize=18)
