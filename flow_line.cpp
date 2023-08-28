@@ -90,8 +90,10 @@ ArrayXd gaussian_filter(ArrayXd w, double sigma, double L, double ds, int n)
     ArrayXd summ = ArrayXd::Zero(n);
 
     double x, y, kernel;
-    double dx = ds * L;
+    double dx = 1.0e-3 * ds * L;     // [m] --> [km]. Bedrock is given in km and L is given in metres.
     double A = 1.0 / (sqrt(2.0 * M_PI) * sigma);
+
+    sigma = 4.0 * dx;
 
     // Weierstrass transform.
     for (int i = 0; i < n; i++)
@@ -100,7 +102,7 @@ ArrayXd gaussian_filter(ArrayXd w, double sigma, double L, double ds, int n)
         for (int j = 0; j < n; j++)
         {
             y = j * dx;
-            kernel = exp(-pow((x - y) / sigma, 2) / 2.0);
+            kernel = exp(- 0.5 * pow((x - y) / sigma, 2) );
             summ(i) += w(j) * kernel;
         }
     }
@@ -1568,12 +1570,12 @@ int main()
 
     // BEDROCK
     // Glacier ews option.
-    int const smooth_bed = 0;                        // Apply gaussian filter on bed topography. 
-    double const sigma_gauss = 10.0;                  // Sigma gaussian filter. 
+    int const smooth_bed = 1;                        // Apply gaussian filter on bed topography. 
+    double const sigma_gauss = 2.0;                  // Sigma gaussian filter. 
     double const t0_gauss = 1.5e4;                   // Init time to apply gaussian filter.
     double const x_1 = 346.0e3;                      // Peak beginning [m].
     double const x_2 = 350.0e3;                      // Peak end [m]. 88.0
-    double const y_p = 88.0;                         // Peak height [m]. 88.0, 176.0
+    double const y_p = 176.0;                         // Peak height [m]. 44.0, 88.0, 176.0
     double const y_0 = 70.0;                         // Initial bedrock elevation (x=0) [m].
     
     // SURFACE MASS BALANCE.
@@ -1899,9 +1901,10 @@ int main()
         // Update bedrock with new domain extension L.
         bed = f_bed(L, n, experiment, y_0, y_p, x_1, x_2);
 
-        if ( smooth_bed == 1 )
+        if ( smooth_bed == 1 && t > t0_gauss )
         {
-            bed = gaussian_filter(bed, sigma_gauss, L, ds, n);
+            //bed = gaussian_filter(bed, sigma_gauss, L, ds, n);
+            bed = running_mean(bed, 3, n);
         }
 
         // Friction coefficient.

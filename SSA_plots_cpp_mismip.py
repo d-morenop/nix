@@ -18,9 +18,9 @@ from scipy import signal
 
 
 
-path_fig  = '"/home/dmoreno/flowline/ewr/A_rates/bed_smooth/test/'
-#path_now = '/home/dmoreno/flowline/ewr/rate/n.350_A.2.0e-25_n-1_n-2/'
-path_now = '/home/dmoreno/flowline/ewr/A_rates/bed_smooth/test/'
+path_fig  = '"/home/dmoreno/flowline/ewr/A_rates/bed_smooth/test_gauss_2/'
+#path_now = '/home/dmoreno/flowline/ewr/A_rates/bed_smooth/running_mean/p.3_y_p.176_tf_A.3.0e4_A.0.5e-26_5.0e-25/'
+path_now = '/home/dmoreno/flowline/ewr/A_rates/bed_smooth/gauss_sigma.1dx/'
 path_stoch  = '/home/dmoreno/flowline/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
@@ -151,7 +151,7 @@ def f_bed(x, exp, n):
 		y_0 = 0.07
 
 		# Peak height [km]. 88.0e-3 up to 100.0e-3
-		y_p = 88.0e-3
+		y_p = 176.0e-3
 
 		# Intermideiate slope.
 		m_bed = y_p / ( x_2 - x_1 )
@@ -347,6 +347,8 @@ if save_series == 1:
 
 	ax.set_xlim(15.0, t_plot[l-1])
 	ax2.set_xlim(15.0, t_plot[l-1])
+	ax3.set_xlim(15.0, t_plot[l-1])
+	ax4.set_xlim(15.0, t_plot[l-1])
 	
 	ax.set_ylabel(r'$L \ (\mathrm{km})$', fontsize=18)
 	ax2.set_ylabel(r'$H_{gl} \ (\mathrm{km})$', fontsize=18)
@@ -577,7 +579,7 @@ if save_shooting == 1:
 
 if save_domain == 1:
 	
-	for i in range(0, l, 10): # range(0, l, 2), (l-1, l, 20)
+	for i in range(0, l, 2): # range(0, l, 2), (l-1, l, 20)
 		
 		# Horizontal dimension [km].
 		L_plot  = np.linspace(0, L[i], n)
@@ -701,7 +703,7 @@ if save_domain == 1:
 
 if save_var_frames == 1:
 	
-	for i in range(0, l, 10): # (0, l, 10), (l-1, l, 20)
+	for i in range(l-1, l, 1): # (0, l, 10), (l-1, l, 20)
 		
 		L_plot  = np.linspace(0, L[i], n)
 		x_tilde = L_plot / 750.0  
