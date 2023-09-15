@@ -85,23 +85,28 @@ rungeKutta   --->  4th-order Runge-Kutta integration scheme for the SSA stress
 // TOOLS. USEFUL FUNCTIONS.
 
 
-ArrayXd gaussian_filter(ArrayXd w, double sigma, double L, double ds, int n)
+ArrayXd gaussian_filter(ArrayXd w, double sigma, double L, double ds, int p, int n)
 {
     ArrayXd smth(n);
     ArrayXd summ = ArrayXd::Zero(n);
 
     double x, y;
-    double dx = 1.0e-3 * ds * L; // [m] --> [km]. L in metres but bed is in km.
-    double A = 1.0 / (sqrt(2.0 * M_PI) * sigma);
-    double sigma_inv;
-
-    sigma_inv = 1.0 / ( 2.0 * dx );
-
+    //double dx = 1.0e-3 * ds * L; // [m] --> [km]. L in metres but bed is in km.
+    
+    // Test forcing dx = 1.0. It must be 1.0 for y-amplitude consistency.
+    double dx = 1.0;
+    sigma = 2.0 * dx;
+    
+    // Handy definition. Standard deviation is a multiple of dx (real distance among gridpoints).
+    double sigma_inv = 1.0 / sigma;
+    double A = sigma_inv / sqrt(2.0 * M_PI);
+    
     // Weierstrass transform.
-    for (int i = 0; i < n; i++)
+    for (int i=p; i<n-p; i++)
     {
         x = i * dx;
-        for (int j = 0; j < n; j++)
+
+        for (int j=0; j<n; j++)
         {
             y = j * dx;
             summ(i) += w(j) * exp(- 0.5 * pow((x - y) * sigma_inv, 2) );
@@ -110,6 +115,11 @@ ArrayXd gaussian_filter(ArrayXd w, double sigma, double L, double ds, int n)
 
     // Normalizing Kernel.
     smth = A * summ;
+
+    // The edges are identical to the original array.
+    // (p-1) since the very element (n-1-p) must be also filled.
+    smth.block(0,0,p,1)       = w.block(0,0,p,1);
+    smth.block(n-1-p,0,p+1,1) = w.block(n-1-p,0,p+1,1); 
 
     return smth;
 }
@@ -242,6 +252,8 @@ ArrayXd f_bed(double L, int n, int bed_exp, \
     ArrayXd bed(n);
     ArrayXd x = ArrayXd::LinSpaced(n, 0.0, L); 
 
+    // Number of points at the edges of the array that are not smoothed out.
+    int p = 3;
 
     // MISMIP experiments bedrock.
     // Same bedrock as Schoof (2007).
@@ -311,9 +323,11 @@ ArrayXd f_bed(double L, int n, int bed_exp, \
     // Potential smooth bed.
     if ( smooth_bed == 1 )
     {
-        //bed = gaussian_filter(bed, sigma_gauss, L, ds, n);
-        bed = running_mean(bed, 2, n);
-        //cout << "\n Bed smooth = " << bed;
+        // Gaussian smooth. Quite sensitive to p value (p=5 for n=250).
+        //bed = gaussian_filter(bed, sigma_gauss, L, ds, p, n);
+
+        // Running mean.
+        bed = running_mean(bed, 3, n);
     }
 
     return bed;
@@ -1403,7 +1417,7 @@ int main()
 
     // Time variables.
     double const t0   = 0.0;                         // Starting time [yr].
-    double const tf   = 5.0e3;                       // MISMIP-therm: 90.0e4, Ending time [yr]. EWR: 5.0e3
+    double const tf   = 4.0e4;                       // MISMIP-therm: 90.0e4, Ending time [yr]. EWR: 5.0e3
     double const t_eq = 1.5e3;                   // 2.0e3 Equilibration time: visc, vel, theta, etc. 0.2 * tf
     double t;                                        // Time variable [yr].
 

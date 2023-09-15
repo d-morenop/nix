@@ -18,29 +18,30 @@ from scipy import signal
 import pylab as plt_lab
 from scipy.ndimage import gaussian_filter1d
 
-path_fig        = '/home/dmoreno/figures/flowline/mismip_therm/exp_1-2/n.1000/frames/'
-path_now        = '/home/dmoreno/flowline/ewr/A_rates/bed_smooth/running_mean/p.3_y_p.88_tf_A.2.5e4_A.0.5e-26_5.0e-25/'
+path_fig        = '/home/dmoreno/figures/flowline/ewr/A_rates/bed_peak/y_p.88_tf_A.2.5e4_A.0.5e-26_5.0e-25/frames/'
+path_now        = '/home/dmoreno/flowline/ewr/A_rates/bed_peak/test/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
 
-# /home/dmoreno/flowline/mismip_therm/T_oce_f_q/steps/gamma_T_linear/n.250_T_air.193_T_oce_max.280_gamma_T_1.9/'
-# /home/dmoren07/c++/flowline/output/glacier_ews/m_dot.30.0/
+# /home/dmoreno/flowline/ewr/A_rates/bed_smooth/gauss_dx/dx.2/p.3/y_p.176_tf_A.2.5e4_A.0.5e-26_5.0e-25/'
+# /home/dmoreno/flowline/ewr/A_rates/bed_smooth/running_mean/p.3_y_p.176_tf_A.2.5e4_A.0.5e-26_5.0e-25/'
 
 # Select plots to be saved (boolean integer).
-save_series        = 1
+save_series        = 0
 save_series_comp   = 0
 save_shooting      = 0
 save_domain        = 1
 coloured_domain    = 0
-save_var_frames    = 1
+save_var_frames    = 0
 save_series_frames = 0
 save_theta         = 0
 save_visc          = 0
 save_u_der         = 0
-save_F_n           = 0
+time_series_gif    = 0
 save_L             = 0
-save_fig           = False
-read_stoch_nc      = True
+save_fig           = True
+read_stoch_nc      = False
+bed_smooth         = False
 
 smth_series        = 0
 
@@ -75,6 +76,7 @@ var_name 	  = ['u_bar', 'ub', 'u_x', 'u_z', 'u', 'H', 'visc_bar', 'tau_b', 'tau_
 				 'c_picard', 'dt', 'mu', 'omega_picard', 'A_s', 'theta', 'S', \
 				 'm_stoch', 'smb_stoch', 'Q_fric', 'beta', 'visc', 'u_x_diva', 'F_1', 'F_2', \
 				 'A_theta', 'T_oce']
+
 
 # Dimension.
 l_var = len(var_name)
@@ -217,7 +219,33 @@ elif exp == 'glacier_ews':
 
 bed = f_bed(x_plot, exp, n)
 
+if bed_smooth == True:
+	n_smth = n
+	dx = 1.0 # This must be 1.0 to leave unchaged the max/min values in the y axis.
+	sigma = 2.0 * dx
+	A = 1.0 / (np.sqrt(2.0 * np.pi) * sigma)
 
+	summ = np.zeros(n_smth)
+	kernel = np.empty([n_smth,n_smth])
+	
+	smth = bed
+
+	# Number of points at the edges of the array that are not smoothed out.
+	p = 3
+	summ[p:(n_smth-1-p)] = 0.0
+
+	# Weierstrass transform.
+	for i in range(p, n_smth-p, 1):
+		x = i * dx
+		for j in range(n_smth):
+			y = j * dx
+			kernel[i,j] = np.exp(- 0.5 * ((x - y) / sigma)**2)
+			summ[i] += bed[j] * kernel[i,j]
+		
+
+	# Normalizing Kernel.
+	smth[p:(n_smth-1-p)] = A * summ[p:(n_smth-1-p)]
+	bed = smth
 
 
 # Read stochastic noise to plot.
@@ -322,7 +350,10 @@ if save_series == 1:
 	
 	#ax3.plot(t_plot, T_air, linestyle='-', color='purple', marker='None', \
 	#		 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
-	ax3.plot(t_plot, T_oce, linestyle='-', color='purple', marker='None', \
+	#ax3.plot(t_plot, T_oce, linestyle='-', color='purple', marker='None', \
+	#			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+
+	ax3.plot(t_plot, b[:,s[2]-1], linestyle='-', color='purple', marker='None', \
 			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 
 	#ax3.plot(t_plot, visc_bar_mean, linestyle='-', color='brown', marker='None', \
@@ -367,7 +398,8 @@ if save_series == 1:
 		#ax6.set_ylim(0.0, 300.0)
 		#ax4.set_ylim(A_s[0]*(1.0 - 0.2), A_s[l-1]*(1.0 + 0.05))
 
-	ax.set_ylim(0.0, 1500.0)
+	ax.set_ylim(280.0, 360.0)
+	#ax.set_ylim(0.0, 1500.0)
 
 	ax.set_xlim(0, t_plot[s[0]-1])
 	ax2.set_xlim(0, t_plot[s[0]-1])
@@ -378,7 +410,8 @@ if save_series == 1:
 
 	
 	#ax3.set_ylabel(r'$ T{\mathrm{air}} \ (^{\circ} \mathrm{C})$', fontsize=18)
-	ax3.set_ylabel(r'$ \Delta T_{\mathrm{oce}} \ (^{\circ} \mathrm{C})$', fontsize=18)
+	#ax3.set_ylabel(r'$ \Delta T_{\mathrm{oce}} \ (^{\circ} \mathrm{C})$', fontsize=18)
+	ax3.set_ylabel(r'$ D \ (L)$', fontsize=18)
 	
 	#ax4.set_ylabel(r'$  \theta(0,H) \ (^{\circ} \mathrm{C})$', fontsize=17)
 	#ax4.set_ylabel(r'$ A \ (10^{-17} \ \mathrm{Pa}^{-3} \mathrm{yr}^{-1})$', fontsize=17)
@@ -602,7 +635,7 @@ if save_domain == 1:
 		z_s = H[i,:] + b[i,:]
 		
 		# Gaussian smooth for resolution jiggling.
-		z_s = gaussian_filter1d(z_s, 1.0)
+		z_s = gaussian_filter1d(z_s, 1.5)
 		
 		# Vertical gray line in ice front.
 		n_frnt = 100
@@ -635,6 +668,7 @@ if save_domain == 1:
 		ax.plot(x_plot, bed, linestyle='-', color='saddlebrown', marker='None', \
 	  			linewidth=2.0, alpha=1.0, label=r'$bed(x)$') 
 
+
 		# Ice surface elevation.
 		ax.plot(L_plot, z_s, linestyle='-', color='darkgrey', marker='None', \
 	  			linewidth=3.0, alpha=1.0, label=r'$z_s(x)$')  
@@ -645,7 +679,7 @@ if save_domain == 1:
 	 						   facecolor='blue', alpha=0.4)
 		ax.fill_between(x_plot, bed, -2.5e3,\
 	 						   facecolor='saddlebrown', alpha=0.4)
-		
+
 		if coloured_domain == 0:
 			ax.fill_between(L_plot, b[i,:], z_s,\
 								facecolor='grey', alpha=0.4)
@@ -810,7 +844,7 @@ if save_domain == 1:
 			ax.set_ylim(-1.0, 6.0)
 		
 		# Title.
-		#ax.set_title(r'$i = \ $'+str(i)+r'$, \ t = \ $'+str(np.round(t[i],2))+r'$ \ yr$', fontsize=16)
+		ax.set_title(r'$i = \ $'+str(i)+r'$, \ t = \ $'+str(np.round(t[i],2))+r'$ \ yr$', fontsize=16)
 	 	
 		ax.grid(axis='x', which='major', alpha=0.85)
 		
@@ -843,7 +877,7 @@ if save_domain == 1:
 
 if save_var_frames == 1:
 	
-	for i in range(l-1, l, 1): # (0, l, 10), (l-1, l, 1)
+	for i in range(0, l, 5): # (0, l, 10), (l-1, l, 1)
 		
 		L_plot  = np.linspace(0, L[i], s[2])
 		x_tilde = L_plot / 750.0  
@@ -1273,49 +1307,104 @@ if save_u_der == 1:
 #############################################
 #############################################
 # TIME SERIES
-if save_F_n == 1:
+if time_series_gif == 1:
 
-	for i in range(l-1, l, 1):
+	i_0 = 25
 
-		L_plot  = np.linspace(0, L[i], n)
-	
+	# Plot bed peak position.
+	y_p = np.full(len(t_plot), 350)
+
+	for i in range(i_0, l, 1):
+
 		# Figure.
 		fig = plt.figure(dpi=600, figsize=(5.5,6))
 		ax = fig.add_subplot(211)
 		ax2 = fig.add_subplot(212)
+		ax3 = ax2.twinx()
+
+		plt.rcParams['text.usetex'] = True
+
+		# Plot bed peak position.
+		ax3.plot(t_plot, y_p, linestyle='--', color='red', marker='None', \
+				markersize=3.0, linewidth=1.5, alpha=1.0, label=r'$u_{b}(x)$') 
+
+		# Grey time series in background.
+		ax.plot(t_plot, A_s, linestyle='-', color='grey', marker='None', \
+					markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+
+		ax2.plot(t_plot, u_bar[:,s[2]-1], linestyle='-', color='grey', marker='None', \
+					markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+
+		ax3.plot(t_plot, L, linestyle='-', color='grey', marker='None', \
+				markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+
+		# Coloured line.
+		ax.plot(t_plot[i_0:(i+1)], A_s[i_0:(i+1)], linestyle='-', color='darkgreen', marker='None', \
+			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+
+		ax2.plot(t_plot[i_0:(i+1)], u_bar[i_0:(i+1),s[2]-1], linestyle='-', color='blue', marker='None', \
+					markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+
+		ax3.plot(t_plot[i_0:(i+1)], L[i_0:(i+1)], linestyle='-', color='red', marker='None', \
+				markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+		
+		# Colour point at the current time step.
+		ax.plot(t_plot[i], A_s[i], linestyle='None', color='darkgreen', marker='o', \
+			 markersize=7.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+
+		ax2.plot(t_plot[i], u_bar[i,s[2]-1], linestyle='None', color='blue', marker='o', \
+					markersize=7.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+
+		ax3.plot(t_plot[i], L[i], linestyle='None', color='red', marker='o', \
+				markersize=7.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 
 		
-		plt.rcParams['text.usetex'] = True
+		ax.set_ylabel(r'$ A \ (\mathrm{Pa}^{-3} \mathrm{yr}^{-1})$', fontsize=18)
+		ax2.set_ylabel(r'$ \overline{u} \ (\mathrm{m / yr})$', fontsize=18)
+		ax3.set_ylabel(r'$ L \ (\mathrm{km})$', fontsize=18)
 		
-		ax.plot(L_plot, F_1[i,:], linestyle='-', color='red', marker='None', \
-				markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
-		
-		ax2.plot(L_plot, F_2[i,:], linestyle='-', color='black', marker='None', \
-				markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
-		
-		
-		ax.set_ylabel(r'$ F_{1} \ (\mathrm{m / (Pa yr)})$', fontsize=18)
-		ax2.set_ylabel(r'$ F_{2} \ (\mathrm{m / (Pa yr)})$', fontsize=18)
-		
-		ax2.set_xlabel(r'$ x \ (\mathrm{km})$', fontsize=18)
+		ax2.set_xlabel(r'$ \mathrm{Time} \ (\mathrm{kyr})$', fontsize=18)
 	
 			
-		ax.yaxis.label.set_color('black')
-		ax2.yaxis.label.set_color('black')
+		ax.yaxis.label.set_color('darkgreen')
+		ax2.yaxis.label.set_color('blue')
+		ax3.yaxis.label.set_color('red')
 		
 		ax.set_xticklabels([])
 		#ax2.set_xticklabels([])
 
-		ax.tick_params(axis='y', which='major', length=0, colors='black')
-		ax2.tick_params(axis='y', which='major', length=4, colors='black')
+		ax.tick_params(axis='y', which='major', length=4, colors='darkgreen', labelsize=13)
+		ax2.tick_params(axis='y', which='major', length=4, colors='blue', labelsize=13)
+		ax2.tick_params(axis='x', which='major', length=4, colors='black', labelsize=13)
+		ax3.tick_params(axis='y', which='major', length=4, colors='red', labelsize=13)
 		
 		ax.grid(axis='x', which='major', alpha=0.85)
 		ax2.grid(axis='x', which='major', alpha=0.85)
+
+		# Axis limits.
+		ax.set_xlim(10.0, 40.0)
+		ax2.set_xlim(10.0, 40.0)
+		ax3.set_xlim(10.0, 40.0)
+
+		ax3.set_ylim(280.0, 380.0)
 		
 		plt.tight_layout()
 
+		##### Frame name ########
+		if i < 10:
+			frame = '000'+str(i)
+		elif i > 9 and i < 100:
+			frame = '00'+str(i)
+		elif i > 99 and i < 1000:
+			frame = '0'+str(i)
+		else:
+			frame = str(i)
+		
+		plt.tight_layout()
+		
 		if save_fig == True:
-			plt.savefig(path_fig+'time_series.png', bbox_inches='tight')
+			plt.savefig(path_fig+'time_series_'+frame+'.png', bbox_inches='tight')
+			print('Saved')
 
 		# Display and close figure.
 		plt.show()
