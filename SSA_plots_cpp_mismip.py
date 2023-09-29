@@ -19,7 +19,7 @@ import pylab as plt_lab
 from scipy.ndimage import gaussian_filter1d
 
 path_fig        = '/home/dmoreno/figures/flowline/ewr/A_rates/bed_peak/y_p.88_tf_A.2.5e4_A.0.5e-26_5.0e-25/frames/'
-path_now        = '/home/dmoreno/flowline/ewr/A_rates/bed_peak/test/'
+path_now        = '/home/dmoreno/flowline/blatter-pattyn/test_solver2D_BiCGSTAB_BC_long_n.100_nz.20/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
 
@@ -27,19 +27,20 @@ file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 # /home/dmoreno/flowline/ewr/A_rates/bed_smooth/running_mean/p.3_y_p.176_tf_A.2.5e4_A.0.5e-26_5.0e-25/'
 
 # Select plots to be saved (boolean integer).
-save_series        = 0
-save_series_comp   = 0
+save_series        = 1
+save_series_comp   = 1
 save_shooting      = 0
 save_domain        = 1
 coloured_domain    = 0
-save_var_frames    = 0
+save_var_frames    = 1
 save_series_frames = 0
 save_theta         = 0
 save_visc          = 0
+save_u             = 1
 save_u_der         = 0
 time_series_gif    = 0
 save_L             = 0
-save_fig           = True
+save_fig           = False
 read_stoch_nc      = False
 bed_smooth         = False
 
@@ -49,7 +50,7 @@ smth_series        = 0
 # MISMIP bedrock experiments.
 # exp = 1: inclined bed; exp = 3: overdeepening bed.
 exp_name = ['mismip_1', 'mismip_3', 'glacier_ews']
-idx = 2
+idx = 0
 exp = exp_name[idx]
 
 # Create figures directory if it does not exist.
@@ -63,19 +64,19 @@ data   = Dataset(nc_SSA, mode='r')
 
 
 # Let us create a dictionary with variable names.
-flowline_name = ['u_bar', 'ub', 'u_x', 'u_z', 'u', 'H', 'visc_bar', 'tau_b', 'tau_d', \
+flowline_name = ['u_bar', 'ub', 'u_bar_x', 'u_z', 'u', 'H', 'visc_bar', 'tau_b', 'tau_d', \
 				 'L', 'dL_dt', 't', 'b', 'C_bed', 'dudx_bc', \
 				 'BC_error', 'u2_0_vec', 'u2_dif_vec', 'picard_error', \
 				 'c_picard', 'dt', 'mu', 'omega', 'A', 'theta', 'S', \
-				 'm_stoch', 'smb_stoch', 'Q_fric', 'beta', 'visc', 'u_x_diva', 'F_1', 'F_2', \
-				 'A_theta', 'T_oce']
+				 'm_stoch', 'smb_stoch', 'Q_fric', 'beta', 'visc', 'u_x', 'F_1', 'F_2', \
+				 'A_theta', 'T_oce', 'lmbd']
 
-var_name 	  = ['u_bar', 'ub', 'u_x', 'u_z', 'u', 'H', 'visc_bar', 'tau_b', 'tau_d', \
+var_name 	  = ['u_bar', 'ub', 'u_bar_x', 'u_z', 'u', 'H', 'visc_bar', 'tau_b', 'tau_d', \
 				 'L', 'dL_dt', 't', 'b', 'C_bed', 'u_x_bc', \
 				 'dif', 'u2_0_vec', 'u2_dif_vec', 'picard_error', \
 				 'c_picard', 'dt', 'mu', 'omega_picard', 'A_s', 'theta', 'S', \
-				 'm_stoch', 'smb_stoch', 'Q_fric', 'beta', 'visc', 'u_x_diva', 'F_1', 'F_2', \
-				 'A_theta', 'T_oce']
+				 'm_stoch', 'smb_stoch', 'Q_fric', 'beta', 'visc', 'u_x', 'F_1', 'F_2', \
+				 'A_theta', 'T_oce', 'lmbd']
 
 
 # Dimension.
@@ -325,7 +326,7 @@ if save_series == 1:
 		area[i] = (1.0e3 * L[i] / n) * np.sum(H[i,:])
 		
 		# Current u_x value minus analytical.
-		u_x_0[i] = u_x[i,0] # u_x[i,n-1]
+		u_x_0[i] = u_bar_x[i,0] # u_x[i,n-1]
 
 
 	ax6.plot(t_plot, u_bar[:,s[2]-1], linestyle='-', color='blue', marker='None', \
@@ -398,7 +399,7 @@ if save_series == 1:
 		#ax6.set_ylim(0.0, 300.0)
 		#ax4.set_ylim(A_s[0]*(1.0 - 0.2), A_s[l-1]*(1.0 + 0.05))
 
-	ax.set_ylim(280.0, 360.0)
+	#ax.set_ylim(280.0, 360.0)
 	#ax.set_ylim(0.0, 1500.0)
 
 	ax.set_xlim(0, t_plot[s[0]-1])
@@ -624,7 +625,7 @@ if save_shooting == 1:
 
 if save_domain == 1:
 	
-	for i in range(l-1, l, 1): # range(0, l, 2), (l-1, l, 20)
+	for i in range(0, l, 10): # range(0, l, 2), (l-1, l, 20)
 		
 		# Horizontal dimension [km].
 		L_plot  = np.linspace(0, L[i], s[2])
@@ -635,7 +636,7 @@ if save_domain == 1:
 		z_s = H[i,:] + b[i,:]
 		
 		# Gaussian smooth for resolution jiggling.
-		z_s = gaussian_filter1d(z_s, 1.5)
+		#z_s = gaussian_filter1d(z_s, 1.5)
 		
 		# Vertical gray line in ice front.
 		n_frnt = 100
@@ -877,7 +878,7 @@ if save_domain == 1:
 
 if save_var_frames == 1:
 	
-	for i in range(0, l, 5): # (0, l, 10), (l-1, l, 1)
+	for i in range(0, l, 10): # (0, l, 10), (l-1, l, 1)
 		
 		L_plot  = np.linspace(0, L[i], s[2])
 		x_tilde = L_plot / 750.0  
@@ -887,7 +888,7 @@ if save_var_frames == 1:
 		
 
 		# Vertically averaged du/dx.
-		u_x_bar   = np.mean(u_x_diva[i,:,:], axis=0)
+		u_x_bar   = np.mean(u_x[i,:,:], axis=0)
 		theta_bar = np.mean(theta[i,:,:], axis=0)
 			
 		######################################
@@ -1113,10 +1114,10 @@ if save_visc == 1:
 	y_labels = np.linspace(0, n_z, z_ticks, dtype=int)
 
 	# Var limits.
-	#var_min = np.round(1e-6 * np.nanmin(visc), 0)
-	#var_max = np.round(1e-6 * np.nanmax(visc), 0)
-	var_min = np.nanmin(visc)
-	var_max = np.nanmax(visc)
+	var_min = 1.0e6
+	var_max = 2.0e7
+	#var_min = np.nanmin(visc)
+	#var_max = np.nanmax(visc)
 
 	cb_ticks = np.linspace(var_min, var_max, 6)
 	
@@ -1130,9 +1131,9 @@ if save_visc == 1:
 		ax  = fig.add_subplot(111)
 
 		# Flip theta matrix so that the plot is not upside down.
-		#im = ax.imshow(np.flip(visc[i,:,:],axis=0), cmap='plasma', \
-		#				vmin=var_min, vmax=var_max, aspect='auto')
-		im = ax.imshow(np.flip(visc[i,:,:],axis=0), cmap='plasma', aspect='auto')
+		im = ax.imshow(np.flip(visc[i,:,:],axis=0), cmap='plasma', \
+						vmin=var_min, vmax=var_max, aspect='auto')
+		#im = ax.imshow(np.flip(visc[i,:,:],axis=0), cmap='plasma', aspect='auto')
 	
 		ax.set_ylabel(r'$ \mathbf{n}_{z} $', fontsize=20)
 		ax.set_xlabel(r'$\ \mathbf{x} \ (\mathrm{km})$', fontsize=20)
@@ -1147,12 +1148,14 @@ if save_visc == 1:
 		cb.set_label(r'$\eta (x,z) \ (10^{6} \ \mathrm{Pa \cdot s})$', \
 					 rotation=90, labelpad=6, fontsize=20)
 
+		"""
 		ax.set_xticks(x_ticks)
 		ax.set_xticklabels(list(x_labels), fontsize=15)
 
 		ax.set_yticks(y_ticks)
 		ax.set_yticklabels(list(y_labels[::-1]), fontsize=15)
-	
+		"""
+
 		ax.set_title(r'$i = \ $'+str(i)+r'$, \ t =  \ $'+str(np.round(t[i],2))+r'$ \ yr$', fontsize=16)
 		plt.tight_layout()
 
@@ -1174,7 +1177,7 @@ if save_visc == 1:
 	
 
 
-if save_u_der == 1:
+if save_u == 1:
 
 	# Number of x ticks.
 	n_ticks = 5
@@ -1189,16 +1192,20 @@ if save_u_der == 1:
 	# Var limits.
 	#var_min = np.round(1e-6 * np.nanmin(visc), 0)
 	#var_max = np.round(1e-6 * np.nanmax(visc), 0)
-	u_min = np.nanmin(u)
-	u_max = np.nanmax(u)
+	#u_min = np.nanmin(u)
+	#u_max = np.nanmax(u)
 
-	u_z_min = np.nanmin(u_z)
-	u_z_max = np.nanmax(u_z)
+	#u_x_min = np.nanmin(u_x[s[0]-1])
+	#u_x_max = np.nanmax(u_x[s[0]-1])
+	u_min = 1.0
+	u_max = 1.0e2
 
-	cb_ticks_u   = np.linspace(u_min, u_max, 6)
-	cb_ticks_u_z = np.round(np.linspace(u_z_min, u_z_max, 6), 4)
+	#cb_ticks_u   = np.linspace(u_min, u_max, 6)
+	#cb_ticks_u_z = np.round(np.linspace(u_z_min, u_z_max, 6), 4)
+
+	ind_plot = np.array([0, int(0.5*s[0]), s[0]-1])
 	
-	for i in range(l-1, l, 1):
+	for i in range(50, l, 5): # (l-1, l, 1), ind_plot
 
 		# Update x_labels as domain extension changes in each iteration.
 		x_labels  = np.linspace(0, L[i], n_ticks, dtype=int)
@@ -1212,7 +1219,8 @@ if save_u_der == 1:
 		# Flip theta matrix so that the plot is not upside down.
 		#im = ax.imshow(np.flip(u[i,:,:],axis=0), cmap='plasma', \
 		#				vmin=u_min, vmax=u_max, aspect='auto')
-		im = ax.imshow(np.flip(u[i,:,:],axis=0), norm='log', cmap='viridis', aspect='auto')
+		im = ax.imshow(np.flip(np.abs(u[i,:,:]),axis=0), vmin=u_min, vmax=u_max,\
+		 				 norm='log', cmap='viridis', aspect='auto')
 	
 		ax.set_ylabel(r'$ \mathbf{n}_{z} $', fontsize=20)
 		ax.set_xlabel(r'$\ \mathbf{x} \ (\mathrm{km})$', fontsize=20)
@@ -1227,11 +1235,13 @@ if save_u_der == 1:
 		cb.set_label(r'$ u (x,z) \ ( \mathrm{m / yr})$', \
 					 rotation=90, labelpad=6, fontsize=20)
 
+		"""
 		ax.set_xticks(x_ticks)
 		ax.set_xticklabels(list(x_labels), fontsize=15)
 		
 		ax.set_yticks(y_ticks)
 		ax.set_yticklabels(list(y_labels[::-1]), fontsize=15)
+		"""
 	
 		ax.set_title(r'$i = \ $'+str(i)+r'$, \ t =  \ $'+str(np.round(t[i],2))+r'$ \ yr$', fontsize=16)
 		plt.tight_layout()
@@ -1252,6 +1262,32 @@ if save_u_der == 1:
 		plt.show()
 		plt.close(fig)
 
+if save_u_der == 1:
+
+	# Number of x ticks.
+	n_ticks = 5
+	x_ticks = np.linspace(0, n, n_ticks)
+	n_z     = np.shape(visc)[1]
+	z_ticks = int(0.2 * n_z + 1)
+
+	# n_z-0.5 to avoid half of grid cell in black when plotting.
+	y_ticks  = np.linspace(0, n_z-0.5, z_ticks, dtype=int)
+	y_labels = np.linspace(0, n_z, z_ticks, dtype=int)
+
+	# Var limits.
+	#u_x_min = np.nanmin(u_x[s[0]-1])
+	#u_x_max = np.nanmax(u_x[s[0]-1])
+	
+	#u_x_min = -0.1
+	#u_x_max = 0.1
+
+	#cb_ticks_u   = np.linspace(u_min, u_max, 6)
+	#cb_ticks_u_z = np.round(np.linspace(u_z_min, u_z_max, 6), 4)
+
+	ind_plot = np.array([0, int(0.5*s[0]), s[0]-1])
+	
+	for i in range(0, l, 2): # (l-1, l, 1), ind_plot
+
 		# FIGURE FOR U_Z.
 		fig = plt.figure(dpi=600, figsize=(6,4))
 		plt.rcParams['text.usetex'] = True
@@ -1259,8 +1295,9 @@ if save_u_der == 1:
 
 		# Flip theta matrix so that the plot is not upside down.
 		#im = ax.imshow(np.flip(u_z[i,:,:],axis=0), cmap='plasma', \
-		#				vmin=u_z_min, vmax=u_z_max, aspect='auto')
-		im = ax.imshow(np.flip(u_z[i,:,:],axis=0), norm='log', cmap='viridis', aspect='auto')
+		#				vmin=u_x_min, vmax=u_x_max, aspect='auto')
+		
+		im = ax.imshow(np.flip(lmbd[i,:,:],axis=0), cmap='cividis', aspect='auto')
 
 		ax.set_ylabel(r'$ \mathbf{n}_{z} $', fontsize=20)
 		ax.set_xlabel(r'$\ \mathbf{x} \ (\mathrm{km})$', fontsize=20)
@@ -1272,14 +1309,18 @@ if save_u_der == 1:
 		#cb.set_ticks(cb_ticks_u_z)
 		#cb.set_ticklabels(list(cb_ticks_u_z), fontsize=14)
 
-		cb.set_label(r'$ u_{z} (x,z) \ ( \mathrm{1 / yr})$', \
-					 rotation=90, labelpad=6, fontsize=20)
+		#cb.set_label(r'$ u_{z} (x,z) \ ( \mathrm{1 / yr})$', \
+		#			 rotation=90, labelpad=6, fontsize=20)
 
+		cb.set_label(r'$ \lambda (x,z) \ ( \mathrm{1 / yr})$', \
+					 rotation=90, labelpad=6, fontsize=20)
+		"""
 		ax.set_xticks(x_ticks)
 		ax.set_xticklabels(list(x_labels), fontsize=15)
 
 		ax.set_yticks(y_ticks)
 		ax.set_yticklabels(list(y_labels[::-1]), fontsize=15)
+		"""
 	
 		ax.set_title(r'$i = \ $'+str(i)+r'$, \ t =  \ $'+str(np.round(t[i],2))+r'$ \ yr$', fontsize=16)
 		plt.tight_layout()

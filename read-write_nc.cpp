@@ -7,8 +7,8 @@
 // NETCDF PARAMETERS.
 /* This is the name of the data file we will create. */
 //#define FILE_NAME "output/mismip/exp3/exp3_n.250/exp3_n.250.nc"
-#define FILE_NAME "/home/dmoreno/flowline/ewr/A_rates/bed_peak/test/flowline.nc"
-#define FILE_NAME_HR "/home/dmoreno/flowline/ewr/A_rates/bed_peak/test/flowline_hr.nc"
+#define FILE_NAME "/home/dmoreno/flowline/blatter-pattyn/test_solver2D_BiCGSTAB_u.old_n.100_nz.20_tol.1.0e-2_iter.25/flowline.nc"
+#define FILE_NAME_HR "/home/dmoreno/flowline/blatter-pattyn/test/flowline_hr.nc"
 #define FILE_NAME_READ "/home/dmoreno/flowline/data/noise_sigm_ocn.12.0.nc"
 
 
@@ -27,8 +27,8 @@
 #define H_NAME "H"
 #define U_BAR_NAME "u_bar"
 #define U_B_NAME "ub"
-#define U_X_BAR_NAME "u_x"
-#define U_X_DIVA_NAME "u_x_diva"
+#define U_BAR_X_NAME "u_bar_x"
+#define U_X_NAME "u_x"
 #define U_Z_NAME "u_z"
 #define U_NAME "u"
 #define VISC_NAME "visc"
@@ -39,7 +39,7 @@
 #define TAU_NAME "tau_b"
 #define BETA_NAME "beta"
 #define TAUD_NAME "tau_d"
-#define LMBD_NAME "lambda"
+#define LMBD_NAME "lmbd"
 #define B_NAME "b"
 #define L_NAME "L"
 #define DL_DT_NAME "dL_dt"
@@ -70,8 +70,8 @@
 #define T_UNITS "yr"
 #define U_BAR_UNITS "m/yr"
 #define U_B_UNITS "m/yr"
+#define U_BAR_X_UNITS "1/yr"
 #define U_X_UNITS "1/yr"
-#define U_X_DIVA_UNITS "1/yr"
 #define U_Z_UNITS "1/yr"
 #define U_UNITS "m/yr"
 #define VISC_UNITS "Pa s"
@@ -82,7 +82,7 @@
 #define TAU_UNITS "Pa"
 #define BETA_UNITS "Pa yr / m"
 #define TAUD_UNITS "Pa"
-#define LMBD_UNITS "dimensionless"
+#define LMBD_UNITS "Pa / m"
 #define B_UNITS "m/km"
 #define L_UNITS "km"
 #define DL_DT_UNITS "km/yr"
@@ -117,7 +117,7 @@ int retval;
 // SOLUTION SAVED IN .NC FILE: flow_line.nc
 /* IDs for the netCDF file, dimensions, and variables. */
 int ncid, x_dimid, z_dimid, time_dimid;
-int x_varid, z_varid, u_bar_varid, ub_varid, u_x_varid, u_x_diva_varid, u_z_varid, u_varid,H_varid, \
+int x_varid, z_varid, u_bar_varid, ub_varid, u_bar_x_varid, u_x_varid, u_z_varid, u_varid,H_varid, \
     visc_varid, visc_bar_varid, a_varid, a_theta_varid, s_varid, \
     tau_varid, beta_varid, lmbd_varid, taud_varid, b_varid, L_varid, dL_dt_varid, dt_varid, \
     c_pic_varid, t_varid, mu_varid, omega_varid, u2_bc_varid, u2_dif_varid, \
@@ -231,8 +231,8 @@ int f_nc(int N, int N_Z)
     if ((retval = nc_def_var(ncid, U_B_NAME, NC_DOUBLE, NDIMS,
                     dimids, &ub_varid)))
         ERR(retval);
-    if ((retval = nc_def_var(ncid, U_X_BAR_NAME, NC_DOUBLE, NDIMS,
-                    dimids, &u_x_varid)))
+    if ((retval = nc_def_var(ncid, U_BAR_X_NAME, NC_DOUBLE, NDIMS,
+                    dimids, &u_bar_x_varid)))
         ERR(retval);
     if ((retval = nc_def_var(ncid, H_NAME, NC_DOUBLE, NDIMS,
                     dimids, &H_varid)))
@@ -250,9 +250,6 @@ int f_nc(int N, int N_Z)
         ERR(retval);
     if ((retval = nc_def_var(ncid, BETA_NAME, NC_DOUBLE, NDIMS,
                     dimids, &beta_varid)))
-        ERR(retval);
-    if ((retval = nc_def_var(ncid, LMBD_NAME, NC_DOUBLE, NDIMS,
-                    dimids, &lmbd_varid)))
         ERR(retval);
     if ((retval = nc_def_var(ncid, TAUD_NAME, NC_DOUBLE, NDIMS,
                     dimids, &taud_varid)))
@@ -332,11 +329,14 @@ int f_nc(int N, int N_Z)
     if ((retval = nc_def_var(ncid, U_Z_NAME, NC_DOUBLE, NDIMS_Z,
                     dimids_z, &u_z_varid)))
         ERR(retval);
-    if ((retval = nc_def_var(ncid, U_X_DIVA_NAME, NC_DOUBLE, NDIMS_Z,
-                    dimids_z, &u_x_diva_varid)))
+    if ((retval = nc_def_var(ncid, U_X_NAME, NC_DOUBLE, NDIMS_Z,
+                    dimids_z, &u_x_varid)))
         ERR(retval);
     if ((retval = nc_def_var(ncid, U_NAME, NC_DOUBLE, NDIMS_Z,
                     dimids_z, &u_varid)))
+        ERR(retval);
+    if ((retval = nc_def_var(ncid, LMBD_NAME, NC_DOUBLE, NDIMS_Z,
+                    dimids_z, &lmbd_varid)))
         ERR(retval);
     if ((retval = nc_def_var(ncid, A_THETA_NAME, NC_DOUBLE, NDIMS_Z,
                     dimids_z, &a_theta_varid)))
@@ -349,8 +349,8 @@ int f_nc(int N, int N_Z)
     if ((retval = nc_put_att_text(ncid, ub_varid, UNITS,
                     strlen(U_B_UNITS), U_B_UNITS)))
         ERR(retval);
-    if ((retval = nc_put_att_text(ncid, u_x_varid, UNITS,
-                    strlen(U_X_UNITS), U_X_UNITS)))
+    if ((retval = nc_put_att_text(ncid, u_bar_x_varid, UNITS,
+                    strlen(U_BAR_X_UNITS), U_BAR_X_UNITS)))
         ERR(retval);
     if ((retval = nc_put_att_text(ncid, H_varid, UNITS,
                     strlen(H_UNITS), H_UNITS)))
@@ -448,11 +448,14 @@ int f_nc(int N, int N_Z)
     if ((retval = nc_put_att_text(ncid, u_z_varid, UNITS,
                     strlen(U_Z_UNITS), U_Z_UNITS)))
         ERR(retval);
-    if ((retval = nc_put_att_text(ncid, u_x_diva_varid, UNITS,
-                    strlen(U_X_DIVA_UNITS), U_X_DIVA_UNITS)))
+    if ((retval = nc_put_att_text(ncid, u_x_varid, UNITS,
+                    strlen(U_X_UNITS), U_X_UNITS)))
         ERR(retval);
     if ((retval = nc_put_att_text(ncid, u_varid, UNITS,
                     strlen(U_UNITS), U_UNITS)))
+        ERR(retval);
+    if ((retval = nc_put_att_text(ncid, lmbd_varid, UNITS,
+                    strlen(LMBD_UNITS), LMBD_UNITS)))
         ERR(retval);
      if ((retval = nc_put_att_text(ncid, a_theta_varid, UNITS,
                     strlen(A_THETA_UNITS), A_THETA_UNITS)))
@@ -679,7 +682,8 @@ int f_write(int c, ArrayXd u_bar, ArrayXd ub, ArrayXd u_x, ArrayXd H, ArrayXd vi
             double L, double t, double u2_bc, double u2_dif, double error, \
             double dt, int c_picard, double mu, double omega, ArrayXXd theta, \
             ArrayXXd visc, ArrayXXd u_z, ArrayXXd u_x_diva, ArrayXXd u, double A, double dL_dt, \
-            ArrayXd F_1, ArrayXd F_2, double m_stoch, double smb_stoch, ArrayXXd A_theta, double T_oce)
+            ArrayXd F_1, ArrayXd F_2, double m_stoch, double smb_stoch, ArrayXXd A_theta, double T_oce, \
+            ArrayXXd lmbd)
 {
     start[0]   = c;
     start_0[0] = c;
@@ -690,7 +694,7 @@ int f_write(int c, ArrayXd u_bar, ArrayXd ub, ArrayXd u_x, ArrayXd H, ArrayXd vi
     ERR(retval);
     if ((retval = nc_put_vara_double(ncid, ub_varid, start, cnt, &ub(0))))
     ERR(retval);
-    if ((retval = nc_put_vara_double(ncid, u_x_varid, start, cnt, &u_x(0))))
+    if ((retval = nc_put_vara_double(ncid, u_bar_x_varid, start, cnt, &u_x(0))))
     ERR(retval);
     
     if ((retval = nc_put_vara_double(ncid, H_varid, start, cnt, &H(0))))
@@ -757,9 +761,11 @@ int f_write(int c, ArrayXd u_bar, ArrayXd ub, ArrayXd u_x, ArrayXd H, ArrayXd vi
     ERR(retval);
     if ((retval = nc_put_vara_double(ncid, u_z_varid, start_z, cnt_z, &u_z(0,0))))
     ERR(retval);
-    if ((retval = nc_put_vara_double(ncid, u_x_diva_varid, start_z, cnt_z, &u_x_diva(0,0))))
+    if ((retval = nc_put_vara_double(ncid, u_x_varid, start_z, cnt_z, &u_x(0,0))))
     ERR(retval);
     if ((retval = nc_put_vara_double(ncid, u_varid, start_z, cnt_z, &u(0,0))))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid, lmbd_varid, start_z, cnt_z, &lmbd(0,0))))
     ERR(retval);
     if ((retval = nc_put_vara_double(ncid, a_theta_varid, start_z, cnt_z, &A_theta(0,0))))
     ERR(retval);
