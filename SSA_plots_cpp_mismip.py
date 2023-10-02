@@ -19,7 +19,7 @@ import pylab as plt_lab
 from scipy.ndimage import gaussian_filter1d
 
 path_fig        = '/home/dmoreno/figures/flowline/ewr/A_rates/bed_peak/y_p.88_tf_A.2.5e4_A.0.5e-26_5.0e-25/frames/'
-path_now        = '/home/dmoreno/flowline/blatter-pattyn/test_solver2D_BiCGSTAB_BC_long_n.100_nz.20/'
+path_now        = '/home/dmoreno/flowline/blatter-pattyn/bicgstab/stencil/n.50_nz.10_plus_visc_centred_3/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
 
@@ -35,7 +35,7 @@ coloured_domain    = 0
 save_var_frames    = 1
 save_series_frames = 0
 save_theta         = 0
-save_visc          = 0
+save_visc          = 1
 save_u             = 1
 save_u_der         = 0
 time_series_gif    = 0
@@ -499,7 +499,7 @@ if save_series_comp == 1:
 	ax4.plot(t_plot, np.log10(picard_error), linestyle='-', color='red', marker='None', \
 			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$')
 	
-	ax3.plot(t_plot, omega_picard, linestyle='-', color='blue', marker='None', \
+	ax3.plot(t_plot, omega_picard/np.pi, linestyle='-', color='blue', marker='None', \
 			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 		
 	ax5.plot(t_plot, mu, linestyle='-', color='black', marker='None', \
@@ -509,7 +509,7 @@ if save_series_comp == 1:
 	ax.set_ylabel(r'$N_{\mathrm{pic}}$',fontsize=18)
 	ax2.set_ylabel(r'$ \Delta t \ (yr)$',fontsize=18)
 	ax4.set_ylabel(r'$ \mathrm{log}_{10} (\varepsilon) $',fontsize=18)
-	ax3.set_ylabel(r'$ \omega \ (\mathrm{rad}) $',fontsize=18)
+	ax3.set_ylabel(r'$ \omega \ (\pi \ \mathrm{rad}) $',fontsize=18)
 	ax5.set_ylabel(r'$ \mu $',fontsize=18)
 	ax6.set_ylabel(r'$ \eta \ (Pa \cdot s) $',fontsize=18)
 	ax3.set_xlabel(r'$\mathrm{Time} \ (kyr)$',fontsize=18)
@@ -625,7 +625,7 @@ if save_shooting == 1:
 
 if save_domain == 1:
 	
-	for i in range(0, l, 10): # range(0, l, 2), (l-1, l, 20)
+	for i in range(l-1, l, 1): # range(0, l, 2), (l-1, l, 20)
 		
 		# Horizontal dimension [km].
 		L_plot  = np.linspace(0, L[i], s[2])
@@ -878,7 +878,7 @@ if save_domain == 1:
 
 if save_var_frames == 1:
 	
-	for i in range(0, l, 10): # (0, l, 10), (l-1, l, 1)
+	for i in range(l-1, l, 1): # (0, l, 10), (l-1, l, 1)
 		
 		L_plot  = np.linspace(0, L[i], s[2])
 		x_tilde = L_plot / 750.0  
@@ -1121,7 +1121,7 @@ if save_visc == 1:
 
 	cb_ticks = np.linspace(var_min, var_max, 6)
 	
-	for i in range(0, l, 10):
+	for i in range(l-1, l, 1):
 
 		# Update x_labels as domain extension changes in each iteration.
 		x_labels  = np.linspace(0, L[i], n_ticks, dtype=int)
@@ -1205,7 +1205,7 @@ if save_u == 1:
 
 	ind_plot = np.array([0, int(0.5*s[0]), s[0]-1])
 	
-	for i in range(50, l, 5): # (l-1, l, 1), ind_plot
+	for i in range(l-1, l, 1): # (l-1, l, 1), ind_plot
 
 		# Update x_labels as domain extension changes in each iteration.
 		x_labels  = np.linspace(0, L[i], n_ticks, dtype=int)

@@ -17,7 +17,7 @@ Created on Thu Jun 30 13:23:54 2022
 
 import os
 import subprocess
-import sys
+#import sys
 import shutil
 from subprocess import Popen, PIPE, STDOUT
 
@@ -25,7 +25,7 @@ from subprocess import Popen, PIPE, STDOUT
 
 # User defined directories.
 path_flowline = "/home/dmoreno/scr/flowline/"
-path_output   = "/home/dmoreno/flowline/blatter-pattyn/test_solver2D_BiCGSTAB_u.old_n.100_nz.20_tol.1.0e-2_iter.25/"
+path_output   = "/home/dmoreno/flowline/blatter-pattyn/bicgstab/stencil/n.50_nz.10_plus_visc_centred_4/"
 path_input    = "/home/dmoreno/c++/flowline/output/glacier_ews/"
 
 

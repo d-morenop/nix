@@ -7,7 +7,7 @@
 // NETCDF PARAMETERS.
 /* This is the name of the data file we will create. */
 //#define FILE_NAME "output/mismip/exp3/exp3_n.250/exp3_n.250.nc"
-#define FILE_NAME "/home/dmoreno/flowline/blatter-pattyn/test_solver2D_BiCGSTAB_u.old_n.100_nz.20_tol.1.0e-2_iter.25/flowline.nc"
+#define FILE_NAME "/home/dmoreno/flowline/blatter-pattyn/bicgstab/stencil/n.50_nz.10_plus_visc_centred_4/flowline.nc"
 #define FILE_NAME_HR "/home/dmoreno/flowline/blatter-pattyn/test/flowline_hr.nc"
 #define FILE_NAME_READ "/home/dmoreno/flowline/data/noise_sigm_ocn.12.0.nc"
 
@@ -489,6 +489,7 @@ int f_nc(int N, int N_Z)
     start_z[2] = 0;
 
     return N;
+    //return ncid;
 }
 
 
