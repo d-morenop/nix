@@ -7,7 +7,7 @@
 // NETCDF PARAMETERS.
 /* This is the name of the data file we will create. */
 //#define FILE_NAME "output/mismip/exp3/exp3_n.250/exp3_n.250.nc"
-#define FILE_NAME "/home/dmoreno/flowline/blatter-pattyn/bicgstab/stencil/n.50_nz.10_plus_visc_centred_4/flowline.nc"
+#define FILE_NAME "/home/dmoreno/flowline/blatter-pattyn/bicgstab/stencil/test_alpha_h/flowline.nc"
 #define FILE_NAME_HR "/home/dmoreno/flowline/blatter-pattyn/test/flowline_hr.nc"
 #define FILE_NAME_READ "/home/dmoreno/flowline/data/noise_sigm_ocn.12.0.nc"
 
@@ -677,12 +677,12 @@ int f_nc_hr(int N, int N_Z)
 }
 
 
-int f_write(int c, ArrayXd u_bar, ArrayXd ub, ArrayXd u_x, ArrayXd H, ArrayXd visc_bar, \
+int f_write(int c, ArrayXd u_bar, ArrayXd ub, ArrayXd u_bar_x, ArrayXd H, ArrayXd visc_bar, \
             ArrayXd S, ArrayXd tau_b, ArrayXd beta, ArrayXd tau_d, ArrayXd bed, \
             ArrayXd C_bed, ArrayXd Q_fric, ArrayXd u2_dif_vec, ArrayXd u2_0_vec, \
             double L, double t, double u2_bc, double u2_dif, double error, \
             double dt, int c_picard, double mu, double omega, ArrayXXd theta, \
-            ArrayXXd visc, ArrayXXd u_z, ArrayXXd u_x_diva, ArrayXXd u, double A, double dL_dt, \
+            ArrayXXd visc, ArrayXXd u_z, ArrayXXd u_x, ArrayXXd u, double A, double dL_dt, \
             ArrayXd F_1, ArrayXd F_2, double m_stoch, double smb_stoch, ArrayXXd A_theta, double T_oce, \
             ArrayXXd lmbd)
 {
@@ -695,7 +695,7 @@ int f_write(int c, ArrayXd u_bar, ArrayXd ub, ArrayXd u_x, ArrayXd H, ArrayXd vi
     ERR(retval);
     if ((retval = nc_put_vara_double(ncid, ub_varid, start, cnt, &ub(0))))
     ERR(retval);
-    if ((retval = nc_put_vara_double(ncid, u_bar_x_varid, start, cnt, &u_x(0))))
+    if ((retval = nc_put_vara_double(ncid, u_bar_x_varid, start, cnt, &u_bar_x(0))))
     ERR(retval);
     
     if ((retval = nc_put_vara_double(ncid, H_varid, start, cnt, &H(0))))

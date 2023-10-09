@@ -908,11 +908,41 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
             }
 
             // Boundaries.
+
+            // Two-point derivative.
+            
             u_x.row(0) = u.row(1) - u.row(0);
             u_z.col(0) = u.col(1) - u.col(0);
 
             u_x.row(n-1)   = u.row(n-1) - u.row(n-2);
             u_z.col(n_z-1) = u.col(n_z-1) - u.col(n_z-2);
+            
+
+            
+            // Three-point derivative.
+            /*
+            u_x.row(0) = ( u.row(0) - 4.0 * u.row(1) + 3.0 * u.row(2) ) / 3.0;
+            u_z.col(0) = ( u.col(0) - 4.0 * u.col(1) + 3.0 * u.col(2) ) / 3.0;
+
+            u_x.row(n-1)   = ( u.row(n-1) - 4.0 * u.row(n-2) + 3.0 * u.row(n-3) ) / 3.0;
+            u_z.col(n_z-1) = ( u.col(n_z-1) - 4.0 * u.col(n_z-2) + 3.0 * u.col(n_z-3) ) / 3.0;
+            */
+            
+            
+            // Four-point derivative.
+            /*
+            u_x.row(0) = ( 11.0 * u.row(0) - 18.0 * u.row(1) + \
+                            9.0 * u.row(2) - 2.0 * u.row(3) ) / 6.0;
+            
+            u_z.col(0) = ( 11.0 * u.col(0) - 18.0 * u.col(1) + \
+                            9.0 * u.col(2) - 2.0 * u.col(3) ) / 6.0;
+
+            u_x.row(n-1) = ( 11.0 * u.row(n-1) - 18.0 * u.row(n-2) +  \
+                                9.0 * u.row(n-3) - 2.0 * u.row(n-4) ) / 6.0;
+           
+            u_z.col(n_z-1) = ( 11.0 * u.col(n_z-1) - 18.0 * u.col(n_z-2) + \
+                                9.0 * u.col(n_z-3) - 2.0 * u.col(n_z-4) ) / 6.0;
+            */
 
             // Sigma coordinates transformation.
             u_x = u_x / (ds * L);
@@ -941,19 +971,7 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
     }
 
     // Allocate output variables.
-    /*
-    out.block(0,0,n,n_z)       = visc;
-    out.col(n_z)               = visc_bar;
-    out.col(n_z+1)             = u_bar_x;
-    out.block(0,n_z+1,n,n_z)   = u_x;
-    out.block(0,2*n_z+1,n,n_z) = u_z;
-    out.block(0,3*n_z+1,n,n_z) = strain_2d;
-    out.block(0,4*n_z+1,n,n_z) = A_theta;
-    */
-
-    // Allocate output variables.
     out << visc, visc_bar, u_bar_x, u_x, u_z, strain_2d, A_theta;
-
 
     return out;
 }	
@@ -1225,7 +1243,7 @@ ArrayXXd f_u(ArrayXXd u, ArrayXd u_bar, ArrayXd beta, ArrayXd C_bed, ArrayXXd vi
              ArrayXd H, ArrayXd dz, double sec_year, double t, double t_eq, \
              double m, int vel_meth, int n_z, int n)
 {
-    ArrayXXd out(n,n_z+3), F_1(n,n_z), F_all(n,n_z+1);
+    ArrayXXd out(n,4), F_1(n,n_z), F_all(n,n_z+1); //out(n,n_z+3)
     ArrayXd beta_eff(n), ub(n), F_2(n), tau_b(n), Q_fric(n);
 
     //ArrayXXd out(n,n_z+6),
@@ -1295,6 +1313,7 @@ ArrayXXd f_u(ArrayXXd u, ArrayXd u_bar, ArrayXd beta, ArrayXd C_bed, ArrayXXd vi
         //ub = u.col(1);
 
         // We need some equilibration before taking the lowest vertical layer.
+        /*
         if ( t < 5.0*t_eq )
         {
             ub = u.col(1);
@@ -1304,6 +1323,9 @@ ArrayXXd f_u(ArrayXXd u, ArrayXd u_bar, ArrayXd beta, ArrayXd C_bed, ArrayXXd vi
             // It crashes becasue we get negative basal velocities from the BC.
             ub = u.col(0);
         }
+        */
+
+        ub = u.col(0);
         
         // beta = beta_eff, ub = u_bar for SSA.
         beta_eff    = C_bed * pow(ub, m - 1.0);
@@ -1331,7 +1353,7 @@ ArrayXXd f_u(ArrayXXd u, ArrayXd u_bar, ArrayXd beta, ArrayXd C_bed, ArrayXXd vi
     */
 
     // Allocate output variables.
-    out << beta_eff, tau_b, Q_fric, u;
+    out << beta_eff, tau_b, Q_fric, ub;
 
     
     return out;
@@ -1364,23 +1386,32 @@ ArrayXXd solver_2D(int n, int n_z, double dx, ArrayXd dz, ArrayXXd visc, ArrayXd
             int idx = i*n_z + j;
 
             // Compute coefficients. This works!!
-            /*
+            
             double c_x1 = gamma * visc(i+1,j);
             double c_x  = gamma * visc(i,j);
 
             double c_z1 = dz_2_inv(i) * visc(i,j+1);
             double c_z  = dz_2_inv(i) * visc(i,j);
-            */
             
 
+            // Centred stencin in u and visc.
+            /*
+            double c_ij = - 2.0 * visc(i,j) * ( gamma + dz_2_inv(i) );
+            double c_ip1j  = gamma * ( visc(i,j) + 0.25 * ( visc(i+1,j) - visc(i-1,j) ) ) ;
+            double c_im1j  = gamma * ( visc(i,j) - 0.25 * ( visc(i+1,j) - visc(i-1,j) ) ) ;
+
+            double c_ijp1 = dz_2_inv(i) * ( visc(i,j) + 0.25 * ( visc(i,j+1) - visc(i,j-1) ) );
+            double c_ijm1 = dz_2_inv(i) * ( visc(i,j) - 0.25 * ( visc(i,j+1) - visc(i,j-1) ) );
+            */
+
             // Average stencil plus.
-            
+            /*
             double c_x1 = gamma * 0.5 * ( visc(i+1,j+1) + visc(i+1,j) );
             double c_x  = gamma * 0.5 * ( visc(i,j+1) + visc(i,j) );
 
             double c_z1 = dz_2_inv(i) * 0.5 * ( visc(i+1,j+1) + visc(i,j+1) );
             double c_z  = dz_2_inv(i) * 0.5 * ( visc(i+1,j) + visc(i,j) );       
-              
+            */
 
             // Average stencil minus.
             /*
@@ -1401,11 +1432,21 @@ ArrayXXd solver_2D(int n, int n_z, double dx, ArrayXd dz, ArrayXXd visc, ArrayXd
             */
 
             // Add non-zero entries to the triplet list
+            
             tripletList.push_back(T(idx, idx, - ( c_x1 + c_x + c_z1 + c_z )));
             tripletList.push_back(T(idx, idx+n_z, c_x1));
             tripletList.push_back(T(idx, idx-n_z, c_x));
             tripletList.push_back(T(idx, idx+1, c_z1));
             tripletList.push_back(T(idx, idx-1, c_z));
+            
+            /*
+            // Add non-zero entries to the triplet list
+            tripletList.push_back(T(idx, idx, c_ij));
+            tripletList.push_back(T(idx, idx+n_z, c_ip1j));
+            tripletList.push_back(T(idx, idx-n_z, c_im1j));
+            tripletList.push_back(T(idx, idx+1, c_ijp1));
+            tripletList.push_back(T(idx, idx-1, c_ijm1));
+            */
 
             // Fill vector b.
             b(idx) = F(i);
@@ -1414,13 +1455,13 @@ ArrayXXd solver_2D(int n, int n_z, double dx, ArrayXd dz, ArrayXXd visc, ArrayXd
 
     // Set the triplets in the sparse matrix
     // declares a column-major sparse matrix type of double.
-    Eigen::SparseMatrix<double> A_sparse(n*n_z, n*n_z); 
+    SparseMatrix<double> A_sparse(n*n_z, n*n_z); 
     
     // Define your sparse matrix A_spare from triplets.
     A_sparse.setFromTriplets(tripletList.begin(), tripletList.end());
 
     // Solver.
-    Eigen::BiCGSTAB<SparseMatrix<double> > solver;
+    BiCGSTAB<SparseMatrix<double> > solver;
     solver.compute(A_sparse);
 
     // Set tolerance and maximum number of iterations.
@@ -1431,8 +1472,9 @@ ArrayXXd solver_2D(int n, int n_z, double dx, ArrayXd dz, ArrayXXd visc, ArrayXd
 
     VectorXd x = solver.solve(b);
     
-    //std::cout << "#iterations:     " << solver.iterations() << std::endl;
-    //std::cout << "estimated error: " << solver.error()      << std::endl;
+    cout << "\n #iterations:     " << solver.iterations();
+    cout << "\n Estimated error: " << solver.error();
+    
     /* ... update b ... */
     // THINK ABOUT THIS!!!!!!!!!!!
     //x = solver.solve(b); // solve again??? No need to update b in our case.
@@ -1451,6 +1493,8 @@ ArrayXXd solver_2D(int n, int n_z, double dx, ArrayXd dz, ArrayXXd visc, ArrayXd
     In row-major order, the elements of a matrix are stored in memory row by row. 
     This means that consecutive elements in the same row are stored next to each other in memory.*/
     Map<Matrix<double,Dynamic,Dynamic,RowMajor>> u(x.data(), n, n_z);
+
+    //cout << "\n u = " << u;
 
     return u;
 }
@@ -1568,6 +1612,9 @@ ArrayXXd vel_solver(ArrayXd H, double ds, double ds_inv, ArrayXd dz, int n, int 
         {
             // Surface elevation gradient.
             dhds(i) = h(i+1) - h(i);
+
+            // Unstable.
+            //dhds(i) = 0.5 * ( h(i+1) - h(i-1) );
         }
         
         // Boundaries.
@@ -1581,19 +1628,36 @@ ArrayXXd vel_solver(ArrayXd H, double ds, double ds_inv, ArrayXd dz, int n, int 
 
         
         // VELOCITY BOUNDARY CONDITIONS.
+
         // Eq. 25, Pattyn (2003).
-        for (int i=0; i<n-1; i++)
+        for (int i=1; i<n-1; i++)
         {
             // Derivative from current velocity sol.
             // Centred differences and changed sign.
-            //u_sol(i,0) = u_sol(i,1) - dz(i) * ( 0.5 * beta(i) * u_sol(i,1) / visc(i,1) + \
-                                4.0 * dx_2_inv * ( u_sol(i+1,1) - u_sol(i,1) ) * \
-                                     ( bed(i+1) - bed(i) ) );
+            //double alpha = dz(i) * 4.0 * ( 0.5 * beta(i) * u_sol(i,1) / visc(i,1) + \
+                                ( u_sol(i,1) - u_sol(i-1,1) ) * abs( bed(i+1) - bed(i) ) * dx_2_inv );
 
-            u_sol(i,0) = u_sol(i,1) - dz(i) * ( 0.5 * beta(i) * u_sol(i,0) / visc(i,0) + \
-                                4.0 * dx_2_inv * ( u_sol(i+1,0) - u_sol(i,0) ) * \
-                                     ( bed(i+1) - bed(i) ) );
+            //u_sol(i,0) = u_sol(i,1) - alpha;
+            
 
+
+            double alpha_0 = dz(i) * 4.0 * ( 0.5 * beta(i) * u_sol(i,0) / visc(i,0) + \
+                                        0.5 * ( u_sol(i+1,0) - u_sol(i-1,0) ) *  \
+                                            abs( bed(i+1) - bed(i) ) * dx_2_inv );
+            
+            u_sol(i,0) = ( 4.0 * u_sol(i,1) - u_sol(i,2) - alpha_0 ) / 3.0;
+
+            
+
+            //u_sol(i,0) = ( 4.0 * u_sol(i,1) - u_sol(i,2) - \
+                                   dz(i) * 4.0 * ( 0.5 * beta(i) * u_sol(i,1) / visc(i,1) + \
+                                        ( u_sol(i,1) - u_sol(i-1,1) ) *  \
+                                             abs( bed(i+1) - bed(i) ) * dx_2_inv ) ) / 3.0;
+
+            //u_sol(i,0) = u_sol(i,1) - dz(i) * 4.0 * ( 0.5 * beta(i) * u_sol(i,0) / visc(i,0) + \
+                                        ( u_sol(i,0) - u_sol(i-1,0) ) *  \
+                                             abs( bed(i+1) - bed(i) ) * dx_2_inv );
+            
             // Free surface. Pattyn (2003).
             //u_sol(i,n_z-1) = u_sol(i,n_z-2) + \
                               dz(i) * 4.0 * ( u_sol(i+1,n_z-1) - u_sol(i,n_z-1) ) *  \
@@ -1605,17 +1669,53 @@ ArrayXXd vel_solver(ArrayXd H, double ds, double ds_inv, ArrayXd dz, int n, int 
                                          dhds(i) * dx_2_inv;
             
             // Two layer spacing. This works
-            // u_sol(i,n_z-1) = u_sol(i,n_z-3) + \
-                             0.5 * dz(i) * 4.0 * ( u_sol(i+1,n_z-2) - u_sol(i,n_z-2) ) *  \
-                                         dhds(i) * dx_2_inv;
+            //double alpha = 0.5 * dz(i) * 4.0 * ( u_sol(i,n_z-2) - u_sol(i-1,n_z-2) ) *  \
+                                         abs(dhds(i)) * dx_2_inv;
+            //u_sol(i,n_z-1) = u_sol(i,n_z-3) + alpha;
+
+            //cout << "\n i = " << i;
+            //cout << "\n alpha = " << alpha;
+
+
+            //u_sol(i,n_z-1) = u_sol(i,n_z-3);
+
+            //u_sol(i,n_z-1) = u_sol(i,n_z-2) + \
+                              dz(i) * 4.0 * ( u_sol(i+1,n_z-2) - u_sol(i,n_z-2) ) *  \
+                                        abs(dhds(i)) * dx_2_inv;
+
+            //u_sol(i,n_z-1) = u_sol(i,n_z-2) + \
+                              dz(i) * 4.0 * ( u_sol(i+1,n_z-2) - u_sol(i,n_z-2) ) *  \
+                                        abs(dhds(i)) * dx_2_inv;
 
             // Three points. du/dz = 0.5 * ( 3.0 * u(n_z-1) - 4.0 * u(n_z-2) + 1.0 * u(n_z-3) ). 
-            u_sol(i,n_z-1) = ( 4.0 * u_sol(i,n_z-2) - u_sol(i,n_z-3) + \
-                                  2.0 * dz(i) * 4.0 * ( u_sol(i+1,n_z-2) - u_sol(i,n_z-2) ) *  \
-                                         dhds(i) * dx_2_inv ) / 3.0;
+            
+            
+            // Horizontal derivatives evaluated at (n_z-2).
+            //double alpha_h = dz(i) * 4.0 * ( u_sol(i,n_z-2) - u_sol(i-1,n_z-2) ) *  \
+                                         abs(dhds(i)) * dx_2_inv;
 
-            // test du/dz = 0.
-            // 
+            
+            //u_sol(i,n_z-1) = ( 4.0 * u_sol(i,n_z-2) - u_sol(i,n_z-3) + alpha_h ) / 3.0;
+
+
+            double alpha_h = 0.005 * ( t - t_eq ) / ( tf - t_eq );
+            u_sol(i,n_z-1) = u_sol(i,n_z-2) + dz(i) * alpha_h;
+
+            cout << "\n i = " << i;
+            cout << "\n alpha_h = " << dz(i) * alpha_h;
+
+            
+            // Four points. du/dz = ( 11.0 * u.row(0) - 18.0 * u.row(1) + \
+                                        9.0 * u.row(2) - 2.0 * u.row(3) ) / 6.0; 
+            // Horizontal derivatives evaluated at (n_z-2).
+            //u_sol(i,n_z-1) = ( 18.0 * u_sol(i,n_z-2) - 9.0 * u_sol(i,n_z-3) + 2.0 * u_sol(i,n_z-3) + \
+                                   dz(i) * 6.0 * 2.0 * ( u_sol(i+1,n_z-1) - u_sol(i-1,n_z-1) ) *  \
+                                         abs(dhds(i)) * dx_2_inv ) / 11.0;
+            
+
+            // Test du/dz=0.
+            //u_sol(i,n_z-1) = u_sol(i,n_z-2);
+
         }
 
         // Hydrostatic equilibrium with the ocean.
@@ -1635,6 +1735,8 @@ ArrayXXd vel_solver(ArrayXd H, double ds, double ds_inv, ArrayXd dz, int n, int 
             u_sol(n-1,j) = u_sol(n-2,j) + u_x_bc;
         }
 
+        
+
         // Ensure positive velocities.
         u_sol = (u_sol < 0.0).select(0.0, u_sol);
 
@@ -1644,25 +1746,8 @@ ArrayXXd vel_solver(ArrayXd H, double ds, double ds_inv, ArrayXd dz, int n, int 
         // Vertically averaged velocity from full Blatter-Pattyn solution.
         u_bar = u_sol.rowwise().mean();
         
-        /*
-        u_bar = ArrayXd::Zero(n);
-        for (int j=2; j<n_z; j++)
-        {
-            u_bar = u_bar + u_sol.col(j);
-        }
-        u_bar = u_bar / double(n_z-2);
-        */
     }
     
-
-    //cout << "\n u_sol = " << u_sol;
-
-    // Allocate solutions.
-    //out.block(0,0,n,1) = u_bar;
-    //out(0,1)   = D;
-    //out(0,2)   = u_x_bc;
-    //out.block(1,1,n,n_z) = u_sol;
-    //out.block(n+1,n_z+1,n,n_z) = lmbd;
 
     // Allocate solutions.
     out << u_bar, u_sol;
@@ -1932,7 +2017,7 @@ int main()
     ArrayXXd visc(n,n_z);                  // Ice viscosity [Pa·s]. 
     ArrayXXd theta(n,n_z);                 // Temperature field [K].
     ArrayXXd A_theta(n,n_z);               // Temperature dependent ice rate factor [Pa^-3 yr^-1]
-    ArrayXXd fric_all(n,n_z+3);            // Basal friction output.(n,n_z+6)
+    ArrayXXd fric_all(n,4);            // Basal friction output.(n,n_z+3)
     ArrayXXd lmbd(n,n_z);                  // Matrix with stress vertical derivatives d(visc du/dz)/dz. 
     
 
@@ -2361,6 +2446,7 @@ int main()
         c_picard = 0;
 
         // Velocities equilibration.
+        /*
         if ( t < 1.5*t_eq )
         {
             vel_meth = 2;
@@ -2369,6 +2455,7 @@ int main()
         {
             vel_meth = 3;
         }
+        */
         
         // Implicit velocity solver. Picard iteration for non-linear viscosity and beta.
         // Loop over the vertical level for Blatter-Pattyn.
@@ -2472,11 +2559,18 @@ int main()
         ub        = fric_all.col(3);
         //F_1     = fric_all.col(4);
         //F_2       = fric_all.col(5);
+        //visc     = visc_all.block(0,0,n,n_z);
+        //visc_bar = visc_all.col(n_z);
         u_bar_x   = visc_all.col(n_z+1);
-        u_x       = visc_all.block(0,n_z+1,n,n_z);
-        u_z       = visc_all.block(0,2*n_z+1,n,n_z);
-        strain_2d = visc_all.block(0,3*n_z+1,n,n_z);
-        A_theta   = visc_all.block(0,4*n_z+1,n,n_z);
+        u_x       = visc_all.block(0,n_z+2,n,n_z);
+        u_z       = visc_all.block(0,2*n_z+2,n,n_z);
+        strain_2d = visc_all.block(0,3*n_z+2,n,n_z);
+        A_theta   = visc_all.block(0,4*n_z+2,n,n_z);
+
+
+        // Allocate output variables.
+        // THERE IS SOMETHING WRONG HERE!!!!
+        //out << visc, visc_bar, u_bar_x, u_x, u_z, strain_2d, A_theta;
 
 
 

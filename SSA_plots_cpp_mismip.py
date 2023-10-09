@@ -19,7 +19,7 @@ import pylab as plt_lab
 from scipy.ndimage import gaussian_filter1d
 
 path_fig        = '/home/dmoreno/figures/flowline/ewr/A_rates/bed_peak/y_p.88_tf_A.2.5e4_A.0.5e-26_5.0e-25/frames/'
-path_now        = '/home/dmoreno/flowline/blatter-pattyn/bicgstab/stencil/n.50_nz.10_plus_visc_centred_3/'
+path_now        = '/home/dmoreno/flowline/blatter-pattyn/bicgstab/stencil/test_alpha_h/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
 
@@ -37,7 +37,7 @@ save_series_frames = 0
 save_theta         = 0
 save_visc          = 1
 save_u             = 1
-save_u_der         = 0
+save_u_der         = 1
 time_series_gif    = 0
 save_L             = 0
 save_fig           = False
@@ -1114,8 +1114,8 @@ if save_visc == 1:
 	y_labels = np.linspace(0, n_z, z_ticks, dtype=int)
 
 	# Var limits.
-	var_min = 1.0e6
-	var_max = 2.0e7
+	var_min = 1.0e5
+	var_max = 1.0e7
 	#var_min = np.nanmin(visc)
 	#var_max = np.nanmax(visc)
 
@@ -1131,7 +1131,7 @@ if save_visc == 1:
 		ax  = fig.add_subplot(111)
 
 		# Flip theta matrix so that the plot is not upside down.
-		im = ax.imshow(np.flip(visc[i,:,:],axis=0), cmap='plasma', \
+		im = ax.imshow(np.flip(visc[i,:,:],axis=0), cmap='plasma', norm="log", \
 						vmin=var_min, vmax=var_max, aspect='auto')
 		#im = ax.imshow(np.flip(visc[i,:,:],axis=0), cmap='plasma', aspect='auto')
 	
@@ -1198,14 +1198,14 @@ if save_u == 1:
 	#u_x_min = np.nanmin(u_x[s[0]-1])
 	#u_x_max = np.nanmax(u_x[s[0]-1])
 	u_min = 1.0
-	u_max = 1.0e2
+	u_max = 1.0e3
 
 	#cb_ticks_u   = np.linspace(u_min, u_max, 6)
 	#cb_ticks_u_z = np.round(np.linspace(u_z_min, u_z_max, 6), 4)
 
 	ind_plot = np.array([0, int(0.5*s[0]), s[0]-1])
 	
-	for i in range(l-1, l, 1): # (l-1, l, 1), ind_plot
+	for i in range(5, l, 1): # (l-1, l, 1), ind_plot
 
 		# Update x_labels as domain extension changes in each iteration.
 		x_labels  = np.linspace(0, L[i], n_ticks, dtype=int)
@@ -1275,18 +1275,17 @@ if save_u_der == 1:
 	y_labels = np.linspace(0, n_z, z_ticks, dtype=int)
 
 	# Var limits.
-	#u_x_min = np.nanmin(u_x[s[0]-1])
-	#u_x_max = np.nanmax(u_x[s[0]-1])
-	
-	#u_x_min = -0.1
-	#u_x_max = 0.1
+	u_z_min = 1.0e-3
+	u_z_max = 1.0e-1
+
+	u_z = np.where(u_z < u_z_min, u_z_min, u_z)
 
 	#cb_ticks_u   = np.linspace(u_min, u_max, 6)
 	#cb_ticks_u_z = np.round(np.linspace(u_z_min, u_z_max, 6), 4)
 
 	ind_plot = np.array([0, int(0.5*s[0]), s[0]-1])
 	
-	for i in range(0, l, 2): # (l-1, l, 1), ind_plot
+	for i in range(5, l, 1): # (l-1, l, 1), ind_plot
 
 		# FIGURE FOR U_Z.
 		fig = plt.figure(dpi=600, figsize=(6,4))
@@ -1294,10 +1293,10 @@ if save_u_der == 1:
 		ax  = fig.add_subplot(111)
 
 		# Flip theta matrix so that the plot is not upside down.
-		#im = ax.imshow(np.flip(u_z[i,:,:],axis=0), cmap='plasma', \
-		#				vmin=u_x_min, vmax=u_x_max, aspect='auto')
+		im = ax.imshow(np.flip(u_z[i,:,:],axis=0), norm='log', cmap='PuOr', \
+						vmin=u_z_min, vmax=u_z_max, aspect='auto')
 		
-		im = ax.imshow(np.flip(lmbd[i,:,:],axis=0), cmap='cividis', aspect='auto')
+		#im = ax.imshow(np.flip(lmbd[i,:,:],axis=0), cmap='cividis', aspect='auto')
 
 		ax.set_ylabel(r'$ \mathbf{n}_{z} $', fontsize=20)
 		ax.set_xlabel(r'$\ \mathbf{x} \ (\mathrm{km})$', fontsize=20)
@@ -1312,7 +1311,7 @@ if save_u_der == 1:
 		#cb.set_label(r'$ u_{z} (x,z) \ ( \mathrm{1 / yr})$', \
 		#			 rotation=90, labelpad=6, fontsize=20)
 
-		cb.set_label(r'$ \lambda (x,z) \ ( \mathrm{1 / yr})$', \
+		cb.set_label(r'$ u_{z} (x,z) \ ( \mathrm{1 / yr})$', \
 					 rotation=90, labelpad=6, fontsize=20)
 		"""
 		ax.set_xticks(x_ticks)
@@ -1340,6 +1339,72 @@ if save_u_der == 1:
 		
 		plt.show()
 		plt.close(fig)
+
+
+
+	#u_x_min = np.nanmin(u_x)
+	#u_x_max = np.nanmax(u_x)
+
+	u_x_min = 1.0e-5
+	u_x_max = 1.0e-1
+
+	u_x = np.where(u_x < u_x_min, u_x_min, u_x)
+
+
+	for i in range(5, l, 1): # (l-1, l, 1), ind_plot
+
+		# FIGURE FOR U_Z.
+		fig = plt.figure(dpi=600, figsize=(6,4))
+		plt.rcParams['text.usetex'] = True
+		ax  = fig.add_subplot(111)
+
+		# Flip theta matrix so that the plot is not upside down.
+		im = ax.imshow(np.flip(u_x[i,:,:],axis=0), norm='log', cmap='Spectral', \
+						vmin=u_x_min, vmax=u_x_max, aspect='auto')
+		
+		#im = ax.imshow(np.flip(lmbd[i,:,:],axis=0), cmap='cividis', aspect='auto')
+
+		ax.set_ylabel(r'$ \mathbf{n}_{z} $', fontsize=20)
+		ax.set_xlabel(r'$\ \mathbf{x} \ (\mathrm{km})$', fontsize=20)
+
+		divider = make_axes_locatable(ax)
+		cax     = divider.append_axes("right", size="5%", pad=0.1)
+		cb      = fig.colorbar(im, cax=cax, extend='neither')
+
+		#cb.set_ticks(cb_ticks_u_z)
+		#cb.set_ticklabels(list(cb_ticks_u_z), fontsize=14)
+
+		#cb.set_label(r'$ u_{z} (x,z) \ ( \mathrm{1 / yr})$', \
+		#			 rotation=90, labelpad=6, fontsize=20)
+
+		cb.set_label(r'$ u_{x} (x,z) \ ( \mathrm{1 / yr})$', \
+					rotation=90, labelpad=6, fontsize=20)
+		"""
+		ax.set_xticks(x_ticks)
+		ax.set_xticklabels(list(x_labels), fontsize=15)
+
+		ax.set_yticks(y_ticks)
+		ax.set_yticklabels(list(y_labels[::-1]), fontsize=15)
+		"""
+	
+		ax.set_title(r'$i = \ $'+str(i)+r'$, \ t =  \ $'+str(np.round(t[i],2))+r'$ \ yr$', fontsize=16)
+		plt.tight_layout()
+
+		if save_fig == True:
+			##### Frame name ########
+			if i < 10:
+				frame = '000'+str(i)
+			elif i > 9 and i < 100:
+				frame = '00'+str(i)
+			elif i > 99 and i < 1000:
+				frame = '0'+str(i)
+			else:
+				frame = str(i)
+			
+			plt.savefig(path_fig+'flow_line_visc_'+frame+'.png', bbox_inches='tight')
+	
+	plt.show()
+	plt.close(fig)
 
 
 
