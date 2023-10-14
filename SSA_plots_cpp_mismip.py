@@ -37,7 +37,7 @@ save_series_frames = 0
 save_theta         = 0
 save_visc          = 1
 save_u             = 1
-save_u_der         = 1
+save_u_der         = 0
 time_series_gif    = 0
 save_L             = 0
 save_fig           = False
@@ -1205,7 +1205,7 @@ if save_u == 1:
 
 	ind_plot = np.array([0, int(0.5*s[0]), s[0]-1])
 	
-	for i in range(5, l, 1): # (l-1, l, 1), ind_plot
+	for i in range(5, l, 10): # (l-1, l, 1), ind_plot
 
 		# Update x_labels as domain extension changes in each iteration.
 		x_labels  = np.linspace(0, L[i], n_ticks, dtype=int)
@@ -1285,7 +1285,7 @@ if save_u_der == 1:
 
 	ind_plot = np.array([0, int(0.5*s[0]), s[0]-1])
 	
-	for i in range(5, l, 1): # (l-1, l, 1), ind_plot
+	for i in range(l-1, l, 1): # (l-1, l, 1), ind_plot
 
 		# FIGURE FOR U_Z.
 		fig = plt.figure(dpi=600, figsize=(6,4))
@@ -1351,7 +1351,7 @@ if save_u_der == 1:
 	u_x = np.where(u_x < u_x_min, u_x_min, u_x)
 
 
-	for i in range(5, l, 1): # (l-1, l, 1), ind_plot
+	for i in range(l-1, l, 1): # (l-1, l, 1), ind_plot
 
 		# FIGURE FOR U_Z.
 		fig = plt.figure(dpi=600, figsize=(6,4))

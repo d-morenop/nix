@@ -1694,15 +1694,19 @@ ArrayXXd vel_solver(ArrayXd H, double ds, double ds_inv, ArrayXd dz, int n, int 
             //double alpha_h = dz(i) * 4.0 * ( u_sol(i,n_z-2) - u_sol(i-1,n_z-2) ) *  \
                                          abs(dhds(i)) * dx_2_inv;
 
-            
             //u_sol(i,n_z-1) = ( 4.0 * u_sol(i,n_z-2) - u_sol(i,n_z-3) + alpha_h ) / 3.0;
 
 
-            double alpha_h = 0.005 * ( t - t_eq ) / ( tf - t_eq );
+            double alpha_h = 4.0 * ( u_sol(i+1,n_z-2) - u_sol(i,n_z-2) ) *  \
+                                        abs(500.0*dhds(i)) * dx_2_inv;
+
             u_sol(i,n_z-1) = u_sol(i,n_z-2) + dz(i) * alpha_h;
 
-            cout << "\n i = " << i;
-            cout << "\n alpha_h = " << dz(i) * alpha_h;
+            //double alpha_h = 0.005 * ( t - t_eq ) / ( tf - t_eq );
+            //u_sol(i,n_z-1) = u_sol(i,n_z-2) + dz(i) * alpha_h;
+
+            //cout << "\n i = " << i;
+            //cout << "\n alpha_h = " << dz(i) * alpha_h;
 
             
             // Four points. du/dz = ( 11.0 * u.row(0) - 18.0 * u.row(1) + \
