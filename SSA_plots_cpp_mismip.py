@@ -18,8 +18,8 @@ from scipy import signal
 import pylab as plt_lab
 from scipy.ndimage import gaussian_filter1d
 
-path_fig        = '/home/dmoreno/figures/flowline/mismip_therm/exp_1-2/n.1000/frames/'
-path_now        = '/home/dmoreno/flowline/mismip_therm/T_oce_f_q/steps/gamma_T_linear/n.250_T_air.193_T_oce_max.280_gamma_T_1.9/'
+path_fig        = '/home/dmoreno/figures/flowline/mismip_therm/shelf_melt/A_constant/test/'
+path_now        = '/home/dmoreno/flowline/mismip_therm/T_oce_f_q/steps/gamma_T_quad_long/n.250_T_air.183_T_oce_max.283_gamma_T_50.0/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
 
@@ -30,7 +30,7 @@ file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 save_series        = 1
 save_series_comp   = 0
 save_shooting      = 0
-save_domain        = 0
+save_domain        = 1
 coloured_domain    = 0
 save_var_frames    = 0
 save_series_frames = 0
@@ -809,7 +809,7 @@ if save_domain == 1:
 			ax.set_ylim(-1.0, 6.0)
 		
 		# Title.
-		#ax.set_title(r'$i = \ $'+str(i)+r'$, \ t = \ $'+str(np.round(t[i],2))+r'$ \ yr$', fontsize=16)
+		ax.set_title(r'$i = \ $'+str(i)+r'$, \ t = \ $'+str(np.round(t[i],2))+r'$ \ yr$', fontsize=16)
 	 	
 		ax.grid(axis='x', which='major', alpha=0.85)
 		
@@ -842,7 +842,7 @@ if save_domain == 1:
 
 if save_var_frames == 1:
 	
-	for i in range(l-1, l, 1): # (0, l, 10), (l-1, l, 1)
+	for i in range(0, l, 5): # (0, l, 10), (l-1, l, 1)
 		
 		L_plot  = np.linspace(0, L[i], s[2])
 		x_tilde = L_plot / 750.0  

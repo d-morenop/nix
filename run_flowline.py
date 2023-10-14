@@ -25,7 +25,7 @@ from subprocess import Popen, PIPE, STDOUT
 
 # User defined directories.
 path_flowline = "/home/dmoreno/scr/flowline/"
-path_output   = "/home/dmoreno/flowline/ewr/A_rates/test_version/"
+path_output   = "/home/dmoreno/flowline/mismip_therm/T_oce_f_q/steps/gamma_T_quad_long/gamma_sensitivity/n.250_T_air.188_T_oce_max.283_gamma_T_90.0/"
 path_input    = "/home/dmoreno/c++/flowline/output/glacier_ews/"
 
 
@@ -43,7 +43,7 @@ else:
     print('')
 
     # Boolean to check if path exists.
-    isfile = os.path.isdir(path_output+'*.o')
+    isfile = os.path.isdir(path_output+'*.o')   
     
     # Make clean if path does exist.
     if isfile == True:
