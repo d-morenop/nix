@@ -1397,7 +1397,7 @@ int main()
     double const ds_inv = n;
 
     double const t0   = 0.0;                         // Starting time [yr].
-    double const tf   = 111.0e4;                       // 132.0e4, 90.0e4. Ending time [yr]. 56.5e4. 30.0e4
+    double const tf   = 138.0e4;                       // 132.0e4, 90.0e4. Ending time [yr]. 56.5e4. 30.0e4
     double t;                                        // Time variable [yr].
 
     // Time variables.
@@ -1512,7 +1512,7 @@ int main()
     double const tf_oce  = 27.5e4;                   // End time of applied ocean forcing.
     double const c_po    = 3974.0;                    // J / (kg K)
     double const L_i     = 3.34e5;                    // J / kg 
-    double const gamma_T = 90.0e-5 * sec_year;        // Linear: 1.6e-5, Quad: 50.0e-5. [m/s] --> [m/yr]
+    double const gamma_T = 40.0e-5 * sec_year;        // Linear: 1.6e-5, Quad: 50.0e-5. [m/s] --> [m/yr]
     double const T_0     = 273.15;                    // K
     double T_oce; 
     double const delta_T_oce = 2.0;                    // Amplitude of ocean temperature anomalies. 
@@ -1542,7 +1542,7 @@ int main()
 
     // MISMIP EXPERIMENTS FORCING.
     // Number of steps in the A forcing.
-    int const n_s = 34;  //  Exp_3: 13, Exp_1-2: 17. T_air: 26, T_oce_f_q: 41, 34
+    int const n_s = 42;  //  Exp_3: 13, Exp_1-2: 17. T_air: 26, T_oce_f_q: 41, 34
 
 
     // PREPARE VARIABLES.
@@ -1695,28 +1695,7 @@ int main()
         // Time length for a certain A value. 
         t_s << 3.0e4, 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4,
                30.0e4, 33.0e4, 36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4;
-    }
-    
-    // MISMIP THERMODYNAMICS. 
-    else if ( exp == 1 )
-    {
-        // Time length for each forcing step. 
 
-
-        // ICE RATE FACTOR FORCING. [Pa^-3 s^-1].
-        // Exps 1-2 hysteresis forcing.
-        /*
-        t_s << 3.0e4, 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4,
-               30.0e4, 33.0e4, 36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4;
-
-        A_s << 4.6416e-24, 2.1544e-24, 1.0e-24, 4.6416e-25, 2.1544e-25, 1.0e-25,
-                4.6416e-26, 2.1544e-26, 1.0e-26,
-                2.1544e-26, 4.6416e-26, 1.0e-25, 2.1544e-25, 4.6416e-25, 1.0e-24,
-                2.1544e-24, 4.6416e-24; 
-        
-        A_s = A_s * sec_year;   
-        */
-        
         /*
         // Exp 3 hysteresis forcing.
         A_s << 3.0e-25, 2.5e-25, 2.0e-25, 1.5e-25, 1.0e-25, 5.0e-26, 2.5e-26, 5.0e-26, 1.0e-25, 
@@ -1729,8 +1708,12 @@ int main()
         // Unit conversion: [Pa^-3 s^-1] --> [Pa^-3 yr^-1].
         A_s = A_s * sec_year;   
         */
-        
-        
+    }
+    
+    // MISMIP THERMODYNAMICS. 
+    else if ( exp == 1 )
+    {
+
         // ICE HARDNESS CONVERSION TO TEMPERATURE.
         // Corresponding temperature amplitude is not wide enough for advance/retreate.
         /*
@@ -1755,19 +1738,21 @@ int main()
         // to retireve the initial state. Close hysteresis loop.
 
         // OCEAN TEMPERATURE ANOMALIES WITH ICE RATE FACTOR CONSTANT (INSTEAD OF T_AIR).
-        /*
+        
         t_s <<  6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4, 30.0e4, 33.0e4,
                36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4, 54.0e4, 57.0e4, 60.0e4, 63.0e4,
                66.0e4, 69.0e4, 72.0e4, 75.0e4, 78.0e4, 81.0e4, 84.0e4, 87.0e4, 90.0e4, 93.0e4,
-               96.0e4, 99.0e4, 102.0e4, 105.0e4, 108.0e4, 111.0e4, 114.0e4, 117.0e4, 120.0e4, 123.0e4, 126.0e4;
+               96.0e4, 99.0e4, 102.0e4, 105.0e4, 108.0e4, 111.0e4, 114.0e4, 117.0e4, 120.0e4, 123.0e4, 
+               126.0e4, 132.0e4;
         
         T_oce_s << 273.15, 273.65, 274.15, 274.65, 275.15, 275.65, 276.15, 276.65, 277.15, 277.65,
                    278.15, 278.65, 279.15, 279.65, 280.15, 280.65, 281.15, 281.65, 282.15, 282.65,
-                   283.15, 282.65, 282.15, 281.65, 281.15, 280.65, 280.15, 279.65, 279.15, 278.68,
+                   283.15, 283.15, 282.65, 282.15, 281.65, 281.15, 280.65, 280.15, 279.65, 279.15, 278.68,
                    278.15, 277.65, 277.15, 276.65, 276.15, 275.65, 275.15, 274.65, 274.15, 273.65, 
                    273.15;
-        */
         
+        
+        /*
         t_s <<  6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4, 30.0e4, 33.0e4,
                36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4, 54.0e4, 57.0e4, 60.0e4, 63.0e4,
                66.0e4, 69.0e4, 72.0e4, 75.0e4, 78.0e4, 81.0e4, 84.0e4, 87.0e4, 90.0e4, 93.0e4,
@@ -1778,71 +1763,18 @@ int main()
                    279.15, 278.68,
                    278.15, 277.65, 277.15, 276.65, 276.15, 275.65, 275.15, 274.65, 274.15, 273.65, 
                    273.15;
-
+        */
+        
+        // Constant air temperature if thermodynamics is active.
         T_air_s = ArrayXd::Constant(n_s, 188.15); // 193.15
         
         // Jorge's suggestion: run oceanic forcing with a constant ice rate factor A.
-        // Lowest value from Exp 3 to obtained an advanced ice sheet. 2.5e-12
+        // Lowest value from Exp 3 to obtained an advanced ice sheet. 1.0e-26
         A_s = ArrayXd::Constant(n_s, 1.0e-26);
-        
         A_s = A_s * sec_year;
         
         
-        
-        
-        // FORCING DIRECTLY ON MELTING AND THEN TRANSFORM TO TEMPERATURE TO PLOT.
-        /*
-        t_s << 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4, 30.0e4,
-               33.0e4, 36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4, 54.0e4, 57.0e4,
-               60.0e4, 63.0e4, 66.0e4, 69.0e4, 72.0e4, 75.0e4, 78.0e4;
-        
-        M_s << 0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0, 50.0, 55.0, 
-               60.0, 55.0, 50.0, 45.0, 40.0, 35.0, 30.0, 25.0, 20.0, 15.0, 10.0, 5.0, 0.0;
-        T_air_s = ArrayXd::Constant(n_s, 193.15); // 193.15
-        */
-        
-
-        // COMBINED OCEAN + AIR FORCING.
-        // Factor of 0.25 for ocean temperatures compared to air (Golledge) (1/0.25).
-        /*
-        t_s << 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4, 30.0e4;
-        T_oce_s << 273.15, 274.15, 275.15, 276.15, 277.15, 276.15, 275.15, 274.15, 273.15;
-
-        T_air_s = 200.15 + ( 4.0 * ( T_oce_s - T_0 ) );
-        //T_air_s = 193.15 + ( 4.0 * ( T_oce_s - T_0 ) );
-        */
-        
-
-       /*
-        t_s << 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4, 30.0e4, \
-               33.0e4, 36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4, 54.0e4;
-        T_oce_s << 273.15, 273.65, 274.15, 274.65, 275.15, 275.65, 276.15, 276.65, 277.15, \
-                   276.65, 276.15, 275.65, 275.15, 274.65, 274.15, 273.65, 273.15;
-        T_air_s = 193.15 + ( 4.0 * ( T_oce_s - T_0 ) );
-        */
-        
-        /*
-        // TRY THE OCEAN FORCING WITHOUT REFREEZING. JUST POSITIVE ANOMALIES.
-        // START THE DIAGRAM FROM THE REGITH WITH VERY COLD TEMPERATURES!
-        T_oce_s << 273.15, 272.65, 272.15, 271.65, 271.15, 
-                   271.65, 272.15, 272.65, 273.15, 273.65, 274.15, 274.65, 
-                   275.15, 274.65, 274.15, 273.65, 273.15;
-        t_s << 3.0e4, 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4,
-               30.0e4, 33.0e4, 36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4;
-
-        T_air_s << 253.15, 243.15, 233.15, 223.15, 213.15, 203.15, 198.15, 193.15, 193.15,
-                   198.15, 203.15, 213.15, 223.15, 233.15, 243.15, 253.15, 253.15;
-
         // AIR TEMPERATURES FORCING.
-        // Stable forcing.
-        /*
-        t_s << 3.0e4, 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4,
-               30.0e4, 33.0e4, 36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4;
-
-        T_air_s << 253.15, 243.15, 233.15, 223.15, 213.15, 203.15, 198.15, 193.15, 193.15,
-                   198.15, 203.15, 213.15, 223.15, 233.15, 243.15, 253.15, 253.15;
-        */
-
         // High resolution.
         /*
         t_s << 6.0e4, 10.0e4, 14.0e4, 16.0e4, 20.0e4, 24.0e4, 28.0e4, 32.0e4, 36.0e4, 40.0e4, 
@@ -1853,15 +1785,7 @@ int main()
                    203.15, 198.15, 193.15, 193.15, 198.15, 203.15, 208.15, 213.15, 218.15, 223.15,
                    228.15, 233.15, 238.15, 243.15, 248.15, 253.15;
         */
-        
-        
-
-       // Temperature initial conditions (-25ºC).
-       //theta = ArrayXXd::Constant(n, n_z, T_air_s(0));
-
-       // Convert to kelvin.
-       //cout << "\n Air temperatures = " << T_air_s;
-       //cout << "\n ocean temperatures = " << T_oce_s;
+    
 
         // Initialization.
         T_air   = T_air_s(0);

@@ -19,7 +19,7 @@ import pylab as plt_lab
 from scipy.ndimage import gaussian_filter1d
 
 path_fig        = '/home/dmoreno/figures/flowline/mismip_therm/shelf_melt/A_constant/test/'
-path_now        = '/home/dmoreno/flowline/mismip_therm/T_oce_f_q/steps/gamma_T_quad_long/n.250_T_air.183_T_oce_max.283_gamma_T_50.0/'
+path_now        = '/home/dmoreno/flowline/mismip_therm/T_oce_f_q/steps/gamma_T_quad_long/n.250_T_air.188_T_oce_max.283_gamma_T_50.0/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
 

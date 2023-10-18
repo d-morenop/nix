@@ -7,7 +7,7 @@
 // NETCDF PARAMETERS.
 /* This is the name of the data file we will create. */
 //#define FILE_NAME "output/mismip/exp3/exp3_n.250/exp3_n.250.nc"
-#define FILE_NAME "/home/dmoreno/flowline/mismip_therm/T_oce_f_q/steps/gamma_T_quad_long/gamma_sensitivity/n.250_T_air.188_T_oce_max.283_gamma_T_90.0/flowline.nc"
+#define FILE_NAME "/home/dmoreno/flowline/mismip_therm/T_oce_f_q/steps/gamma_T_quad_long/gamma_sensitivity/n.250_T_air.188_T_oce_max.283_gamma_T_40.0_long/flowline.nc"
 #define FILE_NAME_HR "/home/dmoreno/flowline/ewr/A_rates/test_version/flowline_hr.nc"
 #define FILE_NAME_READ "/home/dmoreno/flowline/data/noise_sigm_ocn.12.0.nc"
 
