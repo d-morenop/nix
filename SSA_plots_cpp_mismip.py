@@ -19,7 +19,7 @@ import pylab as plt_lab
 from scipy.ndimage import gaussian_filter1d
 
 path_fig        = '/home/dmoreno/figures/flowline/ewr/A_rates/bed_peak/y_p.88_tf_A.2.5e4_A.0.5e-26_5.0e-25/frames/'
-path_now        = '/home/dmoreno/flowline/blatter-pattyn/bicgstab/stencil/test_alpha_h/'
+path_now        = '/home/dmoreno/flowline/blatter-pattyn/bicgstab/initial_guess/n.50_nz.15_nz-2_prec_MIT/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
 
@@ -1121,7 +1121,7 @@ if save_visc == 1:
 
 	cb_ticks = np.linspace(var_min, var_max, 6)
 	
-	for i in range(l-1, l, 1):
+	for i in range(l-1, l, 10):
 
 		# Update x_labels as domain extension changes in each iteration.
 		x_labels  = np.linspace(0, L[i], n_ticks, dtype=int)
@@ -1205,7 +1205,7 @@ if save_u == 1:
 
 	ind_plot = np.array([0, int(0.5*s[0]), s[0]-1])
 	
-	for i in range(5, l, 10): # (l-1, l, 1), ind_plot
+	for i in range(l-1, l, 10): # (l-1, l, 1), ind_plot
 
 		# Update x_labels as domain extension changes in each iteration.
 		x_labels  = np.linspace(0, L[i], n_ticks, dtype=int)
