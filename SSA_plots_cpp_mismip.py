@@ -19,7 +19,7 @@ import pylab as plt_lab
 from scipy.ndimage import gaussian_filter1d
 
 path_fig        = '/home/dmoreno/figures/flowline/ewr/A_rates/bed_peak/y_p.88_tf_A.2.5e4_A.0.5e-26_5.0e-25/frames/'
-path_now        = '/home/dmoreno/flowline/blatter-pattyn/bicgstab/initial_guess/n.50_nz.15_nz-2_prec_MIT/'
+path_now        = '/home/dmoreno/flowline/blatter-pattyn/bicgstab/initial_guess/n.75_nz.15_nz-2_MIT/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
 
@@ -625,7 +625,7 @@ if save_shooting == 1:
 
 if save_domain == 1:
 	
-	for i in range(l-1, l, 1): # range(0, l, 2), (l-1, l, 20)
+	for i in range(0, l, 5): # range(0, l, 2), (l-1, l, 20)
 		
 		# Horizontal dimension [km].
 		L_plot  = np.linspace(0, L[i], s[2])

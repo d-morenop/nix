@@ -8,7 +8,6 @@
 #include <string.h>
 #include <netcdf.h>
 #include <chrono>
-#include <vector>
 
 using namespace Eigen;
 using namespace std;
@@ -1378,7 +1377,6 @@ ArrayXXd solver_2D(int n, int n_z, double dx, ArrayXd dz, ArrayXXd visc, ArrayXd
             
 
             // Add non-zero entries to the triplet list
-            
             tripletList.push_back(T(idx, idx, - ( c_x1 + c_x + c_z1 + c_z )));
             tripletList.push_back(T(idx, idx+n_z, c_x1));
             tripletList.push_back(T(idx, idx-n_z, c_x));
@@ -1400,7 +1398,7 @@ ArrayXXd solver_2D(int n, int n_z, double dx, ArrayXd dz, ArrayXXd visc, ArrayXd
 
     // Solver.
     BiCGSTAB<SparseMatrix<double> > solver;
-    solver.compute(A_sparse);
+    //solver.compute(A_sparse);
 
     // Preconditioner. It works as fast as using the previous vel sol as guess x_0.
     // If we use an initial guess x_0 from previous iter, do not use a preconditioner.   
@@ -1443,8 +1441,6 @@ ArrayXXd solver_2D(int n, int n_z, double dx, ArrayXd dz, ArrayXXd visc, ArrayXd
     In row-major order, the elements of a matrix are stored in memory row by row. 
     This means that consecutive elements in the same row are stored next to each other in memory.*/
     Map<Matrix<double,Dynamic,Dynamic,RowMajor>> u(x.data(), n, n_z);
-
-    //cout << "\n u = " << u;
 
     return u;
 }
@@ -1723,8 +1719,8 @@ int main()
 
 
     // Spatial resolution.
-    int const n   = 100;                             // 100. 250. Number of horizontal points 350, 500, 1000, 1500
-    int const n_z = 20;                              // 10. Number vertical layers. 25 (for T_air forcing!)
+    int const n   = 50;                             // 100. 250. Number of horizontal points 350, 500, 1000, 1500
+    int const n_z = 15;                              // 10. Number vertical layers. 25 (for T_air forcing!)
     double const ds     = 1.0 / n;                   // Normalized spatial resolution.
     double const ds_inv = n;
 
