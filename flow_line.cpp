@@ -847,7 +847,14 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
             // Horizontal derivative du/dx as defined in Eq. 21 (Lipscomb et al., 2019).
             for (int i=1; i<n-1; i++)
             {
+                // Centred.
                 u_bar_x(i) = 0.5 * ( u_bar(i+1) - u_bar(i-1) );
+
+                // Forward.
+                //u_bar_x(i) = u_bar(i+1) - u_bar(i);
+
+                // Backwards.
+                //u_bar_x(i) = u_bar(i) - u_bar(i-1);
             }
             u_bar_x(0)   = u_bar(1) - u_bar(0);
             u_bar_x(n-1) = u_bar(n-1) - u_bar(n-2);
@@ -1255,7 +1262,6 @@ ArrayXXd f_u(ArrayXXd u, ArrayXd u_bar, ArrayXd beta, ArrayXd C_bed, ArrayXXd vi
         
         // beta = beta_eff, ub = u_bar for SSA.
         beta_eff    = C_bed * pow(ub, m - 1.0);
-        //beta_eff(0) = beta_eff(1);
     }
     
 
@@ -1287,14 +1293,14 @@ ArrayXXd solver_2D(int n, int n_z, double dx, ArrayXd dz, ArrayXXd visc, ArrayXd
 
     // Build initial guess from previous velocity solution u_0.
     // Border should be zero as the solver does not include boundary conditions.
-    /*
+    
     u_0.col(0)     = ArrayXd::Zero(n);
     u_0.col(n_z-1) = ArrayXd::Zero(n);
     u_0.row(0)     = ArrayXd::Zero(n_z);
     u_0.row(n-1)   = ArrayXd::Zero(n_z);
 
     Map<VectorXd> x_0(u_0.data(), n*n_z);
-    */
+    
     
     // Initialize a triplet list to store non-zero entries.
     typedef Eigen::Triplet<double> T;
@@ -1401,12 +1407,13 @@ ArrayXXd solver_2D(int n, int n_z, double dx, ArrayXd dz, ArrayXXd visc, ArrayXd
     //solver.compute(A_sparse);
 
     // Preconditioner. It works as fast as using the previous vel sol as guess x_0.
-    // If we use an initial guess x_0 from previous iter, do not use a preconditioner.   
+    // If we use an initial guess x_0 from previous iter, do not use a preconditioner.
+    /*
     IncompleteLUT<double> preconditioner;
     preconditioner.setDroptol(1.0e-4); // 1.0e-4. Set ILU preconditioner parameters
     solver.preconditioner().compute(A_sparse);
     solver.compute(A_sparse);
-    
+    */
 
     // Set tolerance and maximum number of iterations.
     int maxIter = 100;                   // 100, 50
@@ -1415,10 +1422,11 @@ ArrayXXd solver_2D(int n, int n_z, double dx, ArrayXd dz, ArrayXXd visc, ArrayXd
     solver.setTolerance(tol);
 
     // Solve without guess (assumes x = 0).
-    VectorXd x = solver.solve(b);
+    //VectorXd x = solver.solve(b);
 
     // Solve with first guess x_0.
-    //VectorXd x = solver.solveWithGuess(b, x_0);
+    solver.compute(A_sparse);
+    VectorXd x = solver.solveWithGuess(b, x_0);
     
     cout << "\n #iterations:     " << solver.iterations();
     cout << "\n Estimated error: " << solver.error();
@@ -1534,10 +1542,10 @@ ArrayXXd vel_solver(ArrayXd H, double ds, double ds_inv, ArrayXd dz, int n, int 
         // Replace potential negative values with given value. (result.array() < 0).select(0, result);
         // Sometimes, u_bar(1) < 0 so that u_bar(0) > 0 after the BC and the model crashes.
         // Necessary for SSA solver, not DIVA.
-        //u_bar = (u_bar < 0.0).select(0.5 * u_bar(2), u_bar);
+        //u_bar = (u_bar < 0.0).select(0.0, u_bar);
         u_bar = (u_bar < 0.0).select(0.25 * u_bar(2), u_bar);
 
-        // THis works but yields extremely thick ice at the divde.
+        // This works but yields extremely thick ice at the divde.
         //u_bar = (u_bar < 0.0).select(0.0, u_bar);
 
         // Boundary conditions.
@@ -1574,9 +1582,6 @@ ArrayXXd vel_solver(ArrayXd H, double ds, double ds_inv, ArrayXd dz, int n, int 
 
         
         // VELOCITY BOUNDARY CONDITIONS.
-
-        
-
         // Eq. 25, Pattyn (2003).
         for (int i=1; i<n-1; i++)
         {
@@ -1712,14 +1717,14 @@ int main()
     // For Transition Indicators:
     //double const eps = 1.0e-9; 
     // MISMIP: 1.0e-8
-    double const eps = 1.0e-6; // 1.0e-5                       
+    double const eps = 1.0e-8; // 1.0e-6                      
 
     // Basal friction exponent.
     double const m = 1.0 / 3.0;                      // Friction exponent.
 
 
     // Spatial resolution.
-    int const n   = 50;                             // 100. 250. Number of horizontal points 350, 500, 1000, 1500
+    int const n   = 150;                             // 100. 250. Number of horizontal points 350, 500, 1000, 1500
     int const n_z = 15;                              // 10. Number vertical layers. 25 (for T_air forcing!)
     double const ds     = 1.0 / n;                   // Normalized spatial resolution.
     double const ds_inv = n;
@@ -1727,7 +1732,7 @@ int main()
 
     // Time variables.
     double const t0   = 0.0;                         // Starting time [yr].
-    double const tf   = 30.0e3;                       // 20.0e3, MISMIP-therm: 3.0e4, 90.0e4, Ending time [yr]. EWR: 5.0e3
+    double const tf   = 54.0e4;                       // 54.0e3, 32.0e4, MISMIP-therm: 3.0e4, 90.0e4, Ending time [yr]. EWR: 5.0e3
     double const t_eq = 1.5e3;                   // 2.0e3 Equilibration time: visc, vel, theta, etc. 0.2 * tf
     double t;                                        // Time variable [yr].
 
@@ -1741,17 +1746,17 @@ int main()
     // VELOCITY SOLVER.
     // 0 = cte, 1 = SSA, 2 = DIVA, 3 = Blatter-Pattyn.
     //int const vel_meth = 3;                          // Vel solver choice: 
-    int vel_meth = 3;
+    int vel_meth = 2;
 
     // TIME STEPING. Quite sensitive (use fixed dt in case of doubt).
     // For stochastic perturbations. dt = 0.1 and n = 250.
-    int const dt_meth = 1;                           // Time-stepping method. Fixed, 0; adapt, 1.
+    int const dt_meth = 0;                           // Time-stepping method. Fixed, 0; adapt, 1.
     double dt;                                       // Time step [yr].
     double dt_CFL;                                   // Courant-Friedrichs-Lewis condition [yr].
     double dt_tilde;                                 // New timestep. 
     double const t_eq_dt = 2.0 * t_eq;               // Eq. time until adaptative timestep is applied.
     double const dt_min = 0.1;                       // Minimum time step [yr]. 0.1
-    double const dt_max = 5.0;                       // Maximum time step [yr]. 2.0
+    double const dt_max = 1.0;                       // Maximum time step [yr]. 2.0, 5.0
     double const rel = 0.7;                          // Relaxation between interations [0,1]. 0.5
     
     // INPUT DEFINITIONS.   
@@ -1835,7 +1840,7 @@ int main()
     double u2_dif;                                   // Difference between analytical and numerical.
 
     // CALVING.
-    int const calving_meth = 1;                      // 0, no calving; 1, Christian et al. (2022), 2: deterministic Favier et al. (2019)
+    int const calving_meth = 0;                      // 0, no calving; 1, Christian et al. (2022), 2: deterministic Favier et al. (2019)
     double const m_dot = 30.0;                       // Mean frontal ablation [m/yr]. 30.0
     double H_f;
 
@@ -2002,25 +2007,30 @@ int main()
     // MISMIP EXPERIMENTS FORCING.
     if ( exp == 0 )
     {
-        // Exps 1-2 hysteresis forcing.
+        // Exps 1-2 forcing.
         // Rate factor [Pa^-3 s^-1].
-        /*
+        
         A_s << 4.6416e-24, 2.1544e-24, 1.0e-24, 4.6416e-25, 2.1544e-25, 1.0e-25,
                 4.6416e-26, 2.1544e-26, 1.0e-26,
                 2.1544e-26, 4.6416e-26, 1.0e-25, 2.1544e-25, 4.6416e-25, 1.0e-24,
-                2.1544e-24, 4.6416e-24; 
-        */
-        A_s << 4.6416e-24, 2.1544e-24, 1.0e-24, 4.6416e-25, 2.1544e-25, 1.0e-25,
-                4.6416e-26, 2.1544e-26, 1.0e-26,
-                2.1544e-26, 4.6416e-26, 1.0e-25, 2.1544e-25, 4.6416e-25, 1.0e-24,
-                2.1544e-24, 4.6416e-24; 
-
-        // Unit conversion: [Pa^-3 s^-1] --> [Pa^-3 yr^-1].
-        A_s = A_s * sec_year;   
+                2.1544e-24, 4.6416e-24;
 
         // Time length for a certain A value. 
         t_s << 3.0e4, 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4,
                30.0e4, 33.0e4, 36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4;
+        
+
+        // Exps 3 hysteresis forcing.
+        /*
+        A_s << 3.0e-25, 2.5e-25, 2.0e-25, 1.5e-25, 1.0e-25, 5.0e-26, 2.5e-26, 
+               5.0e-26, 1.0e-25, 1.5e-25, 2.0e-25, 2.5e-25, 3.0e-25; 
+
+        t_s << 3.0e4, 4.5e4, 6.0e4, 7.5e4, 9.0e4, 12.0e4, 15.0e4, 16.5e4, 18.5e4,
+                21.5e4, 24.5e4, 27.5e4, 29.0e4;
+        */
+    
+        // Unit conversion: [Pa^-3 s^-1] --> [Pa^-3 yr^-1].
+        A_s = A_s * sec_year;     
     }
     
     // MISMIP THERMODYNAMICS. 

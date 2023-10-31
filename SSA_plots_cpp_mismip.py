@@ -19,7 +19,7 @@ import pylab as plt_lab
 from scipy.ndimage import gaussian_filter1d
 
 path_fig        = '/home/dmoreno/figures/flowline/ewr/A_rates/bed_peak/y_p.88_tf_A.2.5e4_A.0.5e-26_5.0e-25/frames/'
-path_now        = '/home/dmoreno/flowline/blatter-pattyn/bicgstab/initial_guess/n.75_nz.15_nz-2_MIT/'
+path_now        = '/home/dmoreno/flowline/mismip_bp/exp_1-2/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
 
@@ -359,11 +359,11 @@ if save_series == 1:
 
 	#ax3.plot(t_plot, visc_bar_mean, linestyle='-', color='brown', marker='None', \
 	#		 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
-	#ax4.plot(t_plot, theta[:,s[1]-1,0], linestyle='-', color='darkgreen', marker='None', \
-#			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
-
-	ax4.plot(t_plot, m_stoch, linestyle='-', color='darkgreen', marker='None', \
+	ax4.plot(t_plot, A_s, linestyle='-', color='darkgreen', marker='None', \
 			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+
+	#ax4.plot(t_plot, m_stoch, linestyle='-', color='darkgreen', marker='None', \
+	#		 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 	ax5.plot(t_plot, visc_bar_mean, linestyle='-', color='brown', marker='None', \
 			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 
@@ -415,8 +415,8 @@ if save_series == 1:
 	ax3.set_ylabel(r'$ D \ (L)$', fontsize=18)
 	
 	#ax4.set_ylabel(r'$  \theta(0,H) \ (^{\circ} \mathrm{C})$', fontsize=17)
-	#ax4.set_ylabel(r'$ A \ (10^{-17} \ \mathrm{Pa}^{-3} \mathrm{yr}^{-1})$', fontsize=17)
-	ax4.set_ylabel(r'$  M \ (\mathrm{m/yr})$', fontsize=17)
+	ax4.set_ylabel(r'$ A \ (\mathrm{Pa}^{-3} \mathrm{yr}^{-1})$', fontsize=17)
+	#ax4.set_ylabel(r'$  M \ (\mathrm{m/yr})$', fontsize=17)
 	ax5.set_ylabel(r'$ \bar{\eta} \ (\mathrm{Pa \cdot s}) $', fontsize=18)
 	ax6.set_ylabel(r'$ \bar{u}(L) \ (\mathrm{m/yr})$', fontsize=18)
 	#ax3.set_xlabel(r'$\mathrm{Time} \ (\mathrm{kyr})$', fontsize=18)
@@ -625,7 +625,7 @@ if save_shooting == 1:
 
 if save_domain == 1:
 	
-	for i in range(0, l, 5): # range(0, l, 2), (l-1, l, 20)
+	for i in range(l-1, l, 1): # range(0, l, 2), (l-1, l, 20)
 		
 		# Horizontal dimension [km].
 		L_plot  = np.linspace(0, L[i], s[2])
@@ -1114,14 +1114,14 @@ if save_visc == 1:
 	y_labels = np.linspace(0, n_z, z_ticks, dtype=int)
 
 	# Var limits.
-	var_min = 1.0e5
-	var_max = 1.0e7
-	#var_min = np.nanmin(visc)
-	#var_max = np.nanmax(visc)
+	#var_min = 1.0e5
+	#var_max = 1.0e7
+	var_min = np.nanmin(visc)
+	var_max = np.nanmax(visc)
 
 	cb_ticks = np.linspace(var_min, var_max, 6)
 	
-	for i in range(l-1, l, 10):
+	for i in range(0, l, 1):
 
 		# Update x_labels as domain extension changes in each iteration.
 		x_labels  = np.linspace(0, L[i], n_ticks, dtype=int)
@@ -1205,7 +1205,7 @@ if save_u == 1:
 
 	ind_plot = np.array([0, int(0.5*s[0]), s[0]-1])
 	
-	for i in range(l-1, l, 10): # (l-1, l, 1), ind_plot
+	for i in range(0, l, 1): # (l-1, l, 1), ind_plot
 
 		# Update x_labels as domain extension changes in each iteration.
 		x_labels  = np.linspace(0, L[i], n_ticks, dtype=int)
