@@ -19,7 +19,7 @@ import pylab as plt_lab
 from scipy.ndimage import gaussian_filter1d
 
 path_fig        = '/home/dmoreno/figures/flowline/ewr/A_rates/bed_peak/y_p.88_tf_A.2.5e4_A.0.5e-26_5.0e-25/frames/'
-path_now        = '/home/dmoreno/flowline/mismip_bp/exp_1-2/'
+path_now        = '/home/dmoreno/flowline/mismip_diva/exp_3_n.200/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
 
@@ -50,7 +50,7 @@ smth_series        = 0
 # MISMIP bedrock experiments.
 # exp = 1: inclined bed; exp = 3: overdeepening bed.
 exp_name = ['mismip_1', 'mismip_3', 'glacier_ews']
-idx = 0
+idx = 1
 exp = exp_name[idx]
 
 # Create figures directory if it does not exist.
@@ -1121,7 +1121,7 @@ if save_visc == 1:
 
 	cb_ticks = np.linspace(var_min, var_max, 6)
 	
-	for i in range(0, l, 1):
+	for i in range(l-1, l, 1):
 
 		# Update x_labels as domain extension changes in each iteration.
 		x_labels  = np.linspace(0, L[i], n_ticks, dtype=int)
@@ -1205,7 +1205,7 @@ if save_u == 1:
 
 	ind_plot = np.array([0, int(0.5*s[0]), s[0]-1])
 	
-	for i in range(0, l, 1): # (l-1, l, 1), ind_plot
+	for i in range(l-1, l, 1): # (l-1, l, 1), ind_plot
 
 		# Update x_labels as domain extension changes in each iteration.
 		x_labels  = np.linspace(0, L[i], n_ticks, dtype=int)

@@ -807,6 +807,10 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
                 }
             }
 
+            // Avoid unnecessary loops.
+            //A_theta = (theta < theta_act).select(A_0(0) * exp(- Q_act(0) / (R * theta) ), A_theta);
+            //A_theta = (theta >= theta_act).select(A_0(1) * exp(- Q_act(1) / (R * theta) ), A_theta);
+
         }
 
         // Associated rate factor. A: [Pa^-3 yr^-1]
@@ -880,11 +884,11 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
             // Strain rate and regularization term to avoid division by 0. 
             strain_2d = pow(u_x,2) + 0.25 * pow(u_z,2) + eps;
 
-            // Viscosity option dependending on visc_term.
+            // Viscosity option dependending on visc_term via B_theta.
             visc = 0.5 * B_theta * pow(strain_2d, n_exp);
 
             // Vertically averaged viscosity.
-            visc_bar = visc_bar.rowwise().mean();
+            visc_bar = visc.rowwise().mean();
 
         }
 
@@ -965,11 +969,7 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
             // Viscosity option dependending on visc_term.
             visc = 0.5 * B_theta * pow(strain_2d, n_exp);
 
-            // Viscosity between bounds.
-            //visc = (visc < 1.0e7).select(1.0e7, visc); // 1.0e6
-            //visc = (visc > 1.0e9).select(1.0e9, visc);
-
-            // Vertically averaged viscosity.
+            // Vertically-averaged viscosity.
             visc_bar = visc.rowwise().mean();
 
         }
@@ -1293,14 +1293,14 @@ ArrayXXd solver_2D(int n, int n_z, double dx, ArrayXd dz, ArrayXXd visc, ArrayXd
 
     // Build initial guess from previous velocity solution u_0.
     // Border should be zero as the solver does not include boundary conditions.
-    
+    /*
     u_0.col(0)     = ArrayXd::Zero(n);
     u_0.col(n_z-1) = ArrayXd::Zero(n);
     u_0.row(0)     = ArrayXd::Zero(n_z);
     u_0.row(n-1)   = ArrayXd::Zero(n_z);
 
     Map<VectorXd> x_0(u_0.data(), n*n_z);
-    
+    */
     
     // Initialize a triplet list to store non-zero entries.
     typedef Eigen::Triplet<double> T;
@@ -1408,12 +1408,11 @@ ArrayXXd solver_2D(int n, int n_z, double dx, ArrayXd dz, ArrayXXd visc, ArrayXd
 
     // Preconditioner. It works as fast as using the previous vel sol as guess x_0.
     // If we use an initial guess x_0 from previous iter, do not use a preconditioner.
-    /*
     IncompleteLUT<double> preconditioner;
     preconditioner.setDroptol(1.0e-4); // 1.0e-4. Set ILU preconditioner parameters
     solver.preconditioner().compute(A_sparse);
     solver.compute(A_sparse);
-    */
+    
 
     // Set tolerance and maximum number of iterations.
     int maxIter = 100;                   // 100, 50
@@ -1422,11 +1421,11 @@ ArrayXXd solver_2D(int n, int n_z, double dx, ArrayXd dz, ArrayXXd visc, ArrayXd
     solver.setTolerance(tol);
 
     // Solve without guess (assumes x = 0).
-    //VectorXd x = solver.solve(b);
+    VectorXd x = solver.solve(b);
 
     // Solve with first guess x_0.
-    solver.compute(A_sparse);
-    VectorXd x = solver.solveWithGuess(b, x_0);
+    //solver.compute(A_sparse);
+    //VectorXd x = solver.solveWithGuess(b, x_0);
     
     cout << "\n #iterations:     " << solver.iterations();
     cout << "\n Estimated error: " << solver.error();
@@ -1686,8 +1685,18 @@ int main()
     // Initialize flowline.
 
     // SELECT EXPERIMENT.
-    // 0: MISMIP, 1: MISMIP-THERM, 2: TRANSITION INDICATORS.
-    int const exp = 0;
+    // 1: Exp. 1-2 MISMIP, 3: Exp. 3 MISMIP, 4: MISMIP+THERM, 5: TRANSITION INDICATORS.
+    int const exp = 3;
+
+    // BED GEOMETRY.
+    // Following Pattyn et al. (2012) the overdeepening hysterisis uses n = 250.
+    // bed_exp = 1: "mismip_1", 3: "mismip_3", 4: "galcier_ews"
+    int const bed_exp = 3;
+
+    // MISMIP EXPERIMENTS FORCING.
+    // Number of steps in the A forcing.
+    //  Exp_3: 13, Exp_1-2: 17. T_air: 17, T_oce: 9. T_oce_f_q: 29
+    int const n_s = 13;  
 
     // GENERAL PARAMETERS.
     double const sec_year = 3.154e7;                // Seconds in a year.
@@ -1700,7 +1709,7 @@ int main()
 
    
     // GROUNDING LINE.
-    double L = 694.5e3;                              // Grounding line position [m] exp1 = 694.5e3, exp3 = (479.1e3), ews = 50.0e3
+    double L = 479.1e3;                              // Grounding line position [m] exp1 = 694.5e3, exp3 = 479.1e3, ews = 50.0e3
     double dL_dt;                                   // GL migration rate [m/yr]. 
     int const dL_dt_num_opt = 1;                    // GL migration numerator discretization opt.
     int const dL_dt_den_opt = 1;                    // 1. GL migration denominator discretization opt.
@@ -1724,7 +1733,7 @@ int main()
 
 
     // Spatial resolution.
-    int const n   = 150;                             // 100. 250. Number of horizontal points 350, 500, 1000, 1500
+    int const n   = 250;                             // 100. 250. Number of horizontal points 350, 500, 1000, 1500
     int const n_z = 15;                              // 10. Number vertical layers. 25 (for T_air forcing!)
     double const ds     = 1.0 / n;                   // Normalized spatial resolution.
     double const ds_inv = n;
@@ -1732,7 +1741,7 @@ int main()
 
     // Time variables.
     double const t0   = 0.0;                         // Starting time [yr].
-    double const tf   = 54.0e4;                       // 54.0e3, 32.0e4, MISMIP-therm: 3.0e4, 90.0e4, Ending time [yr]. EWR: 5.0e3
+    double const tf   = 32.0e4;                       // 54.0e3, 32.0e4, MISMIP-therm: 3.0e4, 90.0e4, Ending time [yr]. EWR: 5.0e3
     double const t_eq = 1.5e3;                   // 2.0e3 Equilibration time: visc, vel, theta, etc. 0.2 * tf
     double t;                                        // Time variable [yr].
 
@@ -1750,7 +1759,7 @@ int main()
 
     // TIME STEPING. Quite sensitive (use fixed dt in case of doubt).
     // For stochastic perturbations. dt = 0.1 and n = 250.
-    int const dt_meth = 0;                           // Time-stepping method. Fixed, 0; adapt, 1.
+    int const dt_meth = 1;                           // Time-stepping method. Fixed, 0; adapt, 1.
     double dt;                                       // Time step [yr].
     double dt_CFL;                                   // Courant-Friedrichs-Lewis condition [yr].
     double dt_tilde;                                 // New timestep. 
@@ -1859,10 +1868,7 @@ int main()
     double const delta_M = 150.0;                      // Amplitude of sub-shelf melting.                         
 
 
-    // MISMIP EXPERIMENT CHOICE.
-    // Following Pattyn et al. (2012) the overdeepening hysterisis uses n = 250.
-    // exp = 1: "mismip_1", 3: "mismip_3", 4: "galcier_ews"
-    int const bed_exp = 1;
+    // Ice rate factor.
     double A, B;
 
     // PICARD ITERATION
@@ -1878,9 +1884,6 @@ int main()
     double const omega_2 = (19.0 / 20.0) * M_PI;
 
 
-    // MISMIP EXPERIMENTS FORCING.
-    // Number of steps in the A forcing.
-    int const n_s = 17;  //  Exp_3: 13, Exp_1-2: 17. T_air: 17, T_oce: 9. T_oce_f_q: 29
 
 
     // PREPARE VARIABLES.
@@ -1969,11 +1972,12 @@ int main()
 
 
     // Implicit initialization.
-    ub    = ArrayXd::Constant(n, 1.0);               // [m / yr] 
-    u_bar = ArrayXd::Constant(n, 1.0);               // [m / yr]
-    u     = ArrayXXd::Constant(n, n_z, 1.0);         // [m / yr]
-    beta  = ArrayXd::Constant(n, 5.0e3);             // [Pa yr / m]
-    tau_b = beta * ub;
+    ub          = ArrayXd::Constant(n, 1.0);               // [m / yr] 
+    u_bar       = ArrayXd::Constant(n, 1.0);               // [m / yr]
+    u_bar_old_2 = ArrayXd::Constant(n, 1.0); 
+    u           = ArrayXXd::Constant(n, n_z, 1.0);         // [m / yr]
+    beta        = ArrayXd::Constant(n, 5.0e3);             // [Pa yr / m]
+    tau_b       = beta * ub;
 
     // Temperature initial conditions (-25ºC).
     theta = ArrayXXd::Constant(n, n_z, 253.15);
@@ -2004,12 +2008,11 @@ int main()
     /////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////
 
-    // MISMIP EXPERIMENTS FORCING.
-    if ( exp == 0 )
+    // MISMIP EXPERIMENTS 1-2 FORCING.
+    if ( exp == 1 )
     {
         // Exps 1-2 forcing.
         // Rate factor [Pa^-3 s^-1].
-        
         A_s << 4.6416e-24, 2.1544e-24, 1.0e-24, 4.6416e-25, 2.1544e-25, 1.0e-25,
                 4.6416e-26, 2.1544e-26, 1.0e-26,
                 2.1544e-26, 4.6416e-26, 1.0e-25, 2.1544e-25, 4.6416e-25, 1.0e-24,
@@ -2018,23 +2021,31 @@ int main()
         // Time length for a certain A value. 
         t_s << 3.0e4, 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4,
                30.0e4, 33.0e4, 36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4;
-        
+    
+        // Unit conversion: [Pa^-3 s^-1] --> [Pa^-3 yr^-1].
+        A_s = A_s * sec_year;     
+    }
 
+    // MISMIP EXPERIMENT 3 FORCING.
+    if ( exp == 3 )
+    {
+        // Exps 3 forcing.
+        // Rate factor [Pa^-3 s^-1].
         // Exps 3 hysteresis forcing.
-        /*
+        
         A_s << 3.0e-25, 2.5e-25, 2.0e-25, 1.5e-25, 1.0e-25, 5.0e-26, 2.5e-26, 
                5.0e-26, 1.0e-25, 1.5e-25, 2.0e-25, 2.5e-25, 3.0e-25; 
 
         t_s << 3.0e4, 4.5e4, 6.0e4, 7.5e4, 9.0e4, 12.0e4, 15.0e4, 16.5e4, 18.5e4,
                 21.5e4, 24.5e4, 27.5e4, 29.0e4;
-        */
+        
     
         // Unit conversion: [Pa^-3 s^-1] --> [Pa^-3 yr^-1].
         A_s = A_s * sec_year;     
     }
     
     // MISMIP THERMODYNAMICS. 
-    else if ( exp == 1 )
+    else if ( exp == 4 )
     {
         // Time length for each forcing step. 
 
@@ -2186,7 +2197,7 @@ int main()
     }   
 
     // TRANSITION INDICATORS EXPERIMENTS.
-    else if ( exp == 2 )
+    else if ( exp == 5 )
     {
         //int const A_rate = 1;         // 0: constant A, 1: linear increase in A.
 
@@ -2237,12 +2248,13 @@ int main()
     t  = t0;
     dt = dt_min;
 
+    
 
     // TIME INTEGRATION.
     while (t < tf)
     {
-        // MISMIP EXPERIMENTS.
-        if ( exp == 0 )
+        // MISMIP EXPERIMENTS 1, 3 and 3.
+        if ( exp == 1 || exp == 3 )
         {
             // Update rate factor value.
             if ( t > t_s(c_s) )
@@ -2256,7 +2268,7 @@ int main()
         }
 
         // MISMIP-THERM EXPERIMENTS.
-        else if ( exp == 1  )
+        else if ( exp == 4 )
         {
             // Update rate factor and T_air value.
             if ( t > t_s(c_s) )
@@ -2299,7 +2311,7 @@ int main()
         }
 
         // TRANSITION INDICATORS EXPERIMENTS.
-        else if ( exp == 2 )
+        else if ( exp == 5 )
         {
             // Constant A throughout the sim.
             if ( A_rate == false )
@@ -2368,18 +2380,6 @@ int main()
         // Picard initialization.
         error    = 1.0;
         c_picard = 0;
-
-        // Use DIVA solver to equilibrate before Blatter-Pattyn.
-        /*
-        if ( t < 4.0*t_eq )
-        {
-            vel_meth = 2;
-        }
-        else
-        {
-            vel_meth = 3;
-        }
-        */
         
         // Implicit velocity solver. Picard iteration for non-linear viscosity and beta.
         // Loop over the vertical level for Blatter-Pattyn.
@@ -2389,9 +2389,6 @@ int main()
             // Save previous iteration solution.
             u_bar_old_1 = u_bar;
             u_old       = u;
-
-            //cout << "\n u = " << u;
-            //cout << "\n visc = " << visc;
             
             // Implicit solver.
             // If SSA solver ub = u_bar.
@@ -2428,6 +2425,7 @@ int main()
             // New relaxed Picard iteration. Pattyn (2003). 
             // Necessary to deal with the nonlinear velocity dependence on both viscosity and beta.
             // Just update beta and visc, not tau_b!
+            /*
             if (c_picard == 0)
             {
                 // Assume worst case as the inital guess.
@@ -2447,8 +2445,8 @@ int main()
                 // De Smedt et al. (2010). Eq. 10.
                 if (omega <= omega_1 || c_u_bar_1.norm() == 0.0)
                 {
-                    //mu = 2.5; // De Smedt.
-                    mu = 1.0; // To avoid negative velocities?
+                    mu = 2.5; // De Smedt.
+                    //mu = 1.0; // To avoid negative velocities?
                     //mu = 0.7; // Daniel
                 }
                 else if (omega > omega_1 & omega < omega_2)
@@ -2462,6 +2460,35 @@ int main()
                     //mu = 0.5; // Daniel
                 }
             }
+            */
+
+            // We have previously intialize u_bar_old_2 for t = 0.
+            // Difference between iter (i-1) and (i-2).
+            c_u_bar_2 = u_bar_old_1 - u_bar_old_2;
+            
+            // Angle defined between two consecutive vel solutions.
+            omega = acos( c_u_bar_1.dot(c_u_bar_2) / \
+                            ( c_u_bar_1.norm() * c_u_bar_2.norm() ) );
+            
+
+            // De Smedt et al. (2010). Eq. 10.
+            if (omega <= omega_1 || c_u_bar_1.norm() == 0.0)
+            {
+                mu = 2.5; // De Smedt.
+                //mu = 1.0; // To avoid negative velocities?
+                //mu = 0.7; // Daniel
+            }
+            else if (omega > omega_1 & omega < omega_2)
+            {
+                mu = 1.0; // De Smedt.
+                //mu = 0.7; // Daniel
+            }
+            else
+            {
+                mu = 0.7; // De Smedt.
+                //mu = 0.5; // Daniel
+            }
+
             
             // New velocity guess based on updated mu.
             u_bar = u_bar_old_1 + mu * c_u_bar_1.array();
@@ -2474,28 +2501,16 @@ int main()
             ++c_picard;
         }
 
-        //cout << "\n u_b = " << u.col(0);
         
         // Allocate variables from converged solution.
-        //lmbd      = sol.block(n+1,n_z+1,n,n_z);
         tau_b     = fric_all.col(1);
         Q_fric    = fric_all.col(2);
         ub        = fric_all.col(3);
-        //F_1     = fric_all.col(4);
-        //F_2       = fric_all.col(5);
-        //visc     = visc_all.block(0,0,n,n_z);
-        //visc_bar = visc_all.col(n_z);
         u_bar_x   = visc_all.col(n_z+1);
         u_x       = visc_all.block(0,n_z+2,n,n_z);
         u_z       = visc_all.block(0,2*n_z+2,n,n_z);
         strain_2d = visc_all.block(0,3*n_z+2,n,n_z);
         A_theta   = visc_all.block(0,4*n_z+2,n,n_z);
-
-
-        // Allocate output variables.
-        // THERE IS SOMETHING WRONG HERE!!!!
-        //out << visc, visc_bar, u_bar_x, u_x, u_z, strain_2d, A_theta;
-
 
 
         // CONSISTENCY CHECK. Search for NaN values.
@@ -2520,7 +2535,6 @@ int main()
             return 0;
         }
         
-
         
         // Update sub-shelf melt.
         if ( shelf_melt == true )
@@ -2538,10 +2552,15 @@ int main()
         dL_dt = L_out(1);
         
         // Write solution with desired output frequency.
-        
         if ( c == 0 || t > a(c) )
         {
-            cout << "\n t = " << t;
+            // std::cout is typically buffered by default.
+            // By using std::flush or std::endl, you ensure that the data is 
+            // immediately written to the output device. 
+            cout << "\n t =                  " << t << std::flush;
+            cout << "\n #Picard iterations:  " << c_picard << std::flush;
+            cout << "\n Estimated error:     " << error << std::flush;
+            
             //cout << "\n noise_now(0) = " << noise_now(0);
 
             // Write solution in nc.

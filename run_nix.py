@@ -25,7 +25,7 @@ from subprocess import Popen, PIPE, STDOUT
 
 # User defined directories.
 path_flowline = "/home/dmoreno/scr/flowline/"
-path_output   = "/home/dmoreno/flowline/mismip_diva/exp_1-2_n.150/"
+path_output   = "/home/dmoreno/flowline/mismip_diva/exp_3_n.250/"
 path_input    = "/home/dmoreno/c++/flowline/output/glacier_ews/"
 
 
@@ -54,7 +54,7 @@ else:
                        stdout=subprocess.PIPE, universal_newlines=True)
 
 # Copy main script and write_nc to the output folder for compilation therein.
-shutil.copyfile(path_flowline+'flow_line.cpp', path_output+'flow_line.cpp')
+shutil.copyfile(path_flowline+'nix.cpp', path_output+'nix.cpp')
 shutil.copyfile(path_flowline+'read-write_nc.cpp', path_output+'read-write_nc.cpp')
 #shutil.copyfile(path_input+'noise.nc', path_output+'noise.nc')
 
@@ -65,28 +65,28 @@ config = 'iceshelf'
 if config == 'local':
     
     # Compiling command.
-    cmd  = "g++ -I /path/to/eigen3/ -o "+path_output+"flow_line.o "+path_output+"flow_line.cpp -lnetcdf"
+    cmd  = "g++ -I /path/to/eigen3/ -o "+path_output+"nix.o "+path_output+"nix.cpp -lnetcdf"
 
 elif config == 'foehn':
     
     # Compiling command. -std=c++17
-    cmd = "g++ -std=c++11 -I /usr/include/eigen3/ -o "+path_output+"flow_line.o "+path_output+"flow_line.cpp -lnetcdf"
+    cmd = "g++ -std=c++11 -I /usr/include/eigen3/ -o "+path_output+"nix.o "+path_output+"nix.cpp -lnetcdf"
 
 elif config == 'iceshelf':
     
     # Compiling command. -std=c++17
-    cmd = "g++ -std=c++11 -I /usr/include/eigen3/ -o "+path_output+"flow_line.o "+path_output+"flow_line.cpp -lnetcdf"
+    cmd = "g++ -std=c++11 -I /usr/include/eigen3/ -o "+path_output+"nix.o "+path_output+"nix.cpp -lnetcdf"
 
 elif config == 'brigit':
     
     # Compiling command.
-    cmd = "g++ -std=c++11 -I/opt/ohpc/pub/libs/gnu8/impi/netcdf/4.6.3/include/ -I/usr/include/eigen3/ -L/opt/ohpc/pub/libs/gnu8/impi/netcdf/4.6.3/lib/ -lnetcdf -o "+path_output+"flow_line.o "+path_output+"flow_line.cpp"
+    cmd = "g++ -std=c++11 -I/opt/ohpc/pub/libs/gnu8/impi/netcdf/4.6.3/include/ -I/usr/include/eigen3/ -L/opt/ohpc/pub/libs/gnu8/impi/netcdf/4.6.3/lib/ -lnetcdf -o "+path_output+"nix.o "+path_output+"nix.cpp"
     
     # In Brigit, we need a submit.sh file to send job to the queue.
     shutil.copyfile(path_flowline+'submit.sh', path_output+'submit.sh')
 
-# Create text file for terminal output. 
-f = open(path_output+"out.txt", "w")
+# Create text file for terminal output. "wb" for unbuffered output.
+f = open(path_output+"out.txt", "wb")
 
 # Print compiling config.
 print('')
@@ -98,11 +98,11 @@ subprocess.run(cmd, shell=True, check=True, \
                stdout=f, universal_newlines=True)
 
 print('')
-print('-> Flowline compiled.')
+print('-> Nix compiled.')
 print('')
 
 print('')
-print('-> Running flowline.')
+print('-> Running Nix.')
 print('')
     
 # Run flowline in background. Note that the solution is stored in nc file.
@@ -117,7 +117,7 @@ if config == 'brigit':
     cmd_run = "sbatch submit.sh"
     #print('cmd_run = ', cmd_run)
 else:
-    cmd_run = path_output+"flow_line.o &"
+    cmd_run = path_output+"nix.o &"
 
 
 # Run flowline model.
