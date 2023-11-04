@@ -19,7 +19,7 @@ import pylab as plt_lab
 from scipy.ndimage import gaussian_filter1d
 
 path_fig        = '/home/dmoreno/figures/flowline/ewr/A_rates/bed_peak/y_p.88_tf_A.2.5e4_A.0.5e-26_5.0e-25/frames/'
-path_now        = '/home/dmoreno/flowline/mismip_diva/exp_3_n.200/'
+path_now        = '/home/dmoreno/flowline/mismip_bp/exp_3_n.80_nz.10_dt.5_long/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
 
@@ -509,7 +509,7 @@ if save_series_comp == 1:
 	ax.set_ylabel(r'$N_{\mathrm{pic}}$',fontsize=18)
 	ax2.set_ylabel(r'$ \Delta t \ (yr)$',fontsize=18)
 	ax4.set_ylabel(r'$ \mathrm{log}_{10} (\varepsilon) $',fontsize=18)
-	ax3.set_ylabel(r'$ \omega \ (\pi \ \mathrm{rad}) $',fontsize=18)
+	ax3.set_ylabel(r'$ \omega \ (\mathrm{rad}) $',fontsize=18)
 	ax5.set_ylabel(r'$ \mu $',fontsize=18)
 	ax6.set_ylabel(r'$ \eta \ (Pa \cdot s) $',fontsize=18)
 	ax3.set_xlabel(r'$\mathrm{Time} \ (kyr)$',fontsize=18)
@@ -527,6 +527,9 @@ if save_series_comp == 1:
 	
 	ax.set_xticklabels([])
 	ax2.set_xticklabels([])
+
+	ax3.set_yticks([0.0, 0.25, 0.5, 0.75, 1.0])
+	ax3.set_yticklabels([r'$0$', r'$\pi/4$', r'$\pi/2$', r'$3 \pi/4$', r'$\pi$'], fontsize=12)
 	
 	ax.tick_params(axis='y', which='major', length=4, colors='darkblue')
 	ax2.tick_params(axis='y', which='major', length=4, colors='black')

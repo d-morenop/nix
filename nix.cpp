@@ -921,20 +921,9 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
             }
 
             // Boundaries.
-
-            // Two-point derivative.
-            /*
-            u_x.row(0) = u.row(1) - u.row(0);
-            u_z.col(0) = u.col(1) - u.col(0);
-
-            u_x.row(n-1)   = u.row(n-1) - u.row(n-2);
-            u_z.col(n_z-1) = u.col(n_z-1) - u.col(n_z-2);
-            */
-
             // Three-point derivative.
             // MIT.
             // du/dz = 0.5 * ( 3.0 * u(n_z-1) - 4.0 * u(n_z-2) + 1.0 * u(n_z-3) ) 
-            
             u_x.row(0) = 0.5 * ( u.row(0) - 4.0 * u.row(1) + 3.0 * u.row(2) );
             u_z.col(0) = 0.5 * ( u.col(0) - 4.0 * u.col(1) + 3.0 * u.col(2) );
 
@@ -1282,14 +1271,15 @@ ArrayXXd f_u(ArrayXXd u, ArrayXd u_bar, ArrayXd beta, ArrayXd C_bed, ArrayXXd vi
 }
 
 
-ArrayXXd solver_2D(int n, int n_z, double dx, ArrayXd dz, ArrayXXd visc, ArrayXd F, ArrayXXd u_0) 
+ArrayXXd solver_2D(int n, int n_z, double dx, ArrayXd dz, ArrayXXd visc, ArrayXd F, ArrayXXd u_0, \
+                    double tol, double tol_pre, int maxIter, int N, int P) 
 {
 
     ArrayXd dz_2_inv  = 1.0 / pow(dz,2);
     double gamma = 4.0 / pow(dx, 2); // 4.0 / pow(dx, 2)
 
     // Inhomogeneous term: A*x = b.
-    VectorXd b = VectorXd::Zero(n * n_z);
+    VectorXd b = VectorXd::Zero(N);
 
     // Build initial guess from previous velocity solution u_0.
     // Border should be zero as the solver does not include boundary conditions.
@@ -1304,11 +1294,12 @@ ArrayXXd solver_2D(int n, int n_z, double dx, ArrayXd dz, ArrayXXd visc, ArrayXd
     
     // Initialize a triplet list to store non-zero entries.
     typedef Eigen::Triplet<double> T;
-    std::vector<T> tripletList;
+    
 
-    // Reserve memory for triplets.
+    // Reserve memory for triplets. Initialize a triplet list to store non-zero entries.
     // 5 unkowns in a n*n_z array.
-    tripletList.reserve(5 * (n-2) * (n_z-2));  
+    std::vector<T> tripletList;
+    tripletList.reserve(P);  
 
     
     // Loop through grid points
@@ -1389,6 +1380,7 @@ ArrayXXd solver_2D(int n, int n_z, double dx, ArrayXd dz, ArrayXXd visc, ArrayXd
             tripletList.push_back(T(idx, idx+1, c_z1));
             tripletList.push_back(T(idx, idx-1, c_z));
             
+            
 
             // Fill vector b.
             b(idx) = F(i);
@@ -1397,7 +1389,7 @@ ArrayXXd solver_2D(int n, int n_z, double dx, ArrayXd dz, ArrayXXd visc, ArrayXd
 
     // Set the triplets in the sparse matrix
     // declares a column-major sparse matrix type of double.
-    SparseMatrix<double> A_sparse(n*n_z, n*n_z); 
+    SparseMatrix<double> A_sparse(N, N); 
     
     // Define your sparse matrix A_spare from triplets.
     A_sparse.setFromTriplets(tripletList.begin(), tripletList.end());
@@ -1409,14 +1401,12 @@ ArrayXXd solver_2D(int n, int n_z, double dx, ArrayXd dz, ArrayXXd visc, ArrayXd
     // Preconditioner. It works as fast as using the previous vel sol as guess x_0.
     // If we use an initial guess x_0 from previous iter, do not use a preconditioner.
     IncompleteLUT<double> preconditioner;
-    preconditioner.setDroptol(1.0e-4); // 1.0e-4. Set ILU preconditioner parameters
+    preconditioner.setDroptol(tol_pre); // 1.0e-4. Set ILU preconditioner parameters
     solver.preconditioner().compute(A_sparse);
     solver.compute(A_sparse);
     
 
     // Set tolerance and maximum number of iterations.
-    int maxIter = 100;                   // 100, 50
-    double tol = 1.0e-3;                // 1.0e-3, 1.0e-2
     solver.setMaxIterations(maxIter);
     solver.setTolerance(tol);
 
@@ -1457,7 +1447,8 @@ ArrayXXd vel_solver(ArrayXd H, double ds, double ds_inv, ArrayXd dz, int n, int 
                     ArrayXd bed, double rho, double rho_w, double g, double L, ArrayXd C_bed, \
                     double t, ArrayXd beta, double A_ice, ArrayXXd A_theta,
                     double n_gln, ArrayXXd visc, ArrayXXd u, ArrayXXd u_z, bool visc_therm, \
-                    int vel_meth, double t_eq, double tf)
+                    int vel_meth, double t_eq, double tf, double tol, double tol_pre, int maxIter, \
+                    int N, int P) 
 {
     ArrayXXd out(n,n_z+1), u_sol(n,n_z); 
 
@@ -1577,7 +1568,7 @@ ArrayXXd vel_solver(ArrayXd H, double ds, double ds_inv, ArrayXd dz, int n, int 
         F = rho * g * dhds * dx_inv;
 
         // Blatter-Pattyn solution.
-        u_sol = solver_2D(n, n_z, dx, dz, visc, F, u); 
+        u_sol = solver_2D(n, n_z, dx, dz, visc, F, u, tol, tol_pre, maxIter, N, P); 
 
         
         // VELOCITY BOUNDARY CONDITIONS.
@@ -1695,8 +1686,8 @@ int main()
 
     // MISMIP EXPERIMENTS FORCING.
     // Number of steps in the A forcing.
-    //  Exp_3: 13, Exp_1-2: 17. T_air: 17, T_oce: 9. T_oce_f_q: 29
-    int const n_s = 13;  
+    //  Exp_3: 13 (14, 18 long), Exp_1-2: 17. T_air: 17, T_oce: 9. T_oce_f_q: 29
+    int const n_s = 18;  
 
     // GENERAL PARAMETERS.
     double const sec_year = 3.154e7;                // Seconds in a year.
@@ -1708,7 +1699,7 @@ int main()
     double const rho_w = 1028.0;                    // Water denisity [kg/m³]. 1000.0, 1028.0
 
    
-    // GROUNDING LINE.
+    // GROUNDING LINE. exp1 = 694.5e3, exp3 = 479.1e3.
     double L = 479.1e3;                              // Grounding line position [m] exp1 = 694.5e3, exp3 = 479.1e3, ews = 50.0e3
     double dL_dt;                                   // GL migration rate [m/yr]. 
     int const dL_dt_num_opt = 1;                    // GL migration numerator discretization opt.
@@ -1733,15 +1724,15 @@ int main()
 
 
     // Spatial resolution.
-    int const n   = 250;                             // 100. 250. Number of horizontal points 350, 500, 1000, 1500
-    int const n_z = 15;                              // 10. Number vertical layers. 25 (for T_air forcing!)
+    int const n   = 100;                             // 100. 250. Number of horizontal points 350, 500, 1000, 1500
+    int const n_z = 10;                              // 10. Number vertical layers. 25 (for T_air forcing!)
     double const ds     = 1.0 / n;                   // Normalized spatial resolution.
     double const ds_inv = n;
 
 
     // Time variables.
     double const t0   = 0.0;                         // Starting time [yr].
-    double const tf   = 32.0e4;                       // 54.0e3, 32.0e4, MISMIP-therm: 3.0e4, 90.0e4, Ending time [yr]. EWR: 5.0e3
+    double const tf   = 57.0e4;                       // 54.0e3, 57.0e4, 31.5e4, MISMIP-therm: 3.0e4, 90.0e4, Ending time [yr]. EWR: 5.0e3
     double const t_eq = 1.5e3;                   // 2.0e3 Equilibration time: visc, vel, theta, etc. 0.2 * tf
     double t;                                        // Time variable [yr].
 
@@ -1754,8 +1745,15 @@ int main()
 
     // VELOCITY SOLVER.
     // 0 = cte, 1 = SSA, 2 = DIVA, 3 = Blatter-Pattyn.
-    //int const vel_meth = 3;                          // Vel solver choice: 
-    int vel_meth = 2;
+    int const vel_meth = 3;
+    
+    // Blatter-Pattyn solver.
+    int const N          = n * n_z;                  // Total dimensions.
+    int const P          = 5 * (n-2) * (n_z-2);      // Number of velocitiy unkowns at each timestep. 
+    int const maxIter    = 100;                      // Maximum number of BiCGSTAB iterations. 
+    double const tol     = 1.0e-3;                   // BiCGSTAB convergence tolerance.
+    double const tol_pre = 1.0e-4;                   // 1.0e-4. Sparse matrix preconditioner tolerance.
+
 
     // TIME STEPING. Quite sensitive (use fixed dt in case of doubt).
     // For stochastic perturbations. dt = 0.1 and n = 250.
@@ -1765,11 +1763,11 @@ int main()
     double dt_tilde;                                 // New timestep. 
     double const t_eq_dt = 2.0 * t_eq;               // Eq. time until adaptative timestep is applied.
     double const dt_min = 0.1;                       // Minimum time step [yr]. 0.1
-    double const dt_max = 1.0;                       // Maximum time step [yr]. 2.0, 5.0
+    double const dt_max = 5.0;                       // Maximum time step [yr]. 2.0, 5.0
     double const rel = 0.7;                          // Relaxation between interations [0,1]. 0.5
     
     // INPUT DEFINITIONS.   
-    int const N = 50000;                             // Number of time points in BC (input from noise.nc in glacier_ews), equivalent to time length..
+    int const N_stoch = 50000;                             // Number of time points in BC (input from noise.nc in glacier_ews), equivalent to time length..
     double const dt_noise = 1.0;                     // Assumed time step in stochastic_anom.py 
 
     // OUTPUT DEFINITIONS.
@@ -2032,12 +2030,30 @@ int main()
         // Exps 3 forcing.
         // Rate factor [Pa^-3 s^-1].
         // Exps 3 hysteresis forcing.
-        
+        /*
         A_s << 3.0e-25, 2.5e-25, 2.0e-25, 1.5e-25, 1.0e-25, 5.0e-26, 2.5e-26, 
                5.0e-26, 1.0e-25, 1.5e-25, 2.0e-25, 2.5e-25, 3.0e-25; 
 
-        t_s << 3.0e4, 4.5e4, 6.0e4, 7.5e4, 9.0e4, 12.0e4, 15.0e4, 16.5e4, 18.5e4,
-                21.5e4, 24.5e4, 27.5e4, 29.0e4;
+        t_s << 3.0e4, 4.5e4, 6.0e4, 7.5e4, 9.0e4, 12.0e4, 15.0e4, 16.5e4, 18.0e4,
+                21.0e4, 24.0e4, 27.0e4, 28.5e4;
+        */    
+
+        // Long
+        /*
+        A_s << 3.0e-25, 2.5e-25, 2.0e-25, 1.5e-25, 1.0e-25, 5.0e-26, 2.5e-26, 1.2e-26,
+               5.0e-26, 1.0e-25, 1.5e-25, 2.0e-25, 2.5e-25, 3.0e-25; 
+
+        t_s << 3.0e4, 4.5e4, 6.0e4, 7.5e4, 9.0e4, 12.0e4, 15.0e4, 16.5e4, 18.0e4, 21.0e4,
+                24.0e4, 27.0e4, 30.0e4, 31.5e4;
+                */
+
+        // Time length for a certain A value.
+        A_s << 5.0e-25, 4.0e-25, 3.0e-25, 2.5e-25, 2.0e-25, 1.5e-25, 1.0e-25, 5.0e-26, 
+                2.5e-26, 1.2e-26,
+               5.0e-26, 1.0e-25, 1.5e-25, 2.0e-25, 2.5e-25, 3.0e-25, 4.0e-25, 5.0e-25; 
+
+        t_s << 3.0e4, 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4,
+               30.0e4, 33.0e4, 36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4, 54.0e4;
         
     
         // Unit conversion: [Pa^-3 s^-1] --> [Pa^-3 yr^-1].
@@ -2224,7 +2240,7 @@ int main()
     // Call nc read function.
     if ( stoch == true )
     {
-        noise = f_nc_read(N);
+        noise = f_nc_read(N_stoch);
         //cout << "\n noise_ocn = " << noise;
     }
     
@@ -2374,7 +2390,7 @@ int main()
 
             // Update SMB considering new domain extension and current stochastic term.
             S = f_smb(sigma, L, S_0, x_mid, x_sca, x_varmid, \
-                      x_varsca, dlta_smb, var_mult, smb_stoch, t, t0_stoch , n, stoch);
+                      x_varsca, dlta_smb, var_mult, smb_stoch, t, t0_stoch, n, stoch);
         }
 
         // Picard initialization.
@@ -2394,7 +2410,7 @@ int main()
             // If SSA solver ub = u_bar.
             sol = vel_solver(H, ds, ds_inv, dz, n, n_z, visc_bar, bed, rho, rho_w, g, L, \
                                 C_bed, t, beta, A, A_theta, n_gln, visc, u, \
-                                    u_z, visc_therm, vel_meth, t_eq, tf);
+                                    u_z, visc_therm, vel_meth, t_eq, tf, tol, tol_pre, maxIter, N, P); ;
             
             // Allocate variables. sol(n+1,n_z+1)
             u_bar  = sol.block(0,0,n,1);
@@ -2425,42 +2441,6 @@ int main()
             // New relaxed Picard iteration. Pattyn (2003). 
             // Necessary to deal with the nonlinear velocity dependence on both viscosity and beta.
             // Just update beta and visc, not tau_b!
-            /*
-            if (c_picard == 0)
-            {
-                // Assume worst case as the inital guess.
-                mu    = 0.5;
-                omega = M_PI;
-            }
-            else
-            {
-                // Difference in iter i-2.
-                c_u_bar_2   = u_bar_old_1 - u_bar_old_2;
-                
-                // Angle defined between two consecutive vel solutions.
-                omega = acos( c_u_bar_1.dot(c_u_bar_2) / \
-                              ( c_u_bar_1.norm() * c_u_bar_2.norm() ) );
-                
-
-                // De Smedt et al. (2010). Eq. 10.
-                if (omega <= omega_1 || c_u_bar_1.norm() == 0.0)
-                {
-                    mu = 2.5; // De Smedt.
-                    //mu = 1.0; // To avoid negative velocities?
-                    //mu = 0.7; // Daniel
-                }
-                else if (omega > omega_1 & omega < omega_2)
-                {
-                    mu = 1.0; // De Smedt.
-                    //mu = 0.7; // Daniel
-                }
-                else
-                {
-                    mu = 0.7; // De Smedt.
-                    //mu = 0.5; // Daniel
-                }
-            }
-            */
 
             // We have previously intialize u_bar_old_2 for t = 0.
             // Difference between iter (i-1) and (i-2).
@@ -2488,7 +2468,6 @@ int main()
                 mu = 0.7; // De Smedt.
                 //mu = 0.5; // Daniel
             }
-
             
             // New velocity guess based on updated mu.
             u_bar = u_bar_old_1 + mu * c_u_bar_1.array();
