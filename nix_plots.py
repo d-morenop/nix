@@ -19,7 +19,7 @@ import pylab as plt_lab
 from scipy.ndimage import gaussian_filter1d
 
 path_fig        = '/home/dmoreno/figures/flowline/ewr/A_rates/bed_peak/y_p.88_tf_A.2.5e4_A.0.5e-26_5.0e-25/frames/'
-path_now        = '/home/dmoreno/flowline/mismip_diva/exp_3_n.200/'
+path_now        = '/home/dmoreno/flowline/ds_uneven/BP/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
 
@@ -50,7 +50,7 @@ smth_series        = 0
 # MISMIP bedrock experiments.
 # exp = 1: inclined bed; exp = 3: overdeepening bed.
 exp_name = ['mismip_1', 'mismip_3', 'glacier_ews']
-idx = 1
+idx = 0
 exp = exp_name[idx]
 
 # Create figures directory if it does not exist.
@@ -204,6 +204,9 @@ def f_bed(x, exp, n):
 	
 	return bed
 
+# Account for unevenly-spaced horizontal grid.
+sigma = np.linspace(0, 1.0, s[2])
+sigma_plot = sigma**(0.5)
 
 # Horizontal dimension to plot. x_plot [km].
 if exp == 'mismip_1' or 'mismip_3':
@@ -628,11 +631,12 @@ if save_domain == 1:
 	for i in range(l-1, l, 1): # range(0, l, 2), (l-1, l, 20)
 		
 		# Horizontal dimension [km].
-		L_plot  = np.linspace(0, L[i], s[2])
+		#L_plot  = np.linspace(0, L[i], s[2])
+		L_plot_sigma = sigma_plot * L[i]
 		
 		# Ice surface elevation [km].
-		H[i,1] = H[i,2]
-		H[i,0] = H[i,2]
+		#H[i,1] = H[i,2]
+		#H[i,0] = H[i,2]
 		z_s = H[i,:] + b[i,:]
 		
 		# Gaussian smooth for resolution jiggling.
@@ -671,7 +675,7 @@ if save_domain == 1:
 
 
 		# Ice surface elevation.
-		ax.plot(L_plot, z_s, linestyle='-', color='darkgrey', marker='None', \
+		ax.plot(L_plot_sigma, z_s, linestyle='-', color='darkgrey', marker='None', \
 	  			linewidth=3.0, alpha=1.0, label=r'$z_s(x)$')  
 	
 		
@@ -682,8 +686,9 @@ if save_domain == 1:
 	 						   facecolor='saddlebrown', alpha=0.4)
 
 		if coloured_domain == 0:
-			ax.fill_between(L_plot, b[i,:], z_s,\
+			ax.fill_between(L_plot_sigma, b[i,:], z_s,\
 								facecolor='grey', alpha=0.4)
+
 		
 		########################################################################
 		########################################################################
@@ -1221,6 +1226,7 @@ if save_u == 1:
 		#				vmin=u_min, vmax=u_max, aspect='auto')
 		im = ax.imshow(np.flip(np.abs(u[i,:,:]),axis=0), vmin=u_min, vmax=u_max,\
 		 				 norm='log', cmap='viridis', aspect='auto')
+	
 	
 		ax.set_ylabel(r'$ \mathbf{n}_{z} $', fontsize=20)
 		ax.set_xlabel(r'$\ \mathbf{x} \ (\mathrm{km})$', fontsize=20)
