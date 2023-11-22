@@ -633,14 +633,17 @@ Array2d f_L(ArrayXd H, ArrayXd q, ArrayXd S, ArrayXd bed, \
 
 // First order scheme. New variable sigma.
 ArrayXd f_H(ArrayXd u_bar, ArrayXd H, ArrayXd S, ArrayXd sigma, \
-            double dt, ArrayXd ds, ArrayXd ds_inv, int n, \
+            double dt, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_sym, int n, \
             double L, double D, double rho, double rho_w, \
             double dL_dt, ArrayXd bed, ArrayXd q, double M, int H_meth, double t, double t_eq)
 {
     // Local variables.
-    ArrayXd H_now(n);
+    ArrayXd H_now(n), dx_inv(n-1), dx_sym_inv(n-1);
 
     double L_inv  = 1.0 / L;
+    
+    dx_inv     = L_inv * ds_inv;
+    dx_sym_inv = L_inv * ds_sym;
 
     // Solution to the modified advection equation considering a streched coordinate
     // system sigma. Two schemes are available, explicit and implicit, noted as
@@ -654,10 +657,13 @@ ArrayXd f_H(ArrayXd u_bar, ArrayXd H, ArrayXd S, ArrayXd sigma, \
         for (int i=1; i<n-1; i++)
         {
             // Centred in sigma, upwind in flux.
-            H_now(i) = H(i) + dt * ( ds_inv(i) * L_inv * \
-                                    ( sigma(i) * dL_dt * \
-                                        0.5 * ( H(i+1) - H(i-1) ) + \
-                                            - ( q(i) - q(i-1) ) ) + S(i) );
+            //H_now(i) = H(i) + dt * ( dx_inv(i) * ( sigma(i) * dL_dt * 0.5 * ( H(i+1) - H(i-1) ) + \
+            //                                - ( q(i) - q(i-1) ) ) + S(i) );
+            
+
+            // Centred in sigma, upwind in flux. Unevenly-spaced horizontal grid.
+            H_now(i) = H(i) + dt * ( sigma(i) * dL_dt * ( H(i+1) - H(i-1) ) * dx_sym_inv(i) + \
+                                            - dx_inv(i) * ( q(i) - q(i-1) ) + S(i) );
         }
         
         // Symmetry at the ice divide (i = 1).
@@ -757,7 +763,7 @@ ArrayXd f_dhdx(ArrayXd dH, ArrayXd b, int n)
 
 ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd tau_b, \
                 ArrayXd u_bar, ArrayXd dz, \
-                double theta_act, ArrayXd ds, double L, \
+                double theta_act, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_sym, double L, \
                 Array2d Q_act, Array2d A_0, double n_gln, double R, double B, double n_exp, \
                 double eps, double t, double t_eq, double sec_year, \
                 int n, int n_z, int vel_meth, double A, bool visc_therm, \
@@ -770,6 +776,7 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
     
     ArrayXd dx_inv = 1.0 / ( ds * L );
     ArrayXd dz_inv = 1.0 / dz;
+    ArrayXd dx_sym_inv = 1.0 / ( ds_sym * L );
 
     
     // Equilibration and constant viscosity experiments.
@@ -838,15 +845,14 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
             // Horizontal derivatives.
             for (int i=1; i<n-1; i++)
             {
-                u_bar_x(i) = 0.5 * ( u_bar(i+1) - u_bar(i-1) ) * dx_inv(i-1);
+                //u_bar_x(i) = 0.5 * ( u_bar(i+1) - u_bar(i-1) ) * dx_inv(i);
+                u_bar_x(i) = ( u_bar(i+1) - u_bar(i) ) * dx_inv(i);
+                //u_bar_x(i) =  ( u_bar(i+1) - u_bar(i-1) ) * dx_sym_inv(i);
             }
 
             // Boundary derivatives.
             u_bar_x(0)   = ( u_bar(1) - u_bar(0) ) * dx_inv(0);
             u_bar_x(n-1) = ( u_bar(n-1) - u_bar(n-2) ) * dx_inv(n-2);
-
-            // Sctreched coordinate system.
-            //u_bar_x = u_bar_x / (ds * L);
             
             // Regularization term to avoid division by 0. 
             strain_1d = pow(u_bar_x,2) + eps;
@@ -862,7 +868,10 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
             for (int i=1; i<n-1; i++)
             {
                 // Centred.
-                u_bar_x(i) = 0.5 * ( u_bar(i+1) - u_bar(i-1) ) * dx_inv(i-1);
+                //u_bar_x(i) = 0.5 * ( u_bar(i+1) - u_bar(i-1) ) * dx_inv(i);
+
+                // Centred with unevenly-spaced grid.
+                u_bar_x(i) =  ( u_bar(i+1) - u_bar(i-1) ) * dx_sym_inv(i);
 
                 // Forward.
                 //u_bar_x(i) = u_bar(i+1) - u_bar(i);
@@ -887,9 +896,6 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
                 }
             }
 
-            // Sigma coordinates transformation.
-            //u_x = u_x / (ds * L);
-
             // Strain rate and regularization term to avoid division by 0. 
             strain_2d = pow(u_x,2) + 0.25 * pow(u_z,2) + eps;
 
@@ -907,11 +913,11 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
             // Spatial derivatives du/dx, du/dz.
             for (int j=1; j<n_z-1; j++)
             {
-                // Centred.
-                //u_z.col(j) = 0.5 * ( u.col(j+1) - u.col(j-1) );
+                // Centred (evenly-spaced grid in the z axis).
+                u_z.col(j) = 0.5 * ( u.col(j+1) - u.col(j-1) ) * dz_inv(j);
                 
                 // Forwards.
-                u_z.col(j) = ( u.col(j+1) - u.col(j) ) * dz_inv(j);
+                //u_z.col(j) = ( u.col(j+1) - u.col(j) ) * dz_inv(j);
 
                 // Forwards. It works.
                 //u_z.col(j) = u.col(j) - u.col(j-1);
@@ -920,24 +926,26 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
             for (int i=1; i<n-1; i++)
             {
                 // Centred.
-                //u_x.row(i) = 0.5 * ( u.row(i+1) - u.row(i-1) );
+                //u_x.row(i) = 0.5 * ( u.row(i+1) - u.row(i-1) ) * dx_inv(i);
+
+                // Centred with unevenly-spaced grid.
+                u_x.row(i) = ( u.row(i+1) - u.row(i-1) ) * dx_sym_inv(i);
                 
                 // Forwards.
-                u_x.row(i) = ( u.row(i+1) - u.row(i) ) * dx_inv(i);
+                //u_x.row(i) = ( u.row(i+1) - u.row(i) ) * dx_inv(i);
 
                 // Try backwards instead. It works.
                 //u_x.row(i) = u.row(i) - u.row(i-1);
             }
 
             // Boundaries.
-
             // Two-point derivative.
             /*
-            u_x.row(0) = u.row(1) - u.row(0);
-            u_z.col(0) = u.col(1) - u.col(0);
+            u_x.row(0) = ( u.row(1) - u.row(0) ) * dx_inv(0);
+            u_z.col(0) = ( u.col(1) - u.col(0) ) * dz_inv(0);
 
-            u_x.row(n-1)   = u.row(n-1) - u.row(n-2);
-            u_z.col(n_z-1) = u.col(n_z-1) - u.col(n_z-2);
+            u_x.row(n-1)   = ( u.row(n-1) - u.row(n-2) ) * dx_inv(n-2);
+            u_z.col(n_z-1) = ( u.col(n_z-1) - u.col(n_z-2) ) * dz_inv(n_z-1);
             */
 
             // Three-point derivative.
@@ -947,9 +955,10 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
             u_x.row(0) = 0.5 * ( u.row(0) - 4.0 * u.row(1) + 3.0 * u.row(2) ) * dx_inv(0);
             u_z.col(0) = 0.5 * ( u.col(0) - 4.0 * u.col(1) + 3.0 * u.col(2) ) * dz_inv(0);
 
-            u_x.row(n-1)   = 0.5 * ( u.row(n-1) - 4.0 * u.row(n-2) + 3.0 * u.row(n-3) ) * dx_inv(n-2);
-            u_z.col(n_z-1) = 0.5 * ( u.col(n_z-1) - 4.0 * u.col(n_z-2) + 3.0 * u.col(n_z-3) ) * dz_inv(n-1);
-            
+            //u_x.row(n-1)   = 0.5 * ( u.row(n-1) - 4.0 * u.row(n-2) + 3.0 * u.row(n-3) ) * dx_inv(n-2);
+            //u_z.col(n_z-1) = 0.5 * ( u.col(n_z-1) - 4.0 * u.col(n_z-2) + 3.0 * u.col(n_z-3) ) * dz_inv(n-1);
+            u_x.row(n-1)   = ( u.row(n-1) - u.row(n-2) ) * dx_inv(n-2);
+            u_z.col(n_z-1) = ( u.col(n_z-1) - u.col(n_z-2) ) * dz_inv(n_z-1);
             
             // Try Vieli and Payne assymetric differences.
             // Vieli 1 (Eq. B12).
@@ -962,17 +971,6 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
             u_z.col(n_z-1) = ( 4.0 * u.col(n_z-1) - 3.0 * u.col(n_z-2) - u.col(n_z-3) ) / 3.0;
             */
             
-
-            // Sigma coordinates transformation.
-            /*
-            u_x = u_x / (ds * L);
-
-            // Vertical spacing dz depends on x.
-            for (int i=0; i<n; i++)
-            {
-                u_z.row(i) = u_z.row(i) / dz(i);
-            }
-            */
 
             // Strain rate and regularization term to avoid division by 0. 
             strain_2d = pow(u_x,2) + 0.25 * pow(u_z,2) + eps;
@@ -1417,7 +1415,7 @@ ArrayXXd solver_2D(int n, int n_z, ArrayXd dx, ArrayXd dz, ArrayXXd visc, ArrayX
 }
 
 
-ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd dz, int n, int n_z, ArrayXd visc_bar, \
+ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_sym, ArrayXd dz, int n, int n_z, ArrayXd visc_bar, \
                     ArrayXd bed, double rho, double rho_w, double g, double L, ArrayXd C_bed, \
                     double t, ArrayXd beta, double A_ice, ArrayXXd A_theta,
                     double n_gln, ArrayXXd visc, ArrayXXd u, ArrayXXd u_z, bool visc_therm, \
@@ -1470,7 +1468,7 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd dz, int n, in
         // Tridiagonal boundary values. 
         A(0) = 0.0;
         B(0) = - gamma(0) * ( visc_H(0) + visc_H(1) ) - beta(0);
-        C(0) = gamma(0) * visc_H(1);
+        C(0) = gamma(1) * visc_H(1); // gamma(0)
 
         A(n-1) = gamma(n-2) * visc_H(n-1);
         B(n-1) = - gamma(n-2) * visc_H(n-1) - beta(n-1);
@@ -1615,11 +1613,11 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd dz, int n, in
             //u_x_bc = dx * A_ice * pow( 0.25 * ( rho * g * ( H(n-1) - j * dz(n-1) ) * \
             //                          (1.0 - rho / rho_w) ), n_gln);
 
-            u_x_bc = dx(n-2) * A_ice * pow( 0.25 * ( rho * g * ( H(n-1) - j * dz(n-1) ) * \
+            //u_x_bc = dx(n-2) * A_ice * pow( 0.25 * ( rho * g * ( H(n-1) - j * dz(n-1) ) * \
                                       (1.0 - rho / rho_w) ), n_gln);
             
             // Same BC regardless of particular vertical layer depth?
-            //u_x_bc = dx * A_ice * pow( 0.25 * ( rho * g * H(n-1) * \
+            u_x_bc = dx(n-2) * A_ice * pow( 0.25 * ( rho * g * H(n-1) * \
                                         (1.0 - rho / rho_w) ), n_gln);
             u_sol(n-1,j) = u_sol(n-2,j) + u_x_bc;
         }
@@ -1657,17 +1655,17 @@ int main()
 
     // SELECT EXPERIMENT.
     // 1: Exp. 1-2 MISMIP, 3: Exp. 3 MISMIP, 4: MISMIP+THERM, 5: TRANSITION INDICATORS.
-    int const exp = 1;
+    int const exp = 3;
 
     // BED GEOMETRY.
     // Following Pattyn et al. (2012) the overdeepening hysterisis uses n = 250.
     // bed_exp = 1: "mismip_1", 3: "mismip_3", 4: "galcier_ews"
-    int const bed_exp = 1;
+    int const bed_exp = 3;
 
     // MISMIP EXPERIMENTS FORCING.
     // Number of steps in the A forcing.
-    //  Exp_3: 13, Exp_1-2: 17. T_air: 17, T_oce: 9. T_oce_f_q: 29
-    int const n_s = 17;  
+    //  Exp_3: 13 (18 long), Exp_1-2: 17. T_air: 17, T_oce: 9. T_oce_f_q: 29
+    int const n_s = 18;  
 
     // GENERAL PARAMETERS.
     double const sec_year = 3.154e7;                // Seconds in a year.
@@ -1679,8 +1677,8 @@ int main()
     double const rho_w = 1028.0;                    // Water denisity [kg/m³]. 1000.0, 1028.0
 
    
-    // GROUNDING LINE.
-    double L = 694.5e3;                              // Grounding line position [m] exp1 = 694.5e3, exp3 = 479.1e3, ews = 50.0e3
+    // GROUNDING LINE. exp1 = 694.5e3, exp3 = 479.1e3
+    double L = 479.1e3;                              // Grounding line position [m] exp1 = 694.5e3, exp3 = 479.1e3, ews = 50.0e3
     double dL_dt;                                   // GL migration rate [m/yr]. 
     int const dL_dt_num_opt = 1;                    // GL migration numerator discretization opt.
     int const dL_dt_den_opt = 1;                    // 1. GL migration denominator discretization opt.
@@ -1704,7 +1702,7 @@ int main()
 
 
     // Spatial resolution.
-    int const n   = 40;                             // 100. 250. Number of horizontal points 350, 500, 1000, 1500
+    int const n   = 500;                             // 100. 250. Number of horizontal points 350, 500, 1000, 1500
     int const n_z = 10;                              // 10. Number vertical layers. 25 (for T_air forcing!)
     //double const ds     = 1.0 / n;                   // Normalized spatial resolution.
     //double const ds_inv = n;
@@ -1712,7 +1710,7 @@ int main()
 
     // Time variables.
     double const t0   = 0.0;                         // Starting time [yr].
-    double const tf   = 2.0e4;                       // 54.0e3, 32.0e4, MISMIP-therm: 3.0e4, 90.0e4, Ending time [yr]. EWR: 5.0e3
+    double const tf   = 57.0e4;                       // 54.0e3, 57.0, 32.0e4, MISMIP-therm: 3.0e4, 90.0e4, Ending time [yr]. EWR: 5.0e3
     double const t_eq = 1.5e3;                   // 2.0e3 Equilibration time: visc, vel, theta, etc. 0.2 * tf
     double t;                                        // Time variable [yr].
 
@@ -1726,7 +1724,7 @@ int main()
     // VELOCITY SOLVER.
     // 0 = cte, 1 = SSA, 2 = DIVA, 3 = Blatter-Pattyn.
     //int const vel_meth = 3;                          // Vel solver choice: 
-    int vel_meth = 3;
+    int vel_meth = 1;
 
     // TIME STEPING. Quite sensitive (use fixed dt in case of doubt).
     // For stochastic perturbations. dt = 0.1 and n = 250.
@@ -1736,7 +1734,7 @@ int main()
     double dt_tilde;                                 // New timestep. 
     double const t_eq_dt = 2.0 * t_eq;               // Eq. time until adaptative timestep is applied.
     double const dt_min = 0.1;                       // Minimum time step [yr]. 0.1
-    double const dt_max = 1.0;                       // Maximum time step [yr]. 2.0, 5.0
+    double const dt_max = 5.0;                       // Maximum time step [yr]. 2.0, 5.0
     double const rel = 0.7;                          // Relaxation between interations [0,1]. 0.5
     
     // INPUT DEFINITIONS.   
@@ -1925,15 +1923,24 @@ int main()
     ArrayXd sigma = ArrayXd::LinSpaced(n, 0.0, 1.0);      // Dimensionless x-coordinates.
     ArrayXd ds(n-1);
     ArrayXd ds_inv(n-1);
-    sigma = pow(sigma, 0.5);
+    ArrayXd ds_sym(n-1);
     
-
+    double const n_sigma = 1.0;          // 0.5. Exponent of spacing in horizontal grid (1.0 = evenly-spaced). 
+    sigma = pow(sigma, n_sigma);
+    
+    // Uneven spacing.
     for (int i=0; i<n-1; i++)
     {
         ds(i) = sigma(i+1) - sigma(i);
     }
 
     ds_inv = 1.0 / ds;
+
+    // For symmetric diferences we sum two consecutive grid spacings.
+    for (int i=1; i<n-1; i++)
+    {
+        ds_sym(i) = ds(i) + ds(i-1);
+    }
 
 
     // Time steps in which the solution is saved. 
@@ -2011,12 +2018,21 @@ int main()
         // Exps 3 forcing.
         // Rate factor [Pa^-3 s^-1].
         // Exps 3 hysteresis forcing.
-        
+        /*
         A_s << 3.0e-25, 2.5e-25, 2.0e-25, 1.5e-25, 1.0e-25, 5.0e-26, 2.5e-26, 
                5.0e-26, 1.0e-25, 1.5e-25, 2.0e-25, 2.5e-25, 3.0e-25; 
 
         t_s << 3.0e4, 4.5e4, 6.0e4, 7.5e4, 9.0e4, 12.0e4, 15.0e4, 16.5e4, 18.5e4,
                 21.5e4, 24.5e4, 27.5e4, 29.0e4;
+        */
+
+        // Time length for a certain A value.
+        A_s << 5.0e-25, 4.0e-25, 3.0e-25, 2.5e-25, 2.0e-25, 1.5e-25, 1.0e-25, 5.0e-26,
+                2.5e-26, 1.2e-26,
+               5.0e-26, 1.0e-25, 1.5e-25, 2.0e-25, 2.5e-25, 3.0e-25, 4.0e-25, 5.0e-25;
+
+        t_s << 3.0e4, 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4,
+               30.0e4, 33.0e4, 36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4, 54.0e4;
         
     
         // Unit conversion: [Pa^-3 s^-1] --> [Pa^-3 yr^-1].
@@ -2196,8 +2212,8 @@ int main()
     /////////////////////////////////////////////////////////////////////////////////
 
     // Print spatial and time dimensions.
-    cout << " \n h = " << ds;
     cout << " \n n = " << n;
+    cout << " \n n_sigma = " << n_sigma;
     cout << " \n tf = " << tf;
 
     // Call nc read function.
@@ -2371,7 +2387,7 @@ int main()
             
             // Implicit solver.
             // If SSA solver ub = u_bar.
-            sol = vel_solver(H, ds, ds_inv, dz, n, n_z, visc_bar, bed, rho, rho_w, g, L, \
+            sol = vel_solver(H, ds, ds_inv, ds_sym, dz, n, n_z, visc_bar, bed, rho, rho_w, g, L, \
                                 C_bed, t, beta, A, A_theta, n_gln, visc, u, \
                                     u_z, visc_therm, vel_meth, t_eq, tf);
             
@@ -2386,7 +2402,7 @@ int main()
 
             // Update viscosity with new velocity.
             visc_all = f_visc(theta, u, visc, H, tau_b, u_bar, dz, \
-                                theta_act, ds, L, Q_act, A_0, n_gln, R, B, n_exp, \
+                                theta_act, ds, ds_inv, ds_sym, L, Q_act, A_0, n_gln, R, B, n_exp, \
                                     eps, t, t_eq, sec_year, n, n_z, vel_meth, A, \
                                         visc_therm, t_eq_A_theta, visc_min, visc_max, visc_0);
             
@@ -2404,43 +2420,6 @@ int main()
             // New relaxed Picard iteration. Pattyn (2003). 
             // Necessary to deal with the nonlinear velocity dependence on both viscosity and beta.
             // Just update beta and visc, not tau_b!
-            /*
-            if (c_picard == 0)
-            {
-                // Assume worst case as the inital guess.
-                mu    = 0.5;
-                omega = M_PI;
-            }
-            else
-            {
-                // Difference in iter i-2.
-                c_u_bar_2   = u_bar_old_1 - u_bar_old_2;
-                
-                // Angle defined between two consecutive vel solutions.
-                omega = acos( c_u_bar_1.dot(c_u_bar_2) / \
-                              ( c_u_bar_1.norm() * c_u_bar_2.norm() ) );
-                
-
-                // De Smedt et al. (2010). Eq. 10.
-                if (omega <= omega_1 || c_u_bar_1.norm() == 0.0)
-                {
-                    mu = 2.5; // De Smedt.
-                    //mu = 1.0; // To avoid negative velocities?
-                    //mu = 0.7; // Daniel
-                }
-                else if (omega > omega_1 & omega < omega_2)
-                {
-                    mu = 1.0; // De Smedt.
-                    //mu = 0.7; // Daniel
-                }
-                else
-                {
-                    mu = 0.7; // De Smedt.
-                    //mu = 0.5; // Daniel
-                }
-            }
-            */
-
             // We have previously intialize u_bar_old_2 for t = 0.
             // Difference between iter (i-1) and (i-2).
             c_u_bar_2 = u_bar_old_1 - u_bar_old_2;
@@ -2537,6 +2516,7 @@ int main()
             // By using std::flush or std::endl, you ensure that the data is 
             // immediately written to the output device. 
             cout << "\n t =                  " << t << std::flush;
+            cout << "\n dx_min =             " << 1.0e-3*L*ds(n-2) << std::flush;
             cout << "\n #Picard iterations:  " << c_picard << std::flush;
             cout << "\n Estimated error:     " << error << std::flush;
             
@@ -2567,7 +2547,7 @@ int main()
 
     
         // Integrate ice thickness forward in time.
-        H = f_H(u_bar, H, S, sigma, dt, ds, ds_inv, n, \
+        H = f_H(u_bar, H, S, sigma, dt, ds, ds_inv, ds_sym, n, \
                     L, D, rho, rho_w, dL_dt, bed, q, M, H_meth, t, t_eq);
         
         // Update vertical discretization.

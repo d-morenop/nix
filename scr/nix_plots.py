@@ -19,7 +19,7 @@ import pylab as plt_lab
 from scipy.ndimage import gaussian_filter1d
 
 path_fig        = '/home/dmoreno/figures/flowline/ewr/A_rates/bed_peak/y_p.88_tf_A.2.5e4_A.0.5e-26_5.0e-25/frames/'
-path_now        = '/home/dmoreno/flowline/ds_uneven/BP/'
+path_now        = '/home/dmoreno/flowline/mismip_bp/exp_3/n.100_nz.10/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
 
@@ -50,7 +50,7 @@ smth_series        = 0
 # MISMIP bedrock experiments.
 # exp = 1: inclined bed; exp = 3: overdeepening bed.
 exp_name = ['mismip_1', 'mismip_3', 'glacier_ews']
-idx = 0
+idx = 1
 exp = exp_name[idx]
 
 # Create figures directory if it does not exist.
@@ -628,7 +628,7 @@ if save_shooting == 1:
 
 if save_domain == 1:
 	
-	for i in range(l-1, l, 1): # range(0, l, 2), (l-1, l, 20)
+	for i in range(l-1, l, 5): # range(0, l, 2), (l-1, l, 20)
 		
 		# Horizontal dimension [km].
 		#L_plot  = np.linspace(0, L[i], s[2])
@@ -695,13 +695,15 @@ if save_domain == 1:
 		# PLOT DOMAIN WITH A COLOUR MAP THAT REPRESENTS THE TEMPERATURE WITHIN THE ICE SHEET.
 		# Create the colored plot
 		elif coloured_domain == 1:
-			theta_min = np.min(-theta)
-			theta_max = np.max(-theta)
-			#theta_min = 30.0
-			#theta_max = 90.0
+			#theta_min = np.min(-theta)
+			#theta_max = np.max(-theta)
+			
+			theta_min = np.min(u)
+			theta_max = np.max(u)
 
 			# Minus sign just for visualization purposes.
-			color_theta = - np.flip(theta[i,:,:],axis=0)
+			#color_theta = - np.flip(theta[i,:,:],axis=0)
+			color_theta = np.flip(u[i,:,:],axis=0)
 
 			# Plot a rectangle.
 			def rect(ax, x, b, y, w, h, c,**kwargs):
@@ -788,7 +790,7 @@ if save_domain == 1:
 
 
 			# Data    
-			X  = L_plot
+			X  = L_plot_sigma # L_plot
 			Y1 = b[i,:] 
 			Y2 = z_s
 			g  = color_theta
@@ -804,16 +806,19 @@ if save_domain == 1:
 			# Add a colorbar based on the colormap
 			#cbar_ax = fig.add_axes([1.025, 0.17, 0.045, 0.779]) 
 			cbar_ax = fig.add_axes([1.01, 0.19, 0.045, 0.76]) 
-			cb = fig.colorbar(plt.cm.ScalarMappable(cmap=reversed_cmap), cax=cbar_ax, extend='neither')
+			cb = fig.colorbar(plt.cm.ScalarMappable(cmap=reversed_cmap), \
+					 				cax=cbar_ax, extend='neither')
 
 			# Set the modified ticks and tick labels
+			"""
 			ticks = np.linspace(0, 1, 5)
 			ticks_lab = np.round(np.linspace(-theta_max, -theta_min, 5), 0)
 			cb.set_ticks(ticks)
 			cb.set_ticklabels([r'$-80$', r'$-60$', r'$-40$', r'$-20$', r'$0$',], \
 								fontsize=13)
-
-			cb.set_label(r'$ \theta (x,z) \ (^{\circ} \mathrm{C}) $', rotation=90, labelpad=8, fontsize=22)
+			"""
+			cb.set_label(r'$ \theta (x,z) \ (^{\circ} \mathrm{C}) $', \
+							rotation=90, labelpad=8, fontsize=22)
 
 		########################################################################
 		########################################################################
@@ -885,7 +890,8 @@ if save_var_frames == 1:
 	
 	for i in range(l-1, l, 1): # (0, l, 10), (l-1, l, 1)
 		
-		L_plot  = np.linspace(0, L[i], s[2])
+		#L_plot  = np.linspace(0, L[i], s[2])
+		L_plot = sigma_plot * L[i]
 		x_tilde = L_plot / 750.0  
 		bed_L   = ( 729.0 - 2184.8 * x_tilde**2 + \
 			               1031.72 * x_tilde**4 - \
