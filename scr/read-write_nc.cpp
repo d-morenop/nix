@@ -7,13 +7,11 @@
 // NETCDF PARAMETERS.
 /* This is the name of the data file we will create. */
 //#define FILE_NAME "output/mismip/exp3/exp3_n.250/exp3_n.250.nc"
-#define FILE_NAME "/home/dmoreno/flowline/mismip_ssa/exp_3/n.500_old-grid/flowline.nc"
-#define FILE_NAME_HR "/home/dmoreno/flowline/blatter-pattyn/test/flowline_hr.nc"
-#define FILE_NAME_READ "/home/dmoreno/flowline/data/noise_sigm_ocn.12.0.nc"
+#define FILE_NAME "/home/dmoreno/nix/test_modules/flowline.nc"
+#define FILE_NAME_HR "/home/dmoreno/nix/blatter-pattyn/test/flowline_hr.nc"
+#define FILE_NAME_READ "/home/dmoreno/nix/data/noise_sigm_ocn.12.0.nc"
 
 
-
-// path: /home/dmoren07/c++/flowline/output/mismip/exp3/exp3_n.250
 
 /* We are writing 1D data, n grid points*/
 #define NDIMS 2

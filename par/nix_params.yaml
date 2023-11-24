@@ -1,0 +1,128 @@
+# This is a YAML file example
+
+time:
+  t0: 0.0
+  tf: 1.0e3
+  t_eq: 1.5e3
+  output:
+    t_n: 100
+    out_hr: false
+
+constants:
+  g: 9.8
+  rho: 917.0
+  rho_w: 1028.0
+  sec_year: 3.154e7
+
+domain:
+  experiment: mismip_1
+  n: 100
+  n_z: 10
+  grid: uneven
+  grid_exp: 0.5
+  bedrock_ews:
+    smooth_bed: 0
+    sigma_gauss: 10.0
+    t0_gauss: 1.5e4
+    x_1: 346.0e3
+    x_2: 350.0e3
+    y_p: 88.0
+    y_0: 70.0
+    
+
+dynamics:
+  vel_meth: SSA
+
+timestep:
+  dt_meth: fixed
+  dt_min: 0.1
+  dt_max: 5.0
+  t_eq_dt: 3000.0
+  rel: 0.7
+
+stochastic:
+  N: 50000
+  dt_noise: 1.0
+
+boundary_conditions:
+  smb:
+    stoch: false
+    S_0: 0.3
+    dlta_smb: -4.0
+    x_acc: 300.0e3
+    x_mid: 3.5e5
+    x_sca: 4.0e4
+    x_varmid: 2.0e5
+    x_varsca: 8.0e4
+    var_mult: 0.25
+  therm:
+    T_air: 253.15
+    w_min: -0.3
+    w_max: 0.0
+
+
+thermodynamics:
+  therm: false
+  therm_w: 1
+  k: 2.0
+  G: 0.05
+  kappa: 1.4e-6
+  theta_max: 273.15
+  theta_act: 263.15
+  R: 8.314
+
+friction:
+  m: 0.33333
+  u_0: 150.0
+  fric_therm: 0
+  theta_frz: 268.15
+  C_ref: 7.624
+  C_frz: 7.624e6
+  C_thw: 0.5
+
+viscosity:
+  n_gln: 3.0
+  eps: 1.0e-8
+  visc_therm: false
+  t_eq_A_theta: 1.5e3
+  A_act: 4.9e-25
+  visc_0: 1.0e8
+  visc_min: 1.0e6
+  visc_max: 1.0e11
+  Q_act_1: 60.0
+  Q_act_2: 139.0
+  A_0_1: 3.985e-13
+  A_0_2: 1.916e3
+
+advection:
+  meth: 0
+
+calving:
+  meth: 0
+  m_dot: 30.0
+  sub_shelf_melt:
+    shelf: false
+    meth: 0
+    t0_oce: 2.5e4
+    tf_oce: 27.5e4
+    c_po: 3974.0
+    L_i: 3.34e5
+    gamma_T: 2.2e-5
+    T_0: 273.15
+    delta_T_oce: 2.0
+    M: 0.0
+    delta_M: 150.0
+
+picard:
+  n: 10
+  tol: 1.0e-4
+  omega_1: 0.125
+  omega_2: 0.95
+
+initialisation:
+  H: 10.0
+  S: 0.3
+  u: 1.0
+  theta: 253.15
+  beta: 5.0e3
+
