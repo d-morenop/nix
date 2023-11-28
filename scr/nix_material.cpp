@@ -7,8 +7,8 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
                 ArrayXd u_bar, ArrayXd dz, \
                 double theta_act, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_sym, double L, \
                 Array2d Q_act, Array2d A_0, double n_gln, double R, double B, double n_exp, \
-                double eps, double t, double t_eq, double sec_year, \
-                int n, int n_z, int vel_meth, double A, bool visc_therm, double visc_0)
+                double eps, double t, double t_eq, \
+                int n, int n_z, string vel_meth, double A, bool visc_therm, double visc_0)
 {
     ArrayXXd out(n,5*n_z+2), u_x(n,n_z), u_z(n,n_z), \
              strain_2d(n,n_z), A_theta(n,n_z), B_theta(n,n_z);
@@ -80,7 +80,7 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
         //B_theta_bar = f_median(B_theta, n, n_z);
 
         // SSA solver.
-        if ( vel_meth == 1 )
+        if ( vel_meth == "SSA" )
         {
             // Horizontal derivatives.
             for (int i=1; i<n-1; i++)
@@ -102,7 +102,7 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
         }
 
         // DIVA solver.
-        else if ( vel_meth == 2 )
+        else if ( vel_meth == "DIVA" )
         {     
             // Horizontal derivative du/dx as defined in Eq. 21 (Lipscomb et al., 2019).
             for (int i=1; i<n-1; i++)
@@ -148,7 +148,7 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
         }
 
         // Blatter-Pattyn.
-        else if ( vel_meth == 3 )
+        else if ( vel_meth == "Blatter-Pattyn" )
         {     
             // Spatial derivatives du/dx, du/dz.
             for (int j=1; j<n_z-1; j++)

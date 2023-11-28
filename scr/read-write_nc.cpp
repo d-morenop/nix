@@ -7,8 +7,8 @@
 // NETCDF PARAMETERS.
 /* This is the name of the data file we will create. */
 //#define FILE_NAME "output/mismip/exp3/exp3_n.250/exp3_n.250.nc"
-#define FILE_NAME "/home/dmoreno/nix/test_modules/flowline.nc"
-#define FILE_NAME_HR "/home/dmoreno/nix/blatter-pattyn/test/flowline_hr.nc"
+#define FILE_NAME "/home/dmoreno/nix/test_modules/nix.nc"
+#define FILE_NAME_HR "/home/dmoreno/nix/blatter-pattyn/test/nix_hr.nc"
 #define FILE_NAME_READ "/home/dmoreno/nix/data/noise_sigm_ocn.12.0.nc"
 
 

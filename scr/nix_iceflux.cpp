@@ -25,7 +25,7 @@ double f_melt(double T_oce, double T_0, double rho, double rho_w, \
 
 
 ArrayXd f_q(ArrayXd u_bar, ArrayXd H, double H_f, double t, double t_eq, \
-               double rho, double rho_w, double m_dot, double M, int calving_meth, int n)
+               double rho, double rho_w, double m_dot, double M, string calving_meth, int n)
 {
     // Local variables.
     ArrayXd q(n);
@@ -42,7 +42,7 @@ ArrayXd f_q(ArrayXd u_bar, ArrayXd H, double H_f, double t, double t_eq, \
     }   
         
     // GL flux definition (Vieli and Payne, 2005).
-    if ( calving_meth == 0 )
+    if ( calving_meth == "none" )
     {
         //q(n-1) = u_bar(n-1) * H(n-1);
 
@@ -53,7 +53,7 @@ ArrayXd f_q(ArrayXd u_bar, ArrayXd H, double H_f, double t, double t_eq, \
     // Additional calving term (Christian et al., 2022).
     // ICE FLUX DISCRETIZATION SEEMS TO BE FUNDAMENTAL TO OBTAIN
     // THE SAME ICE SHEET ADVANCED AS CHRISTIAN. STAGGERED GRID.
-    else if ( calving_meth == 1 )
+    else if ( calving_meth == "stochastic" )
     {
         // No calving during equilibration.
         if ( t < t_eq )
@@ -113,7 +113,7 @@ ArrayXd f_q(ArrayXd u_bar, ArrayXd H, double H_f, double t, double t_eq, \
     }
 
     // Deterministic calving from sub-shelf melting (e.g., Favier et al., 2019).
-    else if ( calving_meth == 2 )
+    else if ( calving_meth == "deterministic" )
     {
         // No calving during equilibration.
         if ( t < t_eq )

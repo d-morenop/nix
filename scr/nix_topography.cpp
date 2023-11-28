@@ -6,11 +6,26 @@
 // It does not follow the ice sheet, but rather there's a certain 
 // value for each position x.
 
+//ArrayXd f_bed(double L, int n, string exp, \
+//              double y_0, double y_p, double x_1, double x_2, \
+//              int smooth_bed, double sigma_gauss, ArrayXd sigma)
 
-ArrayXd f_bed(double L, int n, int bed_exp, \
-              double y_0, double y_p, double x_1, double x_2, \
-              int smooth_bed, double sigma_gauss, ArrayXd sigma)
+ArrayXd f_bed(double L, ArrayXd sigma, DomainParams& params)
 {
+    
+    /*int n = params.n;
+    string exp = params.experiment;
+    double y_0 = params.bedrock_ews.y_0;
+    double y_p = params.bedrock_ews.y_p;
+    double x_1 = params.bedrock_ews.x_1;
+    double x_2 = params.bedrock_ews.x_2;
+    bool smooth_bed = params.bedrock_ews.smooth_bed;
+    double sigma_gauss = params.bedrock_ews.sigma_gauss;*/
+
+    // Using structured bindings for DomainParams to extract the desried values.
+    auto [exp, n, n_z, grid, grid_exp, bedrock_ews] = params;
+    auto [smooth_bed, sigma_gauss, t0_gauss, x_1, x_2, y_p, y_0] = params.bedrock_ews;
+
     // Prepare variables.
     ArrayXd bed(n);
     //ArrayXd x = ArrayXd::LinSpaced(n, 0.0, L); 
@@ -22,12 +37,12 @@ ArrayXd f_bed(double L, int n, int bed_exp, \
     // MISMIP experiments bedrock.
     // Same bedrock as Schoof (2007).
     // Inverse sign to get a decreasing bedrock elevation.
-    if (bed_exp == 1)
+    if ( exp == "mismip_1" || exp == "mismip_1_therm" )
     {
         x = x / 750.0e3; 
         bed = 720.0 - 778.5 * x;
     }
-    else if (bed_exp == 3)
+    else if ( exp == "mismip_3" || exp == "mismip_3_therm" )
     {
         x = x / 750.0e3; 
         // Schoof: 2184.8. Daniel: 2148.8.
@@ -35,7 +50,7 @@ ArrayXd f_bed(double L, int n, int bed_exp, \
                     + 1031.72 * pow(x, 4) + \
                     - 151.72 * pow(x, 6);
     }
-    else if (bed_exp == 4)
+    else if ( exp == "ews" )
     {
         // Variables.
         int c_x1 = 0;
@@ -85,7 +100,7 @@ ArrayXd f_bed(double L, int n, int bed_exp, \
     }
 
     // Potential smooth bed.
-    if ( smooth_bed == 1 )
+    if ( smooth_bed == true )
     {
         // Gaussian smooth. Quite sensitive to p value (p=5 for n=250).
         //bed = gaussian_filter(bed, sigma_gauss, p, n);
@@ -99,11 +114,20 @@ ArrayXd f_bed(double L, int n, int bed_exp, \
 
 
 
-ArrayXd f_smb(ArrayXd sigma, double L, double S_0, \
+/*ArrayXd f_smb(ArrayXd sigma, double L, double S_0, \
               double x_mid, double x_sca, double x_varmid, \
               double x_varsca, double dlta_smb, double var_mult, \
-              double smb_stoch, double t, double t_eq, int n, bool stoch)
+              double smb_stoch, double t, double t_eq, int n, bool stoch)*/
+
+ArrayXd f_smb(ArrayXd sigma, double L, double t, double smb_stoch, \
+              BoundaryConditionsParams& bc, DomainParams& domain, \
+              TimeParams& time)
 {
+    
+    int n       = domain.n;
+    double t_eq = time.t_eq;
+    auto [stoch, t0_stoch, S_0, dlta_smb, x_acc, x_mid, x_sca, x_varmid, x_varsca, var_mult] = bc.smb;
+    
     // Variables
     ArrayXd x(n), S(n); 
     double stoch_pattern, smb_determ;
@@ -147,7 +171,8 @@ ArrayXd f_smb(ArrayXd sigma, double L, double S_0, \
 ArrayXd f_H(ArrayXd u_bar, ArrayXd H, ArrayXd S, ArrayXd sigma, \
             double dt, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_sym, int n, \
             double L, double D, double rho, double rho_w, \
-            double dL_dt, ArrayXd bed, ArrayXd q, double M, int H_meth, double t, double t_eq)
+            double dL_dt, ArrayXd bed, ArrayXd q, double M, string H_meth, \
+            double t, double t_eq)
 {
     // Local variables.
     ArrayXd H_now(n), dx_inv(n-1), dx_sym_inv(n-1);
@@ -164,7 +189,7 @@ ArrayXd f_H(ArrayXd u_bar, ArrayXd H, ArrayXd S, ArrayXd sigma, \
     // implicit crasher earlier. 
     
     // Explicit scheme. Centred dH in the sigma_L term.
-    if ( H_meth == 0 )
+    if ( H_meth == "explicit" )
     {
         for (int i=1; i<n-1; i++)
         {
@@ -195,7 +220,7 @@ ArrayXd f_H(ArrayXd u_bar, ArrayXd H, ArrayXd S, ArrayXd sigma, \
     
     // Implicit scheme.
     /*
-    else if ( H_meth == 1 )
+    else if ( H_meth == "implicit" )
     {
         // Local variables.
         ArrayXd A(n), B(n), C(n), F(n);

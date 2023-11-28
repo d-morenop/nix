@@ -57,9 +57,19 @@ int main()
     readParams(config, nixParams);
 
     // Access parameters
-    std::cout << "t0: " << nixParams.time.t0 << std::endl;
-    std::cout << "g: " << nixParams.constants.g << std::endl;
+    //std::cout << "t0: " << nixParams.time.t0 << std::endl;
+    //std::cout << "g: " << nixParams.constants.g << std::endl;
 
+
+    // USE PARAM STRUCTURE TO ACCES ALL PARAMETERS IN YAML.
+    string exp    = nixParams.domain.experiment;
+    int const n   = nixParams.domain.n;
+    int const n_z = nixParams.domain.n_z;
+    
+    
+    double const sec_year = nixParams.constants.sec_year;
+
+    //
 
 
     /////////////////////////////////////////////////////////////////////////////////
@@ -68,34 +78,47 @@ int main()
 
     // SELECT EXPERIMENT.
     // 1: Exp. 1-2 MISMIP, 3: Exp. 3 MISMIP, 4: MISMIP+THERM, 5: TRANSITION INDICATORS.
-    int const exp = 3;
+    //string exp = "mismip_3";
 
     // BED GEOMETRY.
     // Following Pattyn et al. (2012) the overdeepening hysterisis uses n = 250.
     // bed_exp = 1: "mismip_1", 3: "mismip_3", 4: "galcier_ews"
-    int const bed_exp = 3;
+    //int const bed_exp = 3;
 
     // MISMIP EXPERIMENTS FORCING.
     // Number of steps in the A forcing.
     //  Exp_3: 13 (18 long), Exp_1-2: 17. T_air: 17, T_oce: 9. T_oce_f_q: 29
-    int const n_s = 18;  
+    int n_s;
+    double L;
+
+    if ( exp == "mismip_1" || exp == "mismip_1_therm" )
+    {
+        n_s = 17;
+        L   = 694.5e3;
+    }
+    else if ( exp == "mismip_3" || exp == "mismip_3_therm" )
+    {
+        n_s = 18;
+        L   = 473.1e3;
+    }  
+
 
     // GENERAL PARAMETERS.
-    double const sec_year = 3.154e7;                // Seconds in a year.
+    //double const sec_year = 3.154e7;                // Seconds in a year.
 
     // PHYSICAL CONSTANTS.
-    double const u_0   = 150.0 / sec_year;
+    //double const u_0   = 150.0 / sec_year;
     double const g     = 9.8;                      // Gravitational acceleration [m/s²].
     double const rho   = 917.0;                     // Ice density [kg/m³]. 900.0, 917.0
     double const rho_w = 1028.0;                    // Water denisity [kg/m³]. 1000.0, 1028.0
     
    
     // GROUNDING LINE. exp1 = 694.5e3, exp3 = 479.1e3
-    double L = 479.1e3;                              // Grounding line position [m] exp1 = 694.5e3, exp3 = 479.1e3, ews = 50.0e3
+    //double L = 479.1e3;                              // Grounding line position [m] exp1 = 694.5e3, exp3 = 479.1e3, ews = 50.0e3
     double dL_dt;                                   // GL migration rate [m/yr]. 
     
     // ICE VISCOSITY: visc.
-    double const n_gln = 3.0;                             // Glen flow low exponent.
+    double const n_gln = 3.0;                             // Glen flow law exponent.
     double const n_exp = (1.0 - n_gln) / (2.0 * n_gln);   // De-smedt et al.
     //double const n_exp = (1.0 - n_gln) / n_gln;         // Pattyn.
 
@@ -113,8 +136,9 @@ int main()
 
 
     // Spatial resolution.
-    int const n   = 500;                             // 100. 250. Number of horizontal points 350, 500, 1000, 1500
-    int const n_z = 10;                              // 10. Number vertical layers. 25 (for T_air forcing!)
+    //int const n   = 500;                             // 100. 250. Number of horizontal points 350, 500, 1000, 1500
+    //int const n_z = 10;                              // 10. Number vertical layers. 25 (for T_air forcing!)
+    
     //double const ds     = 1.0 / n;                   // Normalized spatial resolution.
     //double const ds_inv = n;
 
@@ -135,11 +159,13 @@ int main()
     // VELOCITY SOLVER.
     // 0 = cte, 1 = SSA, 2 = DIVA, 3 = Blatter-Pattyn.
     //int const vel_meth = 3;                          // Vel solver choice: 
-    int vel_meth = 1;
+    //int vel_meth = 1;
+    string vel_meth = "SSA";
 
     // TIME STEPING. Quite sensitive (use fixed dt in case of doubt).
     // For stochastic perturbations. dt = 0.1 and n = 250.
-    int const dt_meth = 1;                           // Time-stepping method. Fixed, 0; adapt, 1.
+    //int const dt_meth = 1;                           // Time-stepping method. Fixed, 0; adapt, 1.
+    string dt_meth = "adapt";
     double dt;                                       // Time step [yr].
     double dt_CFL;                                   // Courant-Friedrichs-Lewis condition [yr].
     double dt_tilde;                                 // New timestep. 
@@ -185,7 +211,8 @@ int main()
     // Vertical advection is the key to obtain oscillations.
     // It provides with a feedback to cool down the ice base and balance frictional heat.
     bool const thermodynamics  = false;              // Apply thermodynamic solver at each time step.
-    int const thermodynamics_w = 1;                  // Vertical advection in therm. 0: no advection, 1: constant/linear adv.
+    //int const thermodynamics_w = 1;                  // Vertical advection in therm. 0: no advection, 1: constant/linear adv.
+    bool const thermodynamics_w = true;
     double const k = 2.0;                            // Thermal conductivity of ice [W / m · ºC].
     double const G = 0.05;                           // Geothermal heat flow [W / m^2] = [J / s · m^2].
     double const G_k = G / k;                        // [K / m] 
@@ -200,7 +227,8 @@ int main()
     
 
     // BEDROCK PARAMETRIZATION: f_C_bed.
-    int const fric_therm = 0;                        // Temperature-dependent friction.
+    //int const fric_therm = 0;                        // Temperature-dependent friction.
+    string fric_therm = "none";
     double const theta_frz = 268.15;
     double const C_frz = 7.624e6 / pow(sec_year, m); // Frozen friction coeff. 7.624e6 [Pa m^-1/3 yr^1/3]
     double const C_thw = 0.5 * C_frz;                // Thawed friction coeff. [Pa m^-1/3 yr^1/3]
@@ -211,8 +239,8 @@ int main()
     double const A_act = 4.9e-25 * sec_year;         // Threshold rate factor for the two regimes in activation energy [Pa^-3 s^-1] 
     
     double const visc_0 = 1.0e8;                     // Initial viscosity [Pa·yr]
-    double const visc_min = 1.0e6;
-    double const visc_max = 1.0e11;                  // 1.0e8
+    //double const visc_min = 1.0e6;
+    //double const visc_max = 1.0e11;                  // 1.0e8
     
     Array2d Q_act, A_0; 
     Q_act << 60.0, 139.0;                            // Activation energies [kJ/mol].
@@ -221,7 +249,8 @@ int main()
     A_0 = A_0 * sec_year;                            // [Pa^-3 s^-1] --> [Pa^-3 yr^-1]
     
     // AVECTION EQUATION.
-    int const H_meth = 0;                              // Solver scheme: 0, explicit; 1, implicit.
+    //int const H_meth = 0;                              // Solver scheme: 0, explicit; 1, implicit.
+    string H_meth = "explicit";
 
     // LATERAL BOUNDARY CONDITION.
     double D;                                        // Depth below the sea level [m].
@@ -229,7 +258,8 @@ int main()
     double u2_dif;                                   // Difference between analytical and numerical.
 
     // CALVING.
-    int const calving_meth = 0;                      // 0, no calving; 1, Christian et al. (2022), 2: deterministic Favier et al. (2019)
+    //int const calving_meth = 0;                      // 0, no calving; 1, Christian et al. (2022), 2: deterministic Favier et al. (2019)
+    string calving_meth = "none";
     double const m_dot = 30.0;                       // Mean frontal ablation [m/yr]. 30.0
     double H_f;
 
@@ -243,9 +273,9 @@ int main()
     double const gamma_T = 2.2e-5 * sec_year;        // Linear: 2.0e-5, Quad: 36.23e-5. [m/s] --> [m/yr]
     double const T_0     = 273.15;                    // K
     double T_oce; 
-    double const delta_T_oce = 2.0;                    // Amplitude of ocean temperature anomalies. 
+    //double const delta_T_oce = 2.0;                    // Amplitude of ocean temperature anomalies. 
     double M = 0.0;                                   // Sub-shelf melt [m/yr]. 
-    double const delta_M = 150.0;                      // Amplitude of sub-shelf melting.                         
+    //double const delta_M = 150.0;                      // Amplitude of sub-shelf melting.                         
 
 
     // Ice rate factor.
@@ -347,7 +377,7 @@ int main()
 
     ds_inv = 1.0 / ds;
 
-    // For symmetric diferences we sum two consecutive grid spacings.
+    // For symmetric finite differences schemes we sum two consecutive grid spacings.
     for (int i=1; i<n-1; i++)
     {
         ds_sym(i) = ds(i) + ds(i-1);
@@ -387,11 +417,11 @@ int main()
     dz = H / n_z;
 
     // Initialize vertical velocity (only x-dependency).
-    if ( thermodynamics_w == 0 )
+    if ( thermodynamics_w == false )
     {
         w = ArrayXd::Zero(n);
     }
-    else if ( thermodynamics_w == 1 )
+    else if ( thermodynamics_w == true )
     {
         //w = ArrayXd::Constant(n_z, 0.6);
         w = ArrayXd::LinSpaced(n_z, 0.0, 1.0);
@@ -406,7 +436,7 @@ int main()
     /////////////////////////////////////////////////////////////////////////////////
 
     // MISMIP EXPERIMENTS 1-2 FORCING.
-    if ( exp == 1 )
+    if ( exp == "mismip_1" )
     {
         // Exps 1-2 forcing.
         // Rate factor [Pa^-3 s^-1].
@@ -424,7 +454,7 @@ int main()
     }
 
     // MISMIP EXPERIMENT 3 FORCING.
-    if ( exp == 3 )
+    if ( exp == "mismip_3" )
     {
         // Exps 3 forcing.
         // Rate factor [Pa^-3 s^-1].
@@ -451,7 +481,7 @@ int main()
     }
     
     // MISMIP THERMODYNAMICS. 
-    else if ( exp == 4 )
+    else if ( exp == "mismip_3_therm" )
     {
         // Time length for each forcing step. 
 
@@ -603,7 +633,7 @@ int main()
     }   
 
     // TRANSITION INDICATORS EXPERIMENTS.
-    else if ( exp == 5 )
+    else if ( exp == "ews" )
     {
         //int const A_rate = 1;         // 0: constant A, 1: linear increase in A.
 
@@ -660,7 +690,7 @@ int main()
     while (t < tf)
     {
         // MISMIP EXPERIMENTS 1, 3 and 3.
-        if ( exp == 1 || exp == 3 )
+        if ( exp == "mismip_1" || exp == "mismip_3" )
         {
             // Update rate factor value.
             if ( t > t_s(c_s) )
@@ -674,7 +704,7 @@ int main()
         }
 
         // MISMIP-THERM EXPERIMENTS.
-        else if ( exp == 4 )
+        else if ( exp == "mismip_therm" )
         {
             // Update rate factor and T_air value.
             if ( t > t_s(c_s) )
@@ -717,7 +747,7 @@ int main()
         }
 
         // TRANSITION INDICATORS EXPERIMENTS.
-        else if ( exp == 5 )
+        else if ( exp == "ews" )
         {
             // Constant A throughout the sim.
             if ( A_rate == false )
@@ -752,11 +782,25 @@ int main()
     
 
         // Update bedrock with new domain extension L.
-        bed = f_bed(L, n, bed_exp, y_0, y_p, x_1, x_2, smooth_bed, sigma_gauss, sigma);
+        //bed = f_bed(L, n, exp, y_0, y_p, x_1, x_2, smooth_bed, sigma_gauss, sigma);
+        
+        /*bed = f_bed(L, nixParams.domain.n, \ 
+                        nixParams.domain.experiment, \
+                       nixParams.domain.bedrock_ews.y_0, \
+                        nixParams.domain.bedrock_ews.y_p, \
+                       nixParams.domain.bedrock_ews.x_1, \ 
+                       nixParams.domain.bedrock_ews.x_2, \
+                       nixParams.domain.bedrock_ews.smooth_bed, \
+                       nixParams.domain.bedrock_ews.sigma_gauss, sigma);*/
+
+        bed = f_bed(L, sigma, nixParams.domain);
+
 
         // Friction coefficient.
-        C_bed = f_C_bed(C_ref, theta, H, t, t_eq, theta_max, \
-                        theta_frz, C_frz, C_thw, rho, g, fric_therm, n);
+       /* C_bed = f_C_bed(C_ref, theta, H, t, t_eq, theta_max, \
+                        theta_frz, C_frz, C_thw, rho, g, fric_therm, n);*/
+
+        C_bed = f_C_bed(C_ref, theta, H, t, nixParams);
 
         // Stochastic configuration. 
         // Update time-dependent boundary conditions after equilibration.
@@ -779,8 +823,11 @@ int main()
             //cout << "\n smb_sotch = " << smb_stoch;
 
             // Update SMB considering new domain extension and current stochastic term.
-            S = f_smb(sigma, L, S_0, x_mid, x_sca, x_varmid, \
-                      x_varsca, dlta_smb, var_mult, smb_stoch, t, t0_stoch , n, stoch);
+            //S = f_smb(sigma, L, S_0, x_mid, x_sca, x_varmid, \
+            //          x_varsca, dlta_smb, var_mult, smb_stoch, t, t0_stoch , n, stoch);
+
+            S = f_smb(sigma, L, t, smb_stoch, nixParams.boundary_conditions, \
+                        nixParams.domain, nixParams.time);
         }
 
         // Picard initialization.
@@ -798,9 +845,14 @@ int main()
             
             // Implicit solver.
             // If SSA solver ub = u_bar.
-            sol = vel_solver(H, ds, ds_inv, ds_sym, dz, n, n_z, visc_bar, bed, rho, rho_w, g, L, \
+            /*sol = vel_solver(H, ds, ds_inv, ds_sym, dz, n, n_z, visc_bar, bed, rho, rho_w, g, L, \
                                 C_bed, t, beta, A, A_theta, n_gln, visc, u, \
-                                    u_z, visc_therm, vel_meth);
+                                    u_z, visc_therm, vel_meth);*/
+
+            sol = vel_solver(H, ds, ds_inv, ds_sym, dz, visc_bar, bed, L, \
+                                C_bed, t, beta, A, A_theta, visc, u, u_z, \
+                                    nixParams.dynamics, nixParams.domain, \
+                                        nixParams.constants, nixParams.viscosity);
             
             // Allocate variables. sol(n+1,n_z+1)
             u_bar  = sol.block(0,0,n,1);
@@ -808,13 +860,15 @@ int main()
 
             
             // Update beta with new velocity.
-            fric_all = f_u(u, u_bar, beta, C_bed, visc, H, dz, sec_year, t, t_eq, m, vel_meth, n_z, n);
+            fric_all = f_u(u, u_bar, beta, C_bed, visc, H, dz, t, \
+                            nixParams.domain, nixParams.dynamics, nixParams.friction,\
+                             nixParams.constants);
             beta     = fric_all.col(0);
 
             // Update viscosity with new velocity.
             visc_all = f_visc(theta, u, visc, H, tau_b, u_bar, dz, \
                                 theta_act, ds, ds_inv, ds_sym, L, Q_act, A_0, n_gln, R, B, n_exp, \
-                                    eps, t, t_eq, sec_year, n, n_z, vel_meth, A, \
+                                    eps, t, t_eq, n, n_z, vel_meth, A, \
                                         visc_therm, visc_0);
             
             // Allocate variables.

@@ -5,7 +5,7 @@
 ArrayXXd f_theta(ArrayXXd theta, ArrayXd ub, ArrayXd H, ArrayXd tau_b, ArrayXd Q_fric, \
                  ArrayXd sigma, ArrayXd dz, double theta_max, double T_air, double kappa, double k, \
                  double dt, double G_k, ArrayXd ds, double L, \
-                 double dL_dt, double t, double t_eq, ArrayXd w, int n, int n_z, int vel_meth, \
+                 double dL_dt, double t, double t_eq, ArrayXd w, int n, int n_z, string vel_meth, \
                  ArrayXXd strain_2d)
 {
     ArrayXXd theta_now(n,n_z);
@@ -81,7 +81,7 @@ ArrayXXd f_theta(ArrayXXd theta, ArrayXd ub, ArrayXd H, ArrayXd tau_b, ArrayXd Q
     //theta_now(0,n_z-1) = T_air;
 
     // For the DIVA solver, consider the strain heat contribution.
-    if ( vel_meth == 2 )
+    if ( vel_meth == "DIVA" || vel_meth == "Blatter-Pattyn" )
     {
         theta_now = theta_now + ( kappa / k ) * strain_2d * dt;
     }

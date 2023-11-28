@@ -2,7 +2,7 @@
 
 // NIX TIMESTEP MODULE.
 
-Array2d f_dt(double error, double picard_tol, double dt_meth, \
+Array2d f_dt(double error, double picard_tol, string dt_meth, \
             double t, double dt, double t_eq, double dt_min, \
             double dt_max, double dt_CFL, double rel)
 {
@@ -11,7 +11,7 @@ Array2d f_dt(double error, double picard_tol, double dt_meth, \
     double dt_tilde;
 
     // Fixed time step.
-    if ( dt_meth == 0 || t < t_eq )
+    if ( dt_meth == "fixed" || t < t_eq )
     {
         dt = dt_min;
     }

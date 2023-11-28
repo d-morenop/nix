@@ -95,7 +95,8 @@ ArrayXXd F_int_all(ArrayXXd visc, ArrayXd H, ArrayXd dz, int n_z, int n) {
 }
 
 
-ArrayXXd solver_2D(int n, int n_z, ArrayXd dx, ArrayXd dz, ArrayXXd visc, ArrayXd F, ArrayXXd u_0) 
+ArrayXXd solver_2D(int n, int n_z, ArrayXd dx, ArrayXd dz, \
+            ArrayXXd visc, ArrayXd F, ArrayXXd u_0) 
 {
 
     ArrayXd dz_2_inv = 1.0 / pow(dz,2);
@@ -227,19 +228,34 @@ ArrayXXd solver_2D(int n, int n_z, ArrayXd dx, ArrayXd dz, ArrayXXd visc, ArrayX
 }
 
 
-ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_sym, ArrayXd dz, int n, int n_z, ArrayXd visc_bar, \
+/*ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_sym, ArrayXd dz, int n, int n_z, ArrayXd visc_bar, \
                     ArrayXd bed, double rho, double rho_w, double g, double L, ArrayXd C_bed, \
                     double t, ArrayXd beta, double A_ice, ArrayXXd A_theta,
                     double n_gln, ArrayXXd visc, ArrayXXd u, ArrayXXd u_z, bool visc_therm, \
-                    int vel_meth)
-{
-    ArrayXXd out(n,n_z+1), u_sol(n,n_z); 
+                    string vel_meth)*/
 
+ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_sym, ArrayXd dz, ArrayXd visc_bar, \
+                    ArrayXd bed, double L, ArrayXd C_bed, \
+                    double t, ArrayXd beta, double A_ice, ArrayXXd A_theta, ArrayXXd visc, ArrayXXd u, ArrayXXd u_z, \
+                    DynamicsParams& dynamics , DomainParams& domain, ConstantsParams& constants, ViscosityParams& viscosity)
+{
+
+    // Name parameters.
+    int n            = domain.n;
+    int n_z          = domain.n_z;
+    double n_gln     = viscosity.n_gln;
+    bool visc_therm  = viscosity.visc_therm;
+    string vel_meth  = dynamics.vel_meth;
+    auto [g, rho, rho_w, sec_year] = constants;
+
+    // Prepare variables.
+    ArrayXXd out(n,n_z+1), u_sol(n,n_z); 
     ArrayXd u_bar(n), dhds(n), visc_H(n), h(n), A_bar(n), \
             A(n), B(n), C(n), F(n), dz_inv_2(n), ds_inv_2(n-1), gamma(n-1);
 
     double D, u_x_bc, L_inv;
     
+    // Handy definitions.
     L_inv    = 1.0 / L;
     ds_inv_2 = pow(ds_inv, 2);
     dz_inv_2 = pow(1.0/dz, 2);
@@ -255,7 +271,7 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_sym, Array
     // Staggered grid (Vieli and Payne solutions, appendix).
 
     // SSA and DIVA solvers.
-    if ( vel_meth == 1 || vel_meth == 2 )
+    if ( vel_meth == "SSA" || vel_meth == "DIVA" )
     {
         // Handy definitions.
         visc_H = visc_bar * H;
@@ -296,13 +312,13 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_sym, Array
         D = abs( min(0.0, bed(n-1)) );   
 
         // Imposed rate factor.
-        if (visc_therm == 0)
+        if ( visc_therm == false )
         {
             u_x_bc = L * A_ice * pow( 0.25 * ( rho * g * H(n-1) * (1.0 - rho / rho_w) ), n_gln);
         }
 
         // Temperature-dependent ice rate factor.
-        else if (visc_therm == 1)
+        else if ( visc_therm == true )
         {
             // Vertically averaged ice rate factor.
             A_bar = A_theta.rowwise().mean();
@@ -329,7 +345,7 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_sym, Array
         u_bar(n-1) = u_bar(n-2) + ds(n-2) * u_x_bc;
     }
     
-    else if ( vel_meth ==  3 )
+    else if ( vel_meth == "Blatter-Pattyn" )
     {
         /*
         double dx = ds*L;

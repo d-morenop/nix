@@ -2,14 +2,27 @@
 // NIX FRICTION MODULE.
 
 
-ArrayXd f_C_bed(ArrayXd C_ref, ArrayXXd theta, ArrayXd H, double t, double t_eq, double theta_max, \
-                double theta_frz, double C_frz, double C_thw, double rho, double g, int fric_therm, int n)
+//ArrayXd f_C_bed(ArrayXd C_ref, ArrayXXd theta, ArrayXd H, double t, double t_eq, \
+//                double theta_max, double theta_frz, double C_frz, \
+//                 double C_thw, double rho, double g, string fric_therm, int n)
+
+ArrayXd f_C_bed(ArrayXd C_ref, ArrayXXd theta, ArrayXd H, double t, \
+                NixParams& params)
 {
+    
+    int n             = params.domain.n;
+    double g          = params.constants.g;
+    double rho        = params.constants.rho;
+    double t_eq       = params.time.t_eq;
+    double theta_frz  = params.friction.theta_frz;
+    string fric_therm = params.friction.fric_therm;
+
+    
     ArrayXd C_bed(n), theta_norm(n);
 
    
     // Basal friction coupled with thermal state of the base.
-    if (fric_therm == 1 && t > t_eq)
+    if (fric_therm == "two-valued" && t > t_eq)
     {
         
         // Binary friction.
@@ -36,7 +49,7 @@ ArrayXd f_C_bed(ArrayXd C_ref, ArrayXXd theta, ArrayXd H, double t, double t_eq,
 
     // Overburden pressure of ice. C_bed = N.
     // Seems to be too high, arbitrary factor 0.001 !!!!!!!???
-    else if (fric_therm == 2 && t > t_eq)
+    else if (fric_therm == "N_eff" && t > t_eq)
     {
         C_bed = 0.001 * rho * g * H;
 
@@ -45,7 +58,7 @@ ArrayXd f_C_bed(ArrayXd C_ref, ArrayXXd theta, ArrayXd H, double t, double t_eq,
     }
 
     // Friction coefficient given by reference value.
-    else 
+    else if ( fric_therm == "none" )
     {
         C_bed = C_ref;
     }
@@ -54,17 +67,29 @@ ArrayXd f_C_bed(ArrayXd C_ref, ArrayXXd theta, ArrayXd H, double t, double t_eq,
 }
 
 
-ArrayXXd f_u(ArrayXXd u, ArrayXd u_bar, ArrayXd beta, ArrayXd C_bed, ArrayXXd visc, \
+/*ArrayXXd f_u(ArrayXXd u, ArrayXd u_bar, ArrayXd beta, ArrayXd C_bed, ArrayXXd visc, \
              ArrayXd H, ArrayXd dz, double sec_year, double t, double t_eq, \
-             double m, int vel_meth, int n_z, int n)
+             double m, string vel_meth, int n_z, int n)*/
+
+ArrayXXd f_u(ArrayXXd u, ArrayXd u_bar, ArrayXd beta, ArrayXd C_bed, ArrayXXd visc, \
+             ArrayXd H, ArrayXd dz, double t, DomainParams& domain, \
+             DynamicsParams& dynamics, FrictionParams& friction, ConstantsParams& constants)
 {
+    // Name parameters.
+    int n           = domain.n;
+    int n_z         = domain.n_z;
+    double m        = friction.m;
+    double sec_year = constants.sec_year;
+    string vel_meth = dynamics.vel_meth;
+
+    // Prepare varibales.
     ArrayXXd out(n,4), F_1(n,n_z), F_all(n,n_z+1); //out(n,n_z+3)
     ArrayXd beta_eff(n), ub(n), F_2(n), tau_b(n), Q_fric(n);
 
     //ArrayXXd out(n,n_z+6),
 
     // For constant visc or SSA, ub = u_bar.
-    if ( vel_meth == 0 || vel_meth == 1 )
+    if ( vel_meth == "const" || vel_meth == "SSA" )
     {
         // Vel definition. New beta from ub.
         ub = u_bar;
@@ -75,7 +100,7 @@ ArrayXXd f_u(ArrayXXd u, ArrayXd u_bar, ArrayXd beta, ArrayXd C_bed, ArrayXXd vi
     }
 
     // For DIVA solver, Eq. 32 Lipscomb et al.
-    else if ( vel_meth == 2 )
+    else if ( vel_meth == "DIVA" )
     {
         // Useful integral. n_z-1 as we count from 0.
         F_all = F_int_all(visc, H, dz, n_z, n);
@@ -117,7 +142,7 @@ ArrayXXd f_u(ArrayXXd u, ArrayXd u_bar, ArrayXd beta, ArrayXd C_bed, ArrayXXd vi
     }
 
     // Blatter-Pattyn velocity solver.
-    else if ( vel_meth == 3 )
+    else if ( vel_meth == "Blatter-Pattyn" )
     {
         // Basal velocity from velocity matrix.
         ub = u.col(0);
