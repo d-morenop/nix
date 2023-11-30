@@ -2,34 +2,22 @@
 // NIX FRICTION MODULE.
 
 
-//ArrayXd f_C_bed(ArrayXd C_ref, ArrayXXd theta, ArrayXd H, double t, double t_eq, \
-//                double theta_max, double theta_frz, double C_frz, \
-//                 double C_thw, double rho, double g, string fric_therm, int n)
-
 ArrayXd f_C_bed(ArrayXd C_ref, ArrayXXd theta, ArrayXd H, double t, \
-                NixParams& params)
+                DomainParams dom, ConstantsParams cnst, TimeParams tm, \
+                FrictionParams fric)
 {
     
-    int n             = params.domain.n;
-    double g          = params.constants.g;
-    double rho        = params.constants.rho;
-    double t_eq       = params.time.t_eq;
-    double theta_frz  = params.friction.theta_frz;
-    string fric_therm = params.friction.fric_therm;
+    ArrayXd C_bed(dom.n), theta_norm(dom.n);
 
-    
-    ArrayXd C_bed(n), theta_norm(n);
-
-   
     // Basal friction coupled with thermal state of the base.
-    if (fric_therm == "two-valued" && t > t_eq)
+    if (fric.therm == "two-valued" && t > tm.t_eq)
     {
         
         // Binary friction.
-        for (int i=1; i<n; i++)
+        for (int i=1; i<dom.n; i++)
         {
             // Reference value for frozen bed.
-            if ( theta(i,0) < theta_frz )
+            if ( theta(i,0) < fric.theta_frz )
             {
                 C_bed(i) = C_ref(i);
             }
@@ -49,16 +37,16 @@ ArrayXd f_C_bed(ArrayXd C_ref, ArrayXXd theta, ArrayXd H, double t, \
 
     // Overburden pressure of ice. C_bed = N.
     // Seems to be too high, arbitrary factor 0.001 !!!!!!!???
-    else if (fric_therm == "N_eff" && t > t_eq)
+    else if (fric.therm == "N_eff" && t > tm.t_eq)
     {
-        C_bed = 0.001 * rho * g * H;
+        C_bed = 0.001 * cnst.rho * cnst.g * H;
 
         // g in m/s² --> m/yr^2 SOMETHING MIGHT BE WRONG HERE!
         //C_bed = 0.001 * rho * g * H * pow(sec_year, 2);
     }
 
     // Friction coefficient given by reference value.
-    else if ( fric_therm == "none" )
+    else if ( fric.therm == "none" )
     {
         C_bed = C_ref;
     }
@@ -67,46 +55,36 @@ ArrayXd f_C_bed(ArrayXd C_ref, ArrayXXd theta, ArrayXd H, double t, \
 }
 
 
-/*ArrayXXd f_u(ArrayXXd u, ArrayXd u_bar, ArrayXd beta, ArrayXd C_bed, ArrayXXd visc, \
-             ArrayXd H, ArrayXd dz, double sec_year, double t, double t_eq, \
-             double m, string vel_meth, int n_z, int n)*/
-
 ArrayXXd f_u(ArrayXXd u, ArrayXd u_bar, ArrayXd beta, ArrayXd C_bed, ArrayXXd visc, \
-             ArrayXd H, ArrayXd dz, double t, DomainParams& domain, \
-             DynamicsParams& dynamics, FrictionParams& friction, ConstantsParams& constants)
+             ArrayXd H, ArrayXd dz, double t, DomainParams& dom, \
+             DynamicsParams& dyn, FrictionParams& fric, ConstantsParams& cnst)
 {
-    // Name parameters.
-    int n           = domain.n;
-    int n_z         = domain.n_z;
-    double m        = friction.m;
-    double sec_year = constants.sec_year;
-    string vel_meth = dynamics.vel_meth;
 
     // Prepare varibales.
-    ArrayXXd out(n,4), F_1(n,n_z), F_all(n,n_z+1); //out(n,n_z+3)
-    ArrayXd beta_eff(n), ub(n), F_2(n), tau_b(n), Q_fric(n);
+    ArrayXXd out(dom.n,4), F_1(dom.n,dom.n_z), F_all(dom.n,dom.n_z+1); 
+    ArrayXd beta_eff(dom.n), ub(dom.n), F_2(dom.n), tau_b(dom.n), Q_fric(dom.n);
 
     //ArrayXXd out(n,n_z+6),
 
     // For constant visc or SSA, ub = u_bar.
-    if ( vel_meth == "const" || vel_meth == "SSA" )
+    if ( dyn.vel_meth == "const" || dyn.vel_meth == "SSA" )
     {
         // Vel definition. New beta from ub.
         ub = u_bar;
 
         // beta = beta_eff, ub = u_bar for SSA.
-        beta_eff    = C_bed * pow(ub, m - 1.0);
+        beta_eff    = C_bed * pow(ub, fric.m - 1.0);
         beta_eff(0) = beta_eff(1);
     }
 
     // For DIVA solver, Eq. 32 Lipscomb et al.
-    else if ( vel_meth == "DIVA" )
+    else if ( dyn.vel_meth == "DIVA" )
     {
         // Useful integral. n_z-1 as we count from 0.
-        F_all = F_int_all(visc, H, dz, n_z, n);
+        F_all = F_int_all(visc, H, dz, dom.n_z, dom.n);
         
-        F_2 = F_all.block(0,0,n,1);
-        F_1 = F_all.block(0,1,n,n_z);
+        F_2 = F_all.block(0, 0, dom.n, 1);
+        F_1 = F_all.block(0, 1, dom.n, dom.n_z);
         
         
         // REVISE HOW BETA IS CALCULATED
@@ -117,7 +95,7 @@ ArrayXXd f_u(ArrayXXd u, ArrayXd u_bar, ArrayXd beta, ArrayXd C_bed, ArrayXXd vi
         ub(0) = - ub(1);
 
         // Beta definition. New beta from ub.
-        beta = C_bed * pow(ub, m - 1.0);
+        beta = C_bed * pow(ub, fric.m - 1.0);
 
         // DIVA solver requires an effective beta.
         beta_eff = beta / ( 1.0 + beta * F_2 );
@@ -128,7 +106,7 @@ ArrayXXd f_u(ArrayXXd u, ArrayXd u_bar, ArrayXd beta, ArrayXd C_bed, ArrayXXd vi
 
         
         // Now we can compute u(x,z) from beta and visc.
-        for (int j=0; j<n_z; j++)
+        for (int j=0; j<dom.n_z; j++)
         {
             // Integral only up to current vertical level j.
             // 2D velocity field (Eq. 29 Lipscomb et al., 2019).
@@ -142,13 +120,13 @@ ArrayXXd f_u(ArrayXXd u, ArrayXd u_bar, ArrayXd beta, ArrayXd C_bed, ArrayXXd vi
     }
 
     // Blatter-Pattyn velocity solver.
-    else if ( vel_meth == "Blatter-Pattyn" )
+    else if ( dyn.vel_meth == "Blatter-Pattyn" )
     {
         // Basal velocity from velocity matrix.
         ub = u.col(0);
         
         // beta = beta_eff, ub = u_bar for SSA.
-        beta_eff    = C_bed * pow(ub, m - 1.0);
+        beta_eff    = C_bed * pow(ub, fric.m - 1.0);
     }
     
 
@@ -157,7 +135,7 @@ ArrayXXd f_u(ArrayXXd u, ArrayXd u_bar, ArrayXd beta, ArrayXd C_bed, ArrayXXd vi
     tau_b(0) = tau_b(1);    // Symmetry ice divide. Avoid negative tau as u_bar(0) < 0. 
 
     // Frictional heat. [Pa · m / yr] --> [W / m^2].
-    Q_fric    = tau_b * ub / sec_year;
+    Q_fric    = tau_b * ub / cnst.sec_year;
     Q_fric(0) = Q_fric(1);
 
 

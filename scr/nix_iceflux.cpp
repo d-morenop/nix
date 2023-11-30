@@ -1,38 +1,45 @@
 
-
 // NIX ICE FLUX MODULE.
 // Computes grounding line positions, fluxes and calving at GL.
 
-double f_melt(double T_oce, double T_0, double rho, double rho_w, \
-              double c_po, double L_i, double gamma_T, int meth)
+//double f_melt(double T_oce, double T_0, double rho, double rho_w, \
+//              double c_po, double L_i, double gamma_T, int meth)
+
+double f_melt(double T_oce, SubShelfMeltParams& subshelf, ConstantsParams& cnst)
 {
     double M;
 
     // Linear.
-    if ( meth == 0 )
+    if ( subshelf.meth == "linear" )
     {
-        M = ( T_oce - T_0 ) * gamma_T * ( rho_w * c_po ) / ( rho * L_i );
+        M = ( T_oce - subshelf.T_0 ) * subshelf.gamma_T * \
+                ( cnst.rho_w * subshelf.c_po ) / ( cnst.rho * subshelf.L_i );
     }
 
     // Quadratic.
-    else if ( meth == 1 )
+    else if ( subshelf.meth == "quadratic" )
     {
-        M = pow((T_oce - T_0), 2) * gamma_T * pow( ( rho_w * c_po ) / ( rho * L_i ), 2);
+        M = pow((T_oce - subshelf.T_0), 2) * subshelf.gamma_T * \
+                pow( ( cnst.rho_w * subshelf.c_po ) / ( cnst.rho * subshelf.L_i ), 2);
     }
     
     return M;
 }
 
 
-ArrayXd f_q(ArrayXd u_bar, ArrayXd H, double H_f, double t, double t_eq, \
-               double rho, double rho_w, double m_dot, double M, string calving_meth, int n)
+ArrayXd f_q(ArrayXd u_bar, ArrayXd H, ArrayXd bed, double t, double m_dot, double M, \
+            DomainParams& dom, ConstantsParams& cnst, TimeParams& tm, CalvingParams calv)
 {
+
     // Local variables.
-    ArrayXd q(n);
+    ArrayXd q(dom.n);
     double H_mean;
 
+    // Flotation height from density ratio and ocean depth.
+    double H_f = ( cnst.rho_w / cnst.rho ) * abs(min(0.0, bed(dom.n-1)));
+
     // Flux defined on velocity grid. Staggered grid.
-    for (int i=0; i<n-1; i++)
+    for (int i=0; i<dom.n-1; i++)
     {
         // Vieli and Payne (2005) discretization.
         q(i) = u_bar(i) * 0.5 * ( H(i+1) + H(i) );
@@ -42,24 +49,24 @@ ArrayXd f_q(ArrayXd u_bar, ArrayXd H, double H_f, double t, double t_eq, \
     }   
         
     // GL flux definition (Vieli and Payne, 2005).
-    if ( calving_meth == "none" )
+    if ( calv.meth == "none" )
     {
         //q(n-1) = u_bar(n-1) * H(n-1);
 
         // We impose sythetic reduction potentially cause by ocean cooling/warming.
-        q(n-1) = u_bar(n-1) * H(n-1);
+        q(dom.n-1) = u_bar(dom.n-1) * H(dom.n-1);
     } 
     
     // Additional calving term (Christian et al., 2022).
     // ICE FLUX DISCRETIZATION SEEMS TO BE FUNDAMENTAL TO OBTAIN
     // THE SAME ICE SHEET ADVANCED AS CHRISTIAN. STAGGERED GRID.
-    else if ( calving_meth == "stochastic" )
+    else if ( calv.meth == "stochastic" )
     {
         // No calving during equilibration.
-        if ( t < t_eq )
+        if ( t < tm.t_eq )
         {
             // Vieli and Payne (2005).
-            q(n-1) = u_bar(n-1) * H(n-1);
+            q(dom.n-1) = u_bar(dom.n-1) * H(dom.n-1);
 
             // Schoof (2007).
             //q(n-1) = H(n-1) * 0.5 * ( ub(n-1) + ub(n-2) );
@@ -84,7 +91,7 @@ ArrayXd f_q(ArrayXd u_bar, ArrayXd H, double H_f, double t, double t_eq, \
             // Too retreated
             // LAST ATTEMPT.
             // ALMOST GOOD, A BIT TOO RETREATED FOR N=350 POINTS.
-            q(n-1) = H(n-1) * 0.5 * ( u_bar(n-1) + u_bar(n-2) + ( H_f / H(n-1) ) * m_dot );
+            q(dom.n-1) = H(dom.n-1) * 0.5 * ( u_bar(dom.n-1) + u_bar(dom.n-2) + ( H_f / H(dom.n-1) ) * m_dot );
 
             // Ice flux at GL computed on the ice thickness grid. Schoof (2007).
             // Mean.
@@ -113,19 +120,19 @@ ArrayXd f_q(ArrayXd u_bar, ArrayXd H, double H_f, double t, double t_eq, \
     }
 
     // Deterministic calving from sub-shelf melting (e.g., Favier et al., 2019).
-    else if ( calving_meth == "deterministic" )
+    else if ( calv.meth == "deterministic" )
     {
         // No calving during equilibration.
-        if ( t < t_eq )
+        if ( t < tm.t_eq )
         {
             // Vieli and Payne (2005).
-            q(n-1) = u_bar(n-1) * H(n-1);
+            q(dom.n-1) = u_bar(dom.n-1) * H(dom.n-1);
         }
         
         // Calving after equilibration.
         else
         {
-            q(n-1) = H(n-1) * ( u_bar(n-1) + M );
+            q(dom.n-1) = H(dom.n-1) * ( u_bar(dom.n-1) + M );
             //q(n-1) = ( H(n-1) + M ) * u_bar(n-1);
         }
     }
@@ -134,9 +141,10 @@ ArrayXd f_q(ArrayXd u_bar, ArrayXd H, double H_f, double t, double t_eq, \
 }
 
 
+
 Array2d f_L(ArrayXd H, ArrayXd q, ArrayXd S, ArrayXd bed, \
-          double dt, double L, ArrayXd ds, int n, double rho, \
-          double rho_w, double M)
+            double dt, double L, ArrayXd ds, double M, DomainParams& dom, \
+            ConstantsParams& cnst)
 {
     //Local variables.
     Array2d out;
@@ -148,8 +156,8 @@ Array2d f_L(ArrayXd H, ArrayXd q, ArrayXd S, ArrayXd bed, \
     
     // Accumulation minus flux (reverse sign). 
 
-    num = q(n-1) - q(n-2) - L * ds(n-2) * S(n-1);
-    den = H(n-1) - H(n-2) + ( rho_w / rho ) * ( bed(n-1) - bed(n-2) );
+    num = q(dom.n-1) - q(dom.n-2) - L * ds(dom.n-2) * S(dom.n-1);
+    den = H(dom.n-1) - H(dom.n-2) + ( cnst.rho_w / cnst.rho ) * ( bed(dom.n-1) - bed(dom.n-2) );
 
     /*
     // Two-point backward-difference.

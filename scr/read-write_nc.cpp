@@ -6,10 +6,10 @@
 
 // NETCDF PARAMETERS.
 /* This is the name of the data file we will create. */
-//#define FILE_NAME "output/mismip/exp3/exp3_n.250/exp3_n.250.nc"
-#define FILE_NAME "/home/dmoreno/nix/test_modules/nix.nc"
-#define FILE_NAME_HR "/home/dmoreno/nix/blatter-pattyn/test/nix_hr.nc"
-#define FILE_NAME_READ "/home/dmoreno/nix/data/noise_sigm_ocn.12.0.nc"
+
+//#define FILE_NAME "/home/dmoreno/nix/test_modules/nix.nc"
+//#define FILE_NAME_HR "/home/dmoreno/nix/blatter-pattyn/test/nix_hr.nc"
+//#define FILE_NAME_READ "/home/dmoreno/nix/data/noise_sigm_ocn.12.0.nc"
 
 
 
@@ -170,8 +170,18 @@ size_t start_z_hr[NDIMS_Z], cnt_z_hr[NDIMS_Z];
 
     
 
-int f_nc(int N, int N_Z)
+int f_nc(int N, int N_Z, string path)
 {
+    /* File names. We need a const char to be passed to nc_create().
+      The asterisk (*) is used to declare a pointer. In the context of 
+      const char*, it indicates that the variable is a pointer to a constant 
+      character (i.e., a C-style string). If you want to work with strings or
+      character arrays, you should use the * to declare a pointer (for a 
+      single character you don't need it: "A"). */
+    string full_path = path+"nix.nc";
+    const char* FILE_NAME = full_path.c_str();
+    
+
     /* These program variables hold one spatial variable x. */
     double xs[N];    
     double xz[N_Z];
@@ -493,8 +503,12 @@ int f_nc(int N, int N_Z)
 
 
 // Create another nc file just for high resolution output.
-int f_nc_hr(int N, int N_Z)
+int f_nc_hr(int N, int N_Z, string path)
 {
+    // Create file names.
+    string full_path = path+"nix_hr.nc";
+    const char* FILE_NAME_HR = full_path.c_str();
+
     /* These program variables hold one spatial variable x. */
     double xs[N];    
     double xz[N_Z];
@@ -824,8 +838,11 @@ int f_write_hr(int c, double u_bar_L, double H_L, \
 
 
 // Function to read nc file and load it to vairabe.
-ArrayXXd f_nc_read(int N)
+ArrayXXd f_nc_read(int N, string path)
 {
+    // Convert to const char.
+    const char* FILE_NAME_READ = path.c_str();
+
     /* This will be the netCDF ID for the file and data variable. */
     int ncid, varid_ocn, varid_smb;
 

@@ -1,6 +1,14 @@
 
 // NIX MODULE TO READ ALL PARAMETERS FROM nix_params.yaml
 
+struct PathParams 
+{
+    string nix;
+    string read;
+    string out;
+};
+
+
 struct OutputParams 
 {
     int t_n;
@@ -27,7 +35,8 @@ struct ConstantsParams
 
 struct BedrockEwsParams 
 {
-    bool smooth_bed;
+    string smooth;
+    int p;
     double sigma_gauss;
     double t0_gauss;
     double x_1;
@@ -38,12 +47,12 @@ struct BedrockEwsParams
 
 struct DomainParams 
 {
-    string experiment;
+    string exp;
     int n;
     int n_z;
     string grid;
     double grid_exp;
-    BedrockEwsParams bedrock_ews;
+    BedrockEwsParams ews;
 };
 
 struct DynamicsParams 
@@ -62,6 +71,8 @@ struct TimestepParams
 
 struct StochasticParams 
 {
+    bool stoch;
+    double t0;
     int N;
     double dt_noise;
 };
@@ -87,31 +98,45 @@ struct ThermParams
     double w_max;
 };
 
+struct RateFactorParams 
+{
+    bool A_rate;
+    double t0;
+    double tf;
+};
+
 struct BoundaryConditionsParams 
 {
     SMBParams smb;
     ThermParams therm;
+    RateFactorParams A;
+};
+
+struct AdvWParams 
+{
+    bool apply;
+    double w_0;
+    double w_exp;
 };
 
 struct ThermodynamicsParams 
 {
     bool therm;
-    bool therm_w;
     double k;
     double G_k;
     double kappa;
     double theta_max;
     double theta_act;
-    double R;
+    AdvWParams adv_w;
 };
 
 struct FrictionParams 
 {
     double m;
     double u_0;
-    string fric_therm;
+    string therm;
     double theta_frz;
-    double C_ref;
+    double C_ref_0;
     double C_frz;
     double C_thw;
 };
@@ -119,14 +144,16 @@ struct FrictionParams
 struct ViscosityParams 
 {
     double n_gln;
+    double n_exp;
     double eps;
-    bool visc_therm;
+    bool therm;
     double t_eq_A_theta;
     double A_act;
     double Q_act_1;
     double Q_act_2;
     double A_0_1;
     double A_0_2;
+    double R;
 };
 
 struct AdvectionParams 
@@ -174,125 +201,152 @@ struct InitParams
 
 struct NixParams 
 {
-    TimeParams time;
-    ConstantsParams constants;
-    DomainParams domain;
-    DynamicsParams dynamics;
-    TimestepParams timestep;
-    StochasticParams stochastic;
-    BoundaryConditionsParams boundary_conditions;
-    ThermodynamicsParams thermodynamics;
-    FrictionParams friction;
-    ViscosityParams viscosity;
-    AdvectionParams advection;
-    CalvingParams calving;
-    PicardParams picard;
-    InitParams initialisation;
+    PathParams path;
+    TimeParams tm;
+    ConstantsParams cnst;
+    DomainParams dom;
+    DynamicsParams dyn;
+    TimestepParams tmstep;
+    StochasticParams stoch; 
+    BoundaryConditionsParams bc;
+    ThermodynamicsParams thrmdyn;
+    FrictionParams fric;
+    ViscosityParams vis;
+    AdvectionParams adv;
+    CalvingParams calv;
+    PicardParams pcrd;
+    InitParams init;
 };
+
 
 // Here we populate the structures and transform in the desried units.
 void readParams(const YAML::Node& node, NixParams& params) 
 {
+    // PATHS.
+    params.path.nix = node["path"]["nix"].as<string>();
+    params.path.out = node["path"]["out"].as<string>();
     
-    params.time.t0            = node["time"]["t0"].as<double>();
-    params.time.tf            = node["time"]["tf"].as<double>();
-    params.time.t_eq          = node["time"]["t_eq"].as<double>();
-    params.time.output.t_n    = node["time"]["output"]["t_n"].as<int>();
-    params.time.output.out_hr = node["time"]["output"]["out_hr"].as<bool>();
+    //TIME.
+    params.tm.t0            = node["time"]["t0"].as<double>();
+    params.tm.tf            = node["time"]["tf"].as<double>();
+    params.tm.t_eq          = node["time"]["t_eq"].as<double>();
+    params.tm.output.t_n    = node["time"]["output"]["t_n"].as<int>();
+    params.tm.output.out_hr = node["time"]["output"]["out_hr"].as<bool>();
 
-    params.constants.g     = node["constants"]["g"].as<double>();
-    params.constants.rho   = node["constants"]["rho"].as<double>();
-    params.constants.rho_w = node["constants"]["rho_w"].as<double>();
+    // PHYSICAL CONSTANTS.
+    params.cnst.g        = node["constants"]["g"].as<double>();
+    params.cnst.rho      = node["constants"]["rho"].as<double>();
+    params.cnst.rho_w    = node["constants"]["rho_w"].as<double>();
+    params.cnst.sec_year = node["constants"]["sec_year"].as<double>();
 
-    params.constants.sec_year = node["constants"]["sec_year"].as<double>();
+    // DOMAIN.
+    params.dom.exp             = node["domain"]["experiment"].as<std::string>();
+    params.dom.n               = node["domain"]["n"].as<int>();
+    params.dom.n_z             = node["domain"]["n_z"].as<int>();
+    params.dom.grid            = node["domain"]["grid"].as<std::string>();
+    params.dom.grid_exp        = node["domain"]["grid_exp"].as<double>();
+    params.dom.ews.smooth      = node["domain"]["bedrock_ews"]["smooth_bed"].as<string>();
+    params.dom.ews.p           = node["domain"]["bedrock_ews"]["p"].as<int>();
+    params.dom.ews.sigma_gauss = node["domain"]["bedrock_ews"]["sigma_gauss"].as<double>();
+    params.dom.ews.t0_gauss    = node["domain"]["bedrock_ews"]["t0_gauss"].as<double>();
+    params.dom.ews.x_1         = node["domain"]["bedrock_ews"]["x_1"].as<double>();
+    params.dom.ews.x_2         = node["domain"]["bedrock_ews"]["x_2"].as<double>();
+    params.dom.ews.y_p         = node["domain"]["bedrock_ews"]["y_p"].as<double>();
+    params.dom.ews.y_0         = node["domain"]["bedrock_ews"]["y_0"].as<double>();
 
-    params.domain.experiment              = node["domain"]["experiment"].as<std::string>();
-    params.domain.n                       = node["domain"]["n"].as<int>();
-    params.domain.n_z                     = node["domain"]["n_z"].as<int>();
-    params.domain.grid                    = node["domain"]["grid"].as<std::string>();
-    params.domain.grid_exp                = node["domain"]["grid_exp"].as<double>();
-    params.domain.bedrock_ews.smooth_bed  = node["domain"]["bedrock_ews"]["smooth_bed"].as<bool>();
-    params.domain.bedrock_ews.sigma_gauss = node["domain"]["bedrock_ews"]["sigma_gauss"].as<double>();
-    params.domain.bedrock_ews.t0_gauss    = node["domain"]["bedrock_ews"]["t0_gauss"].as<double>();
-    params.domain.bedrock_ews.x_1         = node["domain"]["bedrock_ews"]["x_1"].as<double>();
-    params.domain.bedrock_ews.x_2         = node["domain"]["bedrock_ews"]["x_2"].as<double>();
-    params.domain.bedrock_ews.y_p         = node["domain"]["bedrock_ews"]["y_p"].as<double>();
-    params.domain.bedrock_ews.y_0         = node["domain"]["bedrock_ews"]["y_0"].as<double>();
+    // DYNAMICS.
+    params.dyn.vel_meth = node["dynamics"]["vel_meth"].as<std::string>();
 
-    params.dynamics.vel_meth = node["dynamics"]["vel_meth"].as<std::string>();
+    // TIME STEP.
+    params.tmstep.dt_meth = node["timestep"]["dt_meth"].as<std::string>();
+    params.tmstep.dt_min  = node["timestep"]["dt_min"].as<double>();
+    params.tmstep.dt_max  = node["timestep"]["dt_max"].as<double>();
+    params.tmstep.t_eq_dt = node["timestep"]["t_eq_dt"].as<double>();
+    params.tmstep.rel     = node["timestep"]["rel"].as<double>();
 
-    params.timestep.dt_meth = node["timestep"]["dt_meth"].as<std::string>();
-    params.timestep.dt_min  = node["timestep"]["dt_min"].as<double>();
-    params.timestep.dt_max  = node["timestep"]["dt_max"].as<double>();
-    params.timestep.t_eq_dt = node["timestep"]["t_eq_dt"].as<double>();
-    params.timestep.rel     = node["timestep"]["rel"].as<double>();
+    // STOCHASIC BOUNDARY CONDITIONS.
+    params.stoch.stoch    = node["stochastic"]["stoch"].as<bool>();
+    params.stoch.t0       = node["stochastic"]["t0"].as<double>();
+    params.stoch.N        = node["stochastic"]["N"].as<int>();
+    params.stoch.dt_noise = node["stochastic"]["dt_noise"].as<double>();
 
-    params.stochastic.N        = node["stochastic"]["N"].as<int>();
-    params.stochastic.dt_noise = node["stochastic"]["dt_noise"].as<double>();
+    // DETERMINISTIC BOUNDARY CONDITIONS.
+    params.bc.smb.stoch    = node["boundary_conditions"]["smb"]["stoch"].as<bool>();
+    params.bc.smb.S_0      = node["boundary_conditions"]["smb"]["S_0"].as<double>();
+    params.bc.smb.dlta_smb = node["boundary_conditions"]["smb"]["dlta_smb"].as<double>();
+    params.bc.smb.x_acc    = node["boundary_conditions"]["smb"]["x_acc"].as<double>();
+    params.bc.smb.x_mid    = node["boundary_conditions"]["smb"]["x_mid"].as<double>();
+    params.bc.smb.x_sca    = node["boundary_conditions"]["smb"]["x_sca"].as<double>();
+    params.bc.smb.x_varmid = node["boundary_conditions"]["smb"]["x_varmid"].as<double>();
+    params.bc.smb.x_varsca = node["boundary_conditions"]["smb"]["x_varsca"].as<double>();
+    params.bc.smb.var_mult = node["boundary_conditions"]["smb"]["var_mult"].as<double>();
+    params.bc.A.A_rate     = node["boundary_conditions"]["rate_factor"]["A_rate"].as<bool>();
+    params.bc.A.t0         = node["boundary_conditions"]["rate_factor"]["t0"].as<double>();
+    params.bc.A.tf         = node["boundary_conditions"]["rate_factor"]["tf"].as<double>();
+    params.bc.therm.T_air  = node["boundary_conditions"]["therm"]["T_air"].as<double>();
+    params.bc.therm.w_min  = node["boundary_conditions"]["therm"]["w_min"].as<double>();
+    params.bc.therm.w_max  = node["boundary_conditions"]["therm"]["w_max"].as<double>();
 
-    params.boundary_conditions.smb.stoch    = node["boundary_conditions"]["smb"]["stoch"].as<bool>();
-    params.boundary_conditions.smb.S_0      = node["boundary_conditions"]["smb"]["S_0"].as<double>();
-    params.boundary_conditions.smb.dlta_smb = node["boundary_conditions"]["smb"]["dlta_smb"].as<double>();
-    params.boundary_conditions.smb.x_acc    = node["boundary_conditions"]["smb"]["x_acc"].as<double>();
-    params.boundary_conditions.smb.x_mid    = node["boundary_conditions"]["smb"]["x_mid"].as<double>();
-    params.boundary_conditions.smb.x_sca    = node["boundary_conditions"]["smb"]["x_sca"].as<double>();
-    params.boundary_conditions.smb.x_varmid = node["boundary_conditions"]["smb"]["x_varmid"].as<double>();
-    params.boundary_conditions.smb.x_varsca = node["boundary_conditions"]["smb"]["x_varsca"].as<double>();
-    params.boundary_conditions.smb.var_mult = node["boundary_conditions"]["smb"]["var_mult"].as<double>();
+    // THERMODYNAMICS.
+    params.thrmdyn.therm       = node["thermodynamics"]["therm"].as<bool>();
+    params.thrmdyn.k           = node["thermodynamics"]["k"].as<double>();
+    params.thrmdyn.G_k         = node["thermodynamics"]["G"].as<double>() / params.thrmdyn.k;
+    params.thrmdyn.kappa       = params.cnst.sec_year * node["thermodynamics"]["kappa"].as<double>();
+    params.thrmdyn.theta_max   = node["thermodynamics"]["theta_max"].as<double>();
+    params.thrmdyn.theta_act   = node["thermodynamics"]["theta_act"].as<double>();
+    params.thrmdyn.adv_w.apply = node["thermodynamics"]["adv_w"]["apply"].as<bool>();
+    params.thrmdyn.adv_w.w_0   = node["thermodynamics"]["adv_w"]["w_0"].as<double>();
+    params.thrmdyn.adv_w.w_exp = node["thermodynamics"]["adv_w"]["w_exp"].as<double>();
 
-    params.boundary_conditions.therm.T_air = node["boundary_conditions"]["therm"]["T_air"].as<double>();
-    params.boundary_conditions.therm.w_min = node["boundary_conditions"]["therm"]["w_min"].as<double>();
-    params.boundary_conditions.therm.w_max = node["boundary_conditions"]["therm"]["w_max"].as<double>();
+    
+    // FRICTION.
+    params.fric.m          = node["friction"]["m"].as<double>();
+    params.fric.u_0        = node["friction"]["u_0"].as<double>();
+    params.fric.therm = node["friction"]["therm"].as<string>();
+    params.fric.theta_frz  = node["friction"]["theta_frz"].as<double>();
+    params.fric.C_ref_0      = node["friction"]["C_ref"].as<double>() / pow(params.cnst.sec_year, params.fric.m );
+    params.fric.C_frz      = node["friction"]["C_frz"].as<double>() / pow(params.cnst.sec_year, params.fric.m );
+    params.fric.C_thw      = params.fric.C_frz * node["friction"]["C_thw"].as<double>();
 
-    params.thermodynamics.therm     = node["thermodynamics"]["therm"].as<bool>();
-    params.thermodynamics.therm_w   = node["thermodynamics"]["therm_w"].as<bool>();
-    params.thermodynamics.k         = node["thermodynamics"]["k"].as<double>();
-    params.thermodynamics.G_k       = node["thermodynamics"]["G"].as<double>() / params.thermodynamics.k;
-    params.thermodynamics.kappa     = params.constants.sec_year * node["thermodynamics"]["kappa"].as<double>();
-    params.thermodynamics.theta_max = node["thermodynamics"]["theta_max"].as<double>();
-    params.thermodynamics.theta_act = node["thermodynamics"]["theta_act"].as<double>();
-    params.thermodynamics.R         = node["thermodynamics"]["R"].as<double>();
+    // VISCOSITY.
+    params.vis.n_gln        = node["viscosity"]["n_gln"].as<double>();
+    params.vis.n_exp        = ( 1.0 - params.vis.n_gln ) / ( 2.0 * params.vis.n_gln );
+    params.vis.eps          = node["viscosity"]["eps"].as<double>();
+    params.vis.therm        = node["viscosity"]["therm"].as<bool>();
+    params.vis.t_eq_A_theta = node["viscosity"]["t_eq_A_theta"].as<double>();
+    params.vis.A_act        = params.cnst.sec_year * node["viscosity"]["A_act"].as<double>();
+    params.vis.Q_act_1      = 1.0e3 * node["viscosity"]["Q_act_1"].as<double>();
+    params.vis.Q_act_2      = 1.0e3 * node["viscosity"]["Q_act_2"].as<double>();
+    params.vis.A_0_1        = params.cnst.sec_year * node["viscosity"]["A_0_1"].as<double>();
+    params.vis.A_0_2        = params.cnst.sec_year * node["viscosity"]["A_0_2"].as<double>();
+    params.vis.R            = node["viscosity"]["R"].as<double>();
 
-    params.friction.m          = node["friction"]["m"].as<double>();
-    params.friction.u_0        = node["friction"]["u_0"].as<double>();
-    params.friction.fric_therm = node["friction"]["fric_therm"].as<string>();
-    params.friction.theta_frz  = node["friction"]["theta_frz"].as<double>();
-    params.friction.C_ref      = node["friction"]["C_ref"].as<double>() / pow(params.constants.sec_year, params.friction.m );
-    params.friction.C_frz      = node["friction"]["C_frz"].as<double>() / pow(params.constants.sec_year, params.friction.m );
-    params.friction.C_thw      = params.friction.C_frz * node["friction"]["C_thw"].as<double>();
+    // HORIZONTAL ICE ADVECTION.
+    params.adv.meth = node["advection"]["meth"].as<string>();
 
-    params.viscosity.n_gln        = node["viscosity"]["n_gln"].as<double>();
-    params.viscosity.eps          = node["viscosity"]["eps"].as<double>();
-    params.viscosity.visc_therm   = node["viscosity"]["visc_therm"].as<bool>();
-    params.viscosity.t_eq_A_theta = node["viscosity"]["t_eq_A_theta"].as<double>();
-    params.viscosity.A_act        = params.constants.sec_year * node["viscosity"]["A_act"].as<double>();
-    params.viscosity.Q_act_1      = 1.0e3 * node["viscosity"]["Q_act_1"].as<double>();
-    params.viscosity.Q_act_2      = 1.0e3 * node["viscosity"]["Q_act_2"].as<double>();
-    params.viscosity.A_0_1        = params.constants.sec_year * node["viscosity"]["A_0_1"].as<double>();
-    params.viscosity.A_0_2        = params.constants.sec_year * node["viscosity"]["A_0_2"].as<double>();
+    // CALVING AND SUH-SHELF MELT.
+    params.calv.meth                      = node["calving"]["meth"].as<string>();
+    params.calv.m_dot                     = node["calving"]["m_dot"].as<double>();
+    params.calv.sub_shelf_melt.shelf_melt = node["calving"]["sub_shelf_melt"]["shelf_melt"].as<bool>();
+    params.calv.sub_shelf_melt.meth       = node["calving"]["sub_shelf_melt"]["meth"].as<string>();
+    params.calv.sub_shelf_melt.t0_oce     = node["calving"]["sub_shelf_melt"]["t0_oce"].as<double>();
+    params.calv.sub_shelf_melt.tf_oce     = node["calving"]["sub_shelf_melt"]["tf_oce"].as<double>();
+    params.calv.sub_shelf_melt.c_po       = node["calving"]["sub_shelf_melt"]["c_po"].as<double>();
+    params.calv.sub_shelf_melt.L_i        = node["calving"]["sub_shelf_melt"]["L_i"].as<double>();
+    params.calv.sub_shelf_melt.gamma_T    = params.cnst.sec_year * node["calving"]["sub_shelf_melt"]["gamma_T"].as<double>();
+    params.calv.sub_shelf_melt.T_0        = node["calving"]["sub_shelf_melt"]["T_0"].as<double>();
 
-    params.advection.meth = node["advection"]["meth"].as<string>();
+    // PICARD ITERATION.
+    params.pcrd.n       = node["picard"]["n"].as<int>();
+    params.pcrd.tol     = node["picard"]["tol"].as<double>();
+    params.pcrd.omega_1 = M_PI * node["picard"]["omega_1"].as<double>();
+    params.pcrd.omega_2 = M_PI * node["picard"]["omega_2"].as<double>();
 
-    params.calving.meth                      = node["calving"]["meth"].as<string>();
-    params.calving.m_dot                     = node["calving"]["m_dot"].as<double>();
-    params.calving.sub_shelf_melt.shelf_melt = node["calving"]["sub_shelf_melt"]["shelf_melt"].as<bool>();
-    params.calving.sub_shelf_melt.meth       = node["calving"]["sub_shelf_melt"]["meth"].as<string>();
-    params.calving.sub_shelf_melt.t0_oce     = node["calving"]["sub_shelf_melt"]["t0_oce"].as<double>();
-    params.calving.sub_shelf_melt.tf_oce     = node["calving"]["sub_shelf_melt"]["tf_oce"].as<double>();
-    params.calving.sub_shelf_melt.c_po       = node["calving"]["sub_shelf_melt"]["c_po"].as<double>();
-    params.calving.sub_shelf_melt.L_i        = node["calving"]["sub_shelf_melt"]["L_i"].as<double>();
-    params.calving.sub_shelf_melt.gamma_T    = params.constants.sec_year * node["calving"]["sub_shelf_melt"]["gamma_T"].as<double>();
-    params.calving.sub_shelf_melt.T_0        = node["calving"]["sub_shelf_melt"]["T_0"].as<double>();
-
-    params.picard.n       = node["picard"]["n"].as<int>();
-    params.picard.tol     = node["picard"]["tol"].as<double>();
-    params.picard.omega_1 = M_PI * node["picard"]["omega_1"].as<double>();
-    params.picard.omega_2 = M_PI * node["picard"]["omega_2"].as<double>();
-
-    params.initialisation.H      = node["initialisation"]["H"].as<double>();
-    params.initialisation.S      = node["initialisation"]["S"].as<double>();
-    params.initialisation.u      = node["initialisation"]["u"].as<double>();
-    params.initialisation.visc_0 = node["initialisation"]["visc_0"].as<double>();
-    params.initialisation.theta  = node["initialisation"]["theta"].as<double>();
-    params.initialisation.beta   = node["initialisation"]["beta"].as<double>();
+    // INTIALISATION.
+    params.init.H      = node["initialisation"]["H"].as<double>();
+    params.init.S      = node["initialisation"]["S"].as<double>();
+    params.init.u      = node["initialisation"]["u"].as<double>();
+    params.init.visc_0 = node["initialisation"]["visc_0"].as<double>();
+    params.init.theta  = node["initialisation"]["theta"].as<double>();
+    params.init.beta   = node["initialisation"]["beta"].as<double>();
 }
