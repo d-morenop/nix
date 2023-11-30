@@ -42,7 +42,7 @@ int main()
     NixParams nixParams;
     readParams(config, nixParams);
 
-    // USE PARAM STRUCTURE TO ACCESS SOME PARAMETERS IN YAML.
+    // USE PARAM CLASS TO ACCESS SOME PARAMETERS IN YAML.
     auto [exp, n, n_z, grid, grid_exp, bedrock_ews] = nixParams.dom;
     auto [t0, tf, t_eq, output]                     = nixParams.tm;
     auto [t_n, out_hr]                              = nixParams.tm.output;
@@ -53,10 +53,6 @@ int main()
     /////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////
     // Initialize Nix.
-
-    // SELECT EXPERIMENT.
-    // 1: Exp. 1-2 MISMIP, 3: Exp. 3 MISMIP, 4: MISMIP+THERM, 5: TRANSITION INDICATORS.
-    //string exp = "mismip_3";
 
     // BED GEOMETRY.
     // Following Pattyn et al. (2012) the overdeepening hysterisis uses n = 250.
@@ -82,15 +78,15 @@ int main()
 
 
     // Prepare scalar variables.
-    double t;                                        // Time variable [yr].
-    double dt;                                       // Time step [yr].
-    double dL_dt;                                   // GL migration rate [m/yr]. 
-    double m_stoch;
-    double smb_stoch;
-    int t_stoch;          
-    double T_air;
-    double T_oce;
-    double M;
+    double t;                            // Time variable [yr].
+    double dt;                           // Time step [yr].
+    double dL_dt;                        // GL migration rate [m/yr]. 
+    double m_stoch;                      // Stochatic contribution to calving [m/yr].     
+    double smb_stoch;                    // Stochatic contribution to smb [m/yr].
+    int t_stoch;                         // Stochactic time index.
+    double T_air;                        // Current value of atmospheric temperature forcing [K] 
+    double T_oce;                        // Current value of ocean temperature anomaly forcing [K]   
+    double M;                            // Totalm calving value [m/yr].
     
     // LATERAL BOUNDARY CONDITION.
     double D;                                        // Depth below the sea level [m].

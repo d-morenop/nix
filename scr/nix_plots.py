@@ -19,12 +19,12 @@ import pylab as plt_lab
 from scipy.ndimage import gaussian_filter1d
 
 path_fig        = '/home/dmoreno/figures/flowline/ewr/A_rates/bed_peak/y_p.88_tf_A.2.5e4_A.0.5e-26_5.0e-25/frames/'
-path_now        = '/home/dmoreno/flowline/mismip_bp/exp_3/n.100_nz.10/'
+path_now        = '/home/dmoreno/nix/test_mismip-3/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
 
 # /home/dmoreno/flowline/ewr/A_rates/bed_smooth/gauss_dx/dx.2/p.3/y_p.176_tf_A.2.5e4_A.0.5e-26_5.0e-25/'
-# /home/dmoreno/flowline/ewr/A_rates/bed_smooth/running_mean/p.3_y_p.176_tf_A.2.5e4_A.0.5e-26_5.0e-25/'
+# /home/dmoreno/flowline/mismip_bp/exp_3/n.100_nz.10/
 
 # Select plots to be saved (boolean integer).
 save_series        = 1
@@ -35,8 +35,8 @@ coloured_domain    = 0
 save_var_frames    = 1
 save_series_frames = 0
 save_theta         = 0
-save_visc          = 1
-save_u             = 1
+save_visc          = 0
+save_u             = 0
 save_u_der         = 0
 time_series_gif    = 0
 save_L             = 0
@@ -59,7 +59,7 @@ if not os.path.exists(path_fig):
 	print(f"Directory '{path_fig}' created.")
 
 # Open nc file in read mode.
-nc_SSA = os.path.join(get_datadir(), path_now+'flowline.nc')
+nc_SSA = os.path.join(get_datadir(), path_now+'nix.nc')
 data   = Dataset(nc_SSA, mode='r')
 
 
@@ -206,7 +206,9 @@ def f_bed(x, exp, n):
 
 # Account for unevenly-spaced horizontal grid.
 sigma = np.linspace(0, 1.0, s[2])
-sigma_plot = sigma**(0.5)
+sigma_plot = sigma**(1.0) # 0.5
+
+
 
 # Horizontal dimension to plot. x_plot [km].
 if exp == 'mismip_1' or 'mismip_3':

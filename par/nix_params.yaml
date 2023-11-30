@@ -3,11 +3,11 @@
 path:
   nix: /home/dmoreno/scr/nix/                              # Nix path.
   read: /home/dmoreno/nix/data/noise_sigm_ocn.12.0.nc      # File with stochastic bc. 
-  out: /home/dmoreno/nix/test_modules/                     # Output path.
+  out: /home/dmoreno/nix/test_mismip-3/                     # Output path.
 
 time:
   t0: 0.0                 # Starting time [yr].
-  tf: 10.0e3              # End time [yr]. 57.0e3, 54.0, 32.0e4, MISMIP-therm: 3.0e4, 90.0e4, Ending time [yr]. EWR: 5.0e3
+  tf: 57.0e4              # End time [yr]. 57.0e3, 54.0, 32.0e4, MISMIP-therm: 3.0e4, 90.0e4, Ending time [yr]. EWR: 5.0e3
   t_eq: 1.5e3             # Equilibration time [yr].
   output:
     t_n: 100              # Number of output frames
@@ -40,7 +40,7 @@ dynamics:
   vel_meth: SSA           # Velocity solver: const, SSA, DIVA, Blatter-Pattyn.
 
 timestep:
-  dt_meth: fixed          # Time-stepping method.
+  dt_meth: adapt          # Time-stepping method. fixed, adapt.
   dt_min: 0.1             # Minimum time step [yr]. 0.1
   dt_max: 5.0             # Maximum time step [yr]. 2.0, 5.0
   t_eq_dt: 3.0e3          # Eq. time until adaptative timestep is applied.
