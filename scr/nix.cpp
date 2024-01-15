@@ -33,7 +33,7 @@ int main()
 {
 
     // Specify the path to YAML file.
-    string file_path = "/home/dmoreno/scr/nix/par/nix_params.yaml";
+    string file_path = "/home/dmoreno/scr/nix/par/nix_params_oscillations.yaml";
 
     // Load the YAML file
     YAML::Node config = YAML::LoadFile(file_path);
@@ -505,8 +505,13 @@ int main()
             }
             
             // Ice hardness.
-            A = A_s(c_s);
+            //A = A_s(c_s);
+            //B = pow(A, (-1 / nixParams.vis.n_gln) );
+
+            // OSCILLATIONS.
+            A = A_s(0);
             B = pow(A, (-1 / nixParams.vis.n_gln) );
+
         }
 
         // MISMIP-THERM EXPERIMENTS.
@@ -569,6 +574,7 @@ int main()
             B = pow(A, ( -1 / nixParams.vis.n_gln ) );
         }
     
+
 
         // Update bedrock with new domain extension L.
         bed = f_bed(L, sigma, nixParams.dom);
@@ -751,6 +757,7 @@ int main()
             cout << "\n Estimated error:     " << error << std::flush;
             
             //cout << "\n noise_now(0) = " << noise_now(0);
+            //cout << " theta = " << theta;
 
             // Write solution in nc.
             // Sub-shelf melting as forcing of MISMIP+thermodynamics.
@@ -797,9 +804,10 @@ int main()
         // Integrate Fourier heat equation.
         else if ( nixParams.thrmdyn.therm == true && t >= nixParams.tm.t_eq )
         {
-            theta = f_theta(theta, ub, H, tau_b, Q_fric, sigma, dz, T_air, \
+            theta = f_theta(theta, ub, H, tau_b, Q_fric, sigma, dz, \
                             dt, ds, L, dL_dt, t, w, strain_2d, \
-                            nixParams.dom, nixParams.thrmdyn, nixParams.dyn);
+                            nixParams.dom, nixParams.thrmdyn, nixParams.dyn, nixParams.bc);
+
         }
 
 

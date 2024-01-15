@@ -16,10 +16,9 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy import signal
 import pylab as plt_lab
-from scipy.ndimage import gaussian_filter1d
 
 path_fig        = '/home/dmoreno/figures/flowline/ewr/A_rates/bed_peak/y_p.88_tf_A.2.5e4_A.0.5e-26_5.0e-25/frames/'
-path_now        = '/home/dmoreno/nix/test_mismip-3/'
+path_now        = '/home/dmoreno/nix/oscillations/w_0.0.5_theta_min.253/adv_w0.0.5_theta_norm_C_thw.0.1_nz.15/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
 
@@ -28,11 +27,11 @@ file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
 # Select plots to be saved (boolean integer).
 save_series        = 1
-save_series_comp   = 1
+save_series_comp   = 0
 save_shooting      = 0
-save_domain        = 1
+save_domain        = 0
 coloured_domain    = 0
-save_var_frames    = 1
+save_var_frames    = 0
 save_series_frames = 0
 save_theta         = 0
 save_visc          = 0
@@ -40,6 +39,7 @@ save_u             = 0
 save_u_der         = 0
 time_series_gif    = 0
 save_L             = 0
+save_series_2D     = 1
 save_fig           = False
 read_stoch_nc      = False
 bed_smooth         = False
@@ -50,7 +50,7 @@ smth_series        = 0
 # MISMIP bedrock experiments.
 # exp = 1: inclined bed; exp = 3: overdeepening bed.
 exp_name = ['mismip_1', 'mismip_3', 'glacier_ews']
-idx = 1
+idx = 0
 exp = exp_name[idx]
 
 # Create figures directory if it does not exist.
@@ -206,7 +206,7 @@ def f_bed(x, exp, n):
 
 # Account for unevenly-spaced horizontal grid.
 sigma = np.linspace(0, 1.0, s[2])
-sigma_plot = sigma**(1.0) # 0.5
+sigma_plot = sigma**(0.5) # 0.5 (uneven), 1.0 (even)
 
 
 
@@ -335,14 +335,14 @@ if save_series == 1:
 
 
 	ax6.plot(t_plot, u_bar[:,s[2]-1], linestyle='-', color='blue', marker='None', \
-			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+			 markersize=3.0, linewidth=2.0, alpha=1.0, label=r'$u_{b}(x)$') 
 
 	ax.plot(t_plot, L, linestyle='-', color='red', marker='None', \
-			markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+			markersize=3.0, linewidth=2.0, alpha=1.0, label=r'$u_{b}(x)$') 
 
 	
 	ax2.plot(t_plot, H[:,s[2]-1], linestyle='-', color='black', marker='None', \
-			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+			 markersize=3.0, linewidth=2.0, alpha=1.0, label=r'$u_{b}(x)$') 
 	
 
 
@@ -359,18 +359,20 @@ if save_series == 1:
 	#ax3.plot(t_plot, T_oce, linestyle='-', color='purple', marker='None', \
 	#			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 
-	ax3.plot(t_plot, b[:,s[2]-1], linestyle='-', color='purple', marker='None', \
-			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+	#ax3.plot(t_plot, b[:,s[2]-1], linestyle='-', color='purple', marker='None', \
+#			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 
-	#ax3.plot(t_plot, visc_bar_mean, linestyle='-', color='brown', marker='None', \
+	ax4.plot(t_plot, theta[:,0,s[2]-1], linestyle='-', color='darkgreen', marker='None', \
+			 markersize=3.0, linewidth=2.0, alpha=1.0, label=r'$u_{b}(x)$') 
+	
+
+	#ax4.plot(t_plot, A_s, linestyle='-', color='darkgreen', marker='None', \
 	#		 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
-	ax4.plot(t_plot, A_s, linestyle='-', color='darkgreen', marker='None', \
-			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 
 	#ax4.plot(t_plot, m_stoch, linestyle='-', color='darkgreen', marker='None', \
 	#		 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 	ax5.plot(t_plot, visc_bar_mean, linestyle='-', color='brown', marker='None', \
-			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+			 markersize=3.0, linewidth=2.0, alpha=1.0, label=r'$u_{b}(x)$') 
 
 		
 	#ax6.plot(t, u_x_0, linestyle='-', color='darkgreen', marker='None', \
@@ -405,7 +407,7 @@ if save_series == 1:
 		#ax4.set_ylim(A_s[0]*(1.0 - 0.2), A_s[l-1]*(1.0 + 0.05))
 
 	#ax.set_ylim(280.0, 360.0)
-	#ax.set_ylim(0.0, 1500.0)
+	ax6.set_ylim(0.0, 3000.0)
 
 	ax.set_xlim(0, t_plot[s[0]-1])
 	ax2.set_xlim(0, t_plot[s[0]-1])
@@ -417,10 +419,10 @@ if save_series == 1:
 	
 	#ax3.set_ylabel(r'$ T{\mathrm{air}} \ (^{\circ} \mathrm{C})$', fontsize=18)
 	#ax3.set_ylabel(r'$ \Delta T_{\mathrm{oce}} \ (^{\circ} \mathrm{C})$', fontsize=18)
-	ax3.set_ylabel(r'$ D \ (L)$', fontsize=18)
+	ax4.set_ylabel(r'$ \theta(z=0,L) $', fontsize=18)
 	
 	#ax4.set_ylabel(r'$  \theta(0,H) \ (^{\circ} \mathrm{C})$', fontsize=17)
-	ax4.set_ylabel(r'$ A \ (\mathrm{Pa}^{-3} \mathrm{yr}^{-1})$', fontsize=17)
+	#ax4.set_ylabel(r'$ A \ (\mathrm{Pa}^{-3} \mathrm{yr}^{-1})$', fontsize=17)
 	#ax4.set_ylabel(r'$  M \ (\mathrm{m/yr})$', fontsize=17)
 	ax5.set_ylabel(r'$ \bar{\eta} \ (\mathrm{Pa \cdot s}) $', fontsize=18)
 	ax6.set_ylabel(r'$ \bar{u}(L) \ (\mathrm{m/yr})$', fontsize=18)
@@ -630,7 +632,7 @@ if save_shooting == 1:
 
 if save_domain == 1:
 	
-	for i in range(l-1, l, 5): # range(0, l, 2), (l-1, l, 20)
+	for i in range(0, l, 10): # range(0, l, 2), (l-1, l, 20)
 		
 		# Horizontal dimension [km].
 		#L_plot  = np.linspace(0, L[i], s[2])
@@ -697,15 +699,15 @@ if save_domain == 1:
 		# PLOT DOMAIN WITH A COLOUR MAP THAT REPRESENTS THE TEMPERATURE WITHIN THE ICE SHEET.
 		# Create the colored plot
 		elif coloured_domain == 1:
-			#theta_min = np.min(-theta)
-			#theta_max = np.max(-theta)
+			theta_min = np.min(-theta)
+			theta_max = np.max(-theta)
 			
-			theta_min = np.min(u)
-			theta_max = np.max(u)
+			#theta_min = np.min(u)
+			#theta_max = np.max(u)
 
 			# Minus sign just for visualization purposes.
-			#color_theta = - np.flip(theta[i,:,:],axis=0)
-			color_theta = np.flip(u[i,:,:],axis=0)
+			color_theta = - np.flip(theta[i,:,:],axis=0)
+			#color_theta = np.flip(u[i,:,:],axis=0)
 
 			# Plot a rectangle.
 			def rect(ax, x, b, y, w, h, c,**kwargs):
@@ -890,7 +892,7 @@ if save_domain == 1:
 
 if save_var_frames == 1:
 	
-	for i in range(l-1, l, 1): # (0, l, 10), (l-1, l, 1)
+	for i in range(0, l, 10): # (0, l, 10), (l-1, l, 1)
 		
 		#L_plot  = np.linspace(0, L[i], s[2])
 		L_plot = sigma_plot * L[i]
@@ -1047,7 +1049,7 @@ if save_theta == 1:
 
 	cb_ticks = np.round(np.linspace(theta_min, theta_max, 6),1)
 	
-	for i in range(20, l, 1):
+	for i in range(20, l, 10):
 
 		# Update x_labels as domain extension changes in each iteration.
 		x_labels  = np.linspace(0, L[i], n_ticks, dtype=int)
@@ -1707,70 +1709,101 @@ if save_L == 1:
 
 	
 
+if save_series_2D == 1:
 
-#############################################
-#############################################
- 	
-# Gaussian filter test:
-# sigma = 5.0
+	# Number of ticks.
+	n_ticks = 5
+	x_ticks = np.linspace(0, s[2], n_ticks)
+	n_z     = np.shape(theta)[1]
+	z_ticks = int(0.2 * n_z + 1)
 
+	# n_z-0.5 to avoid half of grid cell in black when plotting.
+	y_ticks  = np.linspace(0, n_z-0.5, z_ticks, dtype=int)
+	y_labels = np.linspace(0, n_z, z_ticks, dtype=int)
 
-# f = np.array([0, 2, 5, 3, 3, 5, 6, 7, 10, 15, 8, 0])
+	# Theta limits.
+	u_bar_min = 0.0
+	u_bar_max = 3.0
 
-# def gauss(f, sigma):
-#  	l = len(f)
-#  	summ  = np.zeros(l)
-#  	dy = 2.0
- 	
-#  	A = 1.0 / (np.sqrt(2.0 * np.pi) * sigma)
- 	
-#  	# Weierstrass transform
-#  	for i in range(l):
-#  	 	x = i * dy
-#  	 	for j in range(l):
-# 			  y = j * dy
-# 			  summ[i] = summ[i] + f[j] * np.exp( - ( (x - y) / sigma )**2  / 2.0 ) * dy
- 	
-#  	F = A * summ
- 	
-#  	return F
- 	
+	H_min = 0.0
+	H_max = 3.0
+
+	cb_ticks_1 = np.round(np.linspace(u_bar_min, u_bar_max, 6),0)
+	cb_ticks_2 = np.round(np.linspace(H_min, H_max, 6),0)
+
+	u_bar = np.where(u_bar>0, u_bar, 1.0e-3)
+	u_bar = np.log10(u_bar)
 
 
-# fig = plt.figure(dpi=400)
-# ax = fig.add_subplot(111)
+	# Update x_labels as domain extension changes in each iteration.
+	x_labels  = np.linspace(0, L[i], n_ticks, dtype=int)
 
-# plt.rcParams['text.usetex'] = True
+	# Colourmap.
+	cmap = plt.get_cmap("RdYlBu") # spectral, rainbow, jet, turbo
+	reversed_cmap = cmap.reversed()
 
-# ax.plot(f, linestyle='-', color='black', marker='None', \
-#  	markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+	cmap_2 = plt.get_cmap("PRGn") # spectral, rainbow, jet, turbo
+	#reversed_cmap = cmap.reversed()
+	
+	fig = plt.figure(dpi=600, figsize=(8,6))
+	plt.rcParams['text.usetex'] = True
+	ax1  = fig.add_subplot(121)
+	ax2  = fig.add_subplot(122)
 
-# sigmas = np.array([1.0, 2.0, 3.0, 4.0, 10.0])
+	# Flip theta matrix so that the plot is not upside down.
+	im1 = ax1.imshow(np.flip(u_bar,axis=0), cmap=reversed_cmap, \
+					vmin=u_bar_min, vmax=u_bar_max, aspect='auto', interpolation='bilinear')
+	
+	im2 = ax2.imshow(np.flip(H,axis=0), cmap=cmap_2, \
+					vmin=H_min, vmax=H_max, aspect='auto', interpolation='bilinear')
 
-# for i in sigmas:
-#  	F = gauss(f, i)
-#  	ax.plot(F, linestyle='-', color='darkblue', marker='None', \
-#  	markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+	ax1.set_ylabel(r'$ t \ (\mathrm{yr}) $', fontsize=20)
+	ax2.set_xlabel(r'$ x \ (\mathrm{km})$', fontsize=20)
+	ax2.set_xlabel(r'$ x \ (\mathrm{km})$', fontsize=20)
 
-# ax.set_ylabel(r'$Smooth$',fontsize=18)
+	
+	divider_1 = make_axes_locatable(ax1)
+	cax_1     = divider_1.append_axes("right", size="10%", pad=0.2)
+	cb_1      = fig.colorbar(im1, cax=cax_1, extend='neither')
 
+	cb_1.set_ticks(cb_ticks_1)
+	cb_1.set_ticklabels(list(cb_ticks_1), fontsize=14)
 
-# # ax.set_yticks([800, 900, 1000, 1100])
-# # ax.set_yticklabels(['$800$', '$900$',\
-# # 				  '$1000$', '$1100$'], fontsize=12)
+	cb_1.set_label(r'$ \overline{u} (x,t) \ (\mathrm{m/yr})$', \
+					rotation=90, labelpad=6, fontsize=20)
+	
+	
+	divider_2 = make_axes_locatable(ax2)
+	cax_2     = divider_2.append_axes("right", size="10%", pad=0.2)
+	cb_2      = fig.colorbar(im2, cax=cax_2, extend='neither')
 
+	cb_2.set_ticks(cb_ticks_2)
+	cb_2.set_ticklabels(list(cb_ticks_2), fontsize=14)
 
-# ax.yaxis.label.set_color('darkblue')
+	cb_2.set_label(r'$ H (x,t) \ (\mathrm{km})$', \
+					rotation=90, labelpad=6, fontsize=20)
 
+	ax1.set_xticks(x_ticks)
+	ax1.set_xticklabels(list(x_labels), fontsize=15)
 
-# ax.tick_params(axis='y', which='major', length=4, colors='darkblue')
+	ax1.set_yticks(y_ticks)
+	ax1.set_yticklabels(list(y_labels[::-1]), fontsize=15)
 
+	ax2.set_xticks(x_ticks)
+	ax2.set_xticklabels(list(x_labels), fontsize=15)
 
-# ax.grid(axis='x', which='major', alpha=0.85)
+	#ax.set_xlim(0.0, s[2]-1)
+	
 
-# plt.tight_layout()
+	#ax.set_title(r'$i = \ $'+str(i)+r'$, \ t =  \ $'+str(np.round(t[i],2))+r'$ \ yr$', fontsize=16)
+	plt.tight_layout()
 
-# plt.show()
-# plt.close(fig)
+	if save_fig == True:
+
+		plt.savefig(path_fig+'flow_line_theta.png', bbox_inches='tight')
+		
+	plt.show()
+	plt.close(fig)
+
 
 

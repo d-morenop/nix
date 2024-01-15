@@ -12,26 +12,22 @@ ArrayXd f_C_bed(ArrayXd C_ref, ArrayXXd theta, ArrayXd H, double t, \
     // Basal friction coupled with thermal state of the base.
     if (fric.therm == "two-valued" && t > tm.t_eq)
     {
-        
-        // Binary friction.
-        for (int i=1; i<dom.n; i++)
-        {
-            // Reference value for frozen bed.
-            if ( theta(i,0) < fric.theta_frz )
-            {
-                C_bed(i) = C_ref(i);
-            }
-
-            // Reduction by a given factor as we approach melting.
-            else
-            {
-                C_bed(i) = 0.25 * C_ref(i);
-            }
-        }
+        // Simplest scenario: binary friction.
+        // Reduction by a given factor (0.2 now) as we approach melting.
+        //C_bed = C_ref;
+        //C_bed = (theta.col(0) > fric.theta_frz).select(0.1*C_ref, C_bed);
         
         // Normalized basal temperature with pressure melting point [0,1].
-        //theta_norm = abs( theta.block(0,0,n,1) - theta_frz ) / abs(theta_max - theta_frz);
-        //C_bed      = C_thw * theta_norm + C_frz * ( 1.0 - theta_norm );
+        // Upper bound in normalised temperature in the case theta > theta_frz.
+        theta_norm = ( theta.block(0,0,dom.n,1) - fric.theta_frz ) / (fric.theta_thw - fric.theta_frz);
+        
+        theta_norm = (theta_norm < 0.0).select(0.0, theta_norm);
+        theta_norm = (theta_norm > 1.0).select(1.0, theta_norm);
+        
+        theta_norm = pow(theta_norm, 2);
+        
+        // Friction coeff. is the averaged mean between two friction values.
+        C_bed = fric.C_thw * theta_norm + fric.C_frz * ( 1.0 - theta_norm );
 
     }
 

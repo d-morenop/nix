@@ -135,6 +135,7 @@ struct FrictionParams
     double m;
     double u_0;
     string therm;
+    double theta_thw;
     double theta_frz;
     double C_ref_0;
     double C_frz;
@@ -302,10 +303,11 @@ void readParams(const YAML::Node& node, NixParams& params)
     // FRICTION.
     params.fric.m          = node["friction"]["m"].as<double>();
     params.fric.u_0        = node["friction"]["u_0"].as<double>();
-    params.fric.therm = node["friction"]["therm"].as<string>();
+    params.fric.therm      = node["friction"]["therm"].as<string>();
     params.fric.theta_frz  = node["friction"]["theta_frz"].as<double>();
-    params.fric.C_ref_0      = node["friction"]["C_ref"].as<double>() / pow(params.cnst.sec_year, params.fric.m );
-    params.fric.C_frz      = node["friction"]["C_frz"].as<double>() / pow(params.cnst.sec_year, params.fric.m );
+    params.fric.theta_thw  = node["friction"]["theta_thw"].as<double>();
+    params.fric.C_ref_0    = node["friction"]["C_ref"].as<double>() / pow(params.cnst.sec_year, params.fric.m);
+    params.fric.C_frz      = node["friction"]["C_frz"].as<double>() / pow(params.cnst.sec_year, params.fric.m);
     params.fric.C_thw      = params.fric.C_frz * node["friction"]["C_thw"].as<double>();
 
     // VISCOSITY.

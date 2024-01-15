@@ -277,7 +277,7 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_sym, Array
         }
 
         // Derivatives at the boundaries O(x).
-        dhds(0)   = 0.5 * ( H(0) + H(1) ) * ( h(1) - h(0) ) * ds_inv(0);
+        dhds(0)       = 0.5 * ( H(0) + H(1) ) * ( h(1) - h(0) ) * ds_inv(0);
         dhds(dom.n-1) = H(dom.n-1) * ( h(dom.n-1) - h(dom.n-2) ) * ds_inv(dom.n-2); 
         //dhds(dom.n-1) = H(dom.n-1) * 0.5 * ( 3.0 * h(dom.n-1) - 4.0 * h(dom.n-2) + h(dom.n-3) );
 

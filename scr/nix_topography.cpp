@@ -86,6 +86,8 @@ ArrayXd f_bed(double L, ArrayXd sigma, DomainParams dom)
     }
 
     // Potential smooth bed.
+    // Note that the smoothing is computed at every time step and thus changes over time
+    // as the edges that the ice sheet "sees" move.
     if ( dom.ews.smooth == "gauss" )
     {
         // Gaussian smooth. Quite sensitive to p value (p=5 for n=250).

@@ -18,7 +18,8 @@ ArrayXd gaussian_filter(ArrayXd w, double sigma, int p, int n)
     double A = sigma_inv / sqrt(2.0 * M_PI);
     
     // Weierstrass transform.
-    for (int i=p; i<n-p; i++)
+    //for (int i=p; i<n-p; i++)
+    for (int i=0; i<n; i++)
     {
         x = i * dx;
 
@@ -32,10 +33,11 @@ ArrayXd gaussian_filter(ArrayXd w, double sigma, int p, int n)
     // Normalizing Kernel.
     smth = A * summ;
 
+    // WE NO LONGER NEED THIS SINCE index i runs over all indexes in summ(i)???
     // The edges are identical to the original array.
     // (p-1) since the very element (n-1-p) must be also filled.
-    smth.block(0,0,p,1)       = w.block(0,0,p,1);
-    smth.block(n-1-p,0,p+1,1) = w.block(n-1-p,0,p+1,1); 
+    /*smth.block(0,0,p,1)       = w.block(0,0,p,1);
+    smth.block(n-1-p,0,p+1,1) = w.block(n-1-p,0,p+1,1); */
 
     return smth;
 }

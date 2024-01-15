@@ -2,17 +2,10 @@
 
 // NIX THERMODYNAMICS MODULE.
 
-/*ArrayXXd f_theta(ArrayXXd theta, ArrayXd ub, ArrayXd H, ArrayXd tau_b, ArrayXd Q_fric, \
-                 ArrayXd sigma, ArrayXd dz, double theta_max, double T_air, double kappa, double k, \
-                 double dt, double G_k, ArrayXd ds, double L, \
-                 double dL_dt, double t, double t_eq, ArrayXd w, int n, int n_z, string vel_meth, \
-                 ArrayXXd strain_2d)*/
-
 ArrayXXd f_theta(ArrayXXd theta, ArrayXd ub, ArrayXd H, ArrayXd tau_b, ArrayXd Q_fric, \
-                 ArrayXd sigma, ArrayXd dz, double T_air, \
-                 double dt, ArrayXd ds, double L, \
+                 ArrayXd sigma, ArrayXd dz, double dt, ArrayXd ds, double L, \
                  double dL_dt, double t, ArrayXd w, ArrayXXd strain_2d, \
-                 DomainParams& dom, ThermodynamicsParams& thrm, DynamicsParams& dyn)
+                 DomainParams& dom, ThermodynamicsParams& thrm, DynamicsParams& dyn, BoundaryConditionsParams& bc)
 {
     
     ArrayXXd theta_now(dom.n,dom.n_z);
@@ -30,7 +23,6 @@ ArrayXXd f_theta(ArrayXXd theta, ArrayXd ub, ArrayXd H, ArrayXd tau_b, ArrayXd Q
     //Q_f_k = ArrayXd::Zero(n);
 
     // Temperature integration.
-    //for (int i=1; i<dom.n; i++)
     for (int i=1; i<dom.n; i++)
     {
         for (int j=1; j<dom.n_z-1; j++)
@@ -47,25 +39,14 @@ ArrayXXd f_theta(ArrayXXd theta, ArrayXd ub, ArrayXd H, ArrayXd tau_b, ArrayXd Q
         }
         
         // Boundary conditions. Geothermal heat flow at the base.
-        // We add friciton heat contribution Q_f_k.
+        // We add friciton heat contribution Q_f_k. w(z=0) = 0 
         theta_now(i,0) = theta_now(i,1) + dz(i) * ( thrm.G_k + Q_f_k(i) ) + \
                             ( sigma(i) * dL_dt - ub(i) ) * \
                             ( theta(i,0) - theta(i-1,0) ) * dx_inv(i-1); 
 
-        // w(z=0) = 0 right??
-
         // Surface.
-        theta_now(i,dom.n_z-1) = T_air;
+        theta_now(i,dom.n_z-1) = bc.therm.T_air;
     }
-
-    // Vertical loop for x = 0.
-    /*
-    for (int j=1; j<n_z-1; j++)
-    {
-        theta_now(0,j) = theta(0,j) + dt * kappa * dz_2_inv(0) * \
-                        ( theta(0,j+1) - 2.0 * theta(0,j) + theta(0,j-1) ) ;
-    }
-    */
 
     // Due to symmetry theta_now(0,j) = theta_now(2,j). Ice divide.
     theta_now.row(0) = theta_now.row(2);
@@ -80,13 +61,17 @@ ArrayXXd f_theta(ArrayXXd theta, ArrayXd ub, ArrayXd H, ArrayXd tau_b, ArrayXd Q
         theta_now = theta_now + ( thrm.kappa / thrm.k ) * strain_2d * dt;
     }
 
+    // TRY RELAXATION TO AVOID SPURIOUS RESULTS DURING SPIN-UP.
+    double rel = 0.75;
+    theta_now = ( 1.0 - rel ) * theta_now + rel * theta;
+
     // Pressure melting point as the upper bound.
     // theta = (theta.array() > 273.15).select(273.15, theta);
     theta_now = (theta_now.array() > thrm.theta_max).select(thrm.theta_max, theta_now);
 
 
     // Test for the grounding line column.
-    theta_now.row(dom.n-1) = theta_now.row(dom.n-2);
+    //theta_now.row(dom.n-1) = theta_now.row(dom.n-2);
 
     return theta_now;
 }
