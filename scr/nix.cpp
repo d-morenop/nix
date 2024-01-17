@@ -495,6 +495,27 @@ int main()
     // TIME INTEGRATION.
     while (t < tf)
     {
+
+        // STOCHASTIC TIME-DEPENDENT BOUNDARY CONDITION. 
+        // Update time-dependent boundary conditions after equilibration.
+        if ( nixParams.stoch.stoch == true )
+        {
+            // Christian's spin-up also considers stochastic anomalies?
+            // Lower bound of zero in m to avoid numerical issues.
+            // Start counting time when stoch is applied (t0_stoch).
+
+            t_stoch = floor(max(0.0, t - nixParams.bc.A.t0));
+            //cout << "\n t_sotch = " << t_stoch;
+            
+            noise_now = noise.col(t_stoch);
+            m_stoch   = max(0.0, noise_now(0)); 
+            smb_stoch = noise_now(1);
+
+            // Update SMB considering new domain extension and current stochastic term.
+            S = f_smb(sigma, L, t, smb_stoch, nixParams.bc, \
+                        nixParams.dom, nixParams.tm);
+        }
+
         // MISMIP EXPERIMENTS 1, 3 and 3.
         if ( exp == "mismip_1" || exp == "mismip_3" )
         {
@@ -549,7 +570,7 @@ int main()
             }
 
             // Forcing in A.
-            else
+            else if ( nixParams.bc.A.A_rate == true )
             {
                 // Equilibration with constant A.
                 if ( t < nixParams.bc.A.t0 )
@@ -569,6 +590,24 @@ int main()
                 }
             }
 
+            else if ( nixParams.bc.M.M_rate == true )
+            {
+                // Temperature is fixed for now via constant ice rate factor.
+                A = A_s(0);
+
+                // We need to add a value to the stochastic perturbation. The added value
+                // corresponds to a linear increase with a maximum value of 80% of the mean original
+                // melting, i.e. 30 m/yr. At t=tf, we will have the perturbation plus 24 m/yr.
+                
+                // Increase from trend is only applied to non-zero perturbations (Fig. 5a in Christian et al., 2022).
+                if ( m_stoch != 0.0 && t >= nixParams.bc.M.t0 )
+                {
+                    double alpha = (t - nixParams.bc.M.t0) / (nixParams.bc.M.tf - nixParams.bc.M.t0);
+                    m_stoch = m_stoch + alpha * nixParams.bc.M.M_f;
+                }
+            }
+
+
             // Ice hardness.
             A = A * nixParams.cnst.sec_year;
             B = pow(A, ( -1 / nixParams.vis.n_gln ) );
@@ -583,25 +622,6 @@ int main()
         C_bed = f_C_bed(C_ref, theta, H, t, nixParams.dom, \
                             nixParams.cnst, nixParams.tm, nixParams.fric);
 
-        // Stochastic configuration. 
-        // Update time-dependent boundary conditions after equilibration.
-        if ( nixParams.stoch.stoch == true )
-        {
-            // Christian's spin-up also considers stochastic anomalies?
-            // Lower bound of zero in m to avoid numerical issues.
-            // Start counting time when stoch is applied (t0_stoch).
-
-            t_stoch = floor(max(0.0, t - nixParams.bc.A.t0));
-            //cout << "\n t_sotch = " << t_stoch;
-            
-            noise_now = noise.col(t_stoch);
-            m_stoch   = max(0.0, noise_now(0)); 
-            smb_stoch = noise_now(1);
-
-            // Update SMB considering new domain extension and current stochastic term.
-            S = f_smb(sigma, L, t, smb_stoch, nixParams.bc, \
-                        nixParams.dom, nixParams.tm);
-        }
 
         // Picard initialization.
         error    = 1.0;

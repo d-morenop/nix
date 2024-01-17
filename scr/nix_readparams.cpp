@@ -105,11 +105,20 @@ struct RateFactorParams
     double tf;
 };
 
+struct FrontalAblationParams 
+{
+    bool M_rate;
+    double t0;
+    double tf;
+    double M_f;
+};
+
 struct BoundaryConditionsParams 
 {
     SMBParams smb;
     ThermParams therm;
     RateFactorParams A;
+    FrontalAblationParams M;
 };
 
 struct AdvWParams 
@@ -284,6 +293,10 @@ void readParams(const YAML::Node& node, NixParams& params)
     params.bc.A.A_rate     = node["boundary_conditions"]["rate_factor"]["A_rate"].as<bool>();
     params.bc.A.t0         = node["boundary_conditions"]["rate_factor"]["t0"].as<double>();
     params.bc.A.tf         = node["boundary_conditions"]["rate_factor"]["tf"].as<double>();
+    params.bc.M.M_rate     = node["boundary_conditions"]["frontal_ablation"]["M_rate"].as<bool>();
+    params.bc.M.t0         = node["boundary_conditions"]["frontal_ablation"]["t0"].as<double>();
+    params.bc.M.tf         = node["boundary_conditions"]["frontal_ablation"]["tf"].as<double>();
+    params.bc.M.M_f        = node["boundary_conditions"]["frontal_ablation"]["M_f"].as<double>();
     params.bc.therm.T_air  = node["boundary_conditions"]["therm"]["T_air"].as<double>();
     params.bc.therm.w_min  = node["boundary_conditions"]["therm"]["w_min"].as<double>();
     params.bc.therm.w_max  = node["boundary_conditions"]["therm"]["w_max"].as<double>();

@@ -7,7 +7,7 @@ path:
 
 time:
   t0: 0.0                 # Starting time [yr].
-  tf: 57.0e4              # End time [yr]. 57.0e3, 54.0, 32.0e4, MISMIP-therm: 3.0e4, 90.0e4, Ending time [yr]. EWR: 5.0e3
+  tf: 3.0e4              # End time [yr]. 57.0e3, 54.0, 32.0e4, MISMIP-therm: 3.0e4, 90.0e4, Ending time [yr]. EWR: 5.0e3
   t_eq: 1.5e3             # Equilibration time [yr].
   output:
     t_n: 100              # Number of output frames
@@ -20,11 +20,11 @@ constants:
   sec_year: 3.154e7       # Seconds in a year.
 
 domain:
-  experiment: mismip_3    # Domain definition.
+  experiment: ewr         # Domain definition.
   n: 100                  # Number of horizontal points
   n_z: 10                 # Number vertical layers
   grid: even              # Nix grid type.
-  grid_exp: 1.0           # Exponent of horizontal grid points distibution. 
+  grid_exp: 0.5           # Exponent of horizontal grid points distibution. 
   bedrock_ews:            # Transition indicators domain.
     smooth_bed: none      # Apply smooth on bed topography. "gauss", "runnning_mean".
     p: 3                  # Number of points at the edges of the array that are not smoothed out.
@@ -40,21 +40,21 @@ dynamics:
   vel_meth: SSA           # Velocity solver: const, SSA, DIVA, Blatter-Pattyn.
 
 timestep:
-  dt_meth: adapt          # Time-stepping method. fixed, adapt.
+  dt_meth: fixed          # Time-stepping method. fixed, adapt.
   dt_min: 0.1             # Minimum time step [yr]. 0.1
   dt_max: 5.0             # Maximum time step [yr]. 2.0, 5.0
   t_eq_dt: 3.0e3          # Eq. time until adaptative timestep is applied.
   rel: 0.7                # Relaxation between interations [0,1]. 0.5
 
 stochastic:
-  stoch: false            # Apply stochastic boundary conditions.
+  stoch: true            # Apply stochastic boundary conditions.
   t0: 3.0e3               # Start time to apply stochastic BC. 2.0e4 [yr]
   N: 50000                # Number of time points in BC (input from noise.nc in glacier_ews), equivalent to time length.
   dt_noise: 1.0           # Assumed time step in stochastic_anom.py 
 
 boundary_conditions:
   smb:
-    stoch: false          # Apply stochastic SBM.
+    stoch: true          # Apply stochastic SBM.
     t0_stoch: 3.0e3
     S_0: 0.3              # SMB at x = 0 (and during equilibration) [m/yr]. 0.7
     dlta_smb: -4.0        # Difference between interior and terminus SMB [m/yr].
@@ -118,7 +118,7 @@ advection:
   meth: explicit         # Solver scheme. "implicit", "explicit"
 
 calving:
-  meth: none             # 0, no calving; 1, Christian et al. (2022), 2: deterministic Favier et al. (2019)
+  meth: stochastic       # "none", no calving; "stochastic", Christian et al. (2022), 2: deterministic Favier et al. (2019)
   m_dot: 30.0            # Mean frontal ablation [m/yr]. 30.0
   sub_shelf_melt:
     shelf_melt: false

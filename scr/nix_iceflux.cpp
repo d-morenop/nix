@@ -133,7 +133,6 @@ ArrayXd f_q(ArrayXd u_bar, ArrayXd H, ArrayXd bed, double t, double m_dot, doubl
         else
         {
             q(dom.n-1) = H(dom.n-1) * ( u_bar(dom.n-1) + M );
-            //q(n-1) = ( H(n-1) + M ) * u_bar(n-1);
         }
     }
 
