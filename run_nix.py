@@ -23,7 +23,7 @@ import yaml
 
 
 # Specify the path to your YAML file
-yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_oscillations.yaml"
+yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_ews.yaml"
 
 # Read the YAML file
 with open(yaml_file_path, 'r') as file:

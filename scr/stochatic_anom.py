@@ -108,7 +108,7 @@ plot_frames      = False
 save_fig         = True
 
 # Path and file name to write solution.
-path      = '/home/dmoreno/flowline/data/'
+path      = '/home/dmoreno/nix/data/'
 path_fig  = '/home/dmoreno/figures/transition_indicators/'
 file_name = 'noise_sigm_ocn.12.0.nc'
 

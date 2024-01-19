@@ -6,13 +6,9 @@
 // It does not follow the ice sheet, but rather there's a certain 
 // value for each position x.
 
-ArrayXd f_bed(double L, ArrayXd sigma, DomainParams dom)
+ArrayXd f_bed(double L, ArrayXd sigma, ArrayXd ds, DomainParams dom)
 {
     
-    // Using structured bindings for DomainParams to extract the desried values.
-    //auto [exp, n, n_z, grid, grid_exp, bedrock_ews] = params;
-    //auto [smooth_bed, sigma_gauss, t0_gauss, x_1, x_2, y_p, y_0] = params.bedrock_ews;
-
     // Prepare variables.
     ArrayXd bed(dom.n);
     ArrayXd x = sigma * L; 
@@ -60,7 +56,6 @@ ArrayXd f_bed(double L, ArrayXd sigma, DomainParams dom)
                 if ( c_x1 == 0 )
                 {
                     y_1  = bed(i-1);
-                    //c_x1 = c_x1 + 1;
                     c_x1 += 1;
                 }
                     
@@ -75,7 +70,6 @@ ArrayXd f_bed(double L, ArrayXd sigma, DomainParams dom)
                 if (c_x2 == 0)
                 {
                     y_2  = bed(i-1);
-                    //c_x2 = c_x2 + 1;
                     c_x2 += 1;	
                 }
                     
@@ -90,8 +84,8 @@ ArrayXd f_bed(double L, ArrayXd sigma, DomainParams dom)
     // as the edges that the ice sheet "sees" move.
     if ( dom.ews.smooth == "gauss" )
     {
-        // Gaussian smooth. Quite sensitive to p value (p=5 for n=250).
-        bed = gaussian_filter(bed, dom.ews.sigma_gauss, dom.ews.p, dom.n);
+        // Gaussian smooth.
+        bed = gaussian_filter(bed, sigma, ds, dom.ews.sigma_gauss, dom.ews.p, dom.n);
     }
     
     else if ( dom.ews.smooth == "running_mean" )
@@ -109,13 +103,8 @@ ArrayXd f_smb(ArrayXd sigma, double L, double t, double smb_stoch, \
               BoundaryConditionsParams& bc, DomainParams& dom, \
               TimeParams& tm)
 {
-    
-    /*int n       = domain.n;
-    double tm.t_eq = time.tm.t_eq;
-    auto [stoch, t0_stoch, S_0, dlta_smb, x_acc, x_mid, x_sca, x_varmid, x_varsca, var_mult] = bc.smb;
-    */
    
-    // Variables
+    // Variables.
     ArrayXd x(dom.n), S(dom.n); 
     double stoch_pattern, smb_determ;
 

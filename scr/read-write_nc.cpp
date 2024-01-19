@@ -840,8 +840,13 @@ int f_write_hr(int c, double u_bar_L, double H_L, \
 // Function to read nc file and load it to vairabe.
 ArrayXXd f_nc_read(int N, string path)
 {
-    // Convert to const char.
+    // Convert string to const char.
+    //string path_new = path;
     const char* FILE_NAME_READ = path.c_str();
+    
+    /*cout << "\n file_name = " << FILE_NAME_READ;
+    cout << "\n path      = " << path;
+    cout << "\n path_new  = " << path_new;*/
 
     /* This will be the netCDF ID for the file and data variable. */
     int ncid, varid_ocn, varid_smb;
@@ -859,6 +864,10 @@ ArrayXXd f_nc_read(int N, string path)
 
     // Avoid int function.
     nc_open(FILE_NAME_READ, NC_NOWRITE, &ncid);
+    
+    
+    cout << "\n ncid = " << ncid;
+    cout << "\n file_name = " << FILE_NAME_READ;
 
     /* Get the varid of the data variable, based on its name. */
     nc_inq_varid(ncid, "Noise_ocn", &varid_ocn);
@@ -871,6 +880,8 @@ ArrayXXd f_nc_read(int N, string path)
     // Allocate in output variable.
     data.row(0) = noise_ocn;
     data.row(1) = noise_smb;
+
+    //cout << "\n data = " << data;
 
     //nc_get_var_double(ncid, varid_ocn, &data_in(0,0));
     //nc_get_var_double(ncid, varid_smb, &data_in(1,0));

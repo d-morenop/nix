@@ -98,18 +98,13 @@ struct ThermParams
     double w_max;
 };
 
-struct RateFactorParams 
-{
-    bool A_rate;
-    double t0;
-    double tf;
-};
 
-struct FrontalAblationParams 
+struct TrendParams 
 {
-    bool M_rate;
+    string type;
     double t0;
     double tf;
+    double M_0;
     double M_f;
 };
 
@@ -117,8 +112,7 @@ struct BoundaryConditionsParams
 {
     SMBParams smb;
     ThermParams therm;
-    RateFactorParams A;
-    FrontalAblationParams M;
+    TrendParams trend;
 };
 
 struct AdvWParams 
@@ -149,6 +143,7 @@ struct FrictionParams
     double C_ref_0;
     double C_frz;
     double C_thw;
+    double C_ews;
 };
 
 struct ViscosityParams 
@@ -233,8 +228,9 @@ struct NixParams
 void readParams(const YAML::Node& node, NixParams& params) 
 {
     // PATHS.
-    params.path.nix = node["path"]["nix"].as<string>();
-    params.path.out = node["path"]["out"].as<string>();
+    params.path.nix  = node["path"]["nix"].as<string>();
+    params.path.out  = node["path"]["out"].as<string>();
+    params.path.read = node["path"]["read"].as<string>();
     
     //TIME.
     params.tm.t0            = node["time"]["t0"].as<double>();
@@ -281,7 +277,6 @@ void readParams(const YAML::Node& node, NixParams& params)
     params.stoch.dt_noise = node["stochastic"]["dt_noise"].as<double>();
 
     // DETERMINISTIC BOUNDARY CONDITIONS.
-    params.bc.smb.stoch    = node["boundary_conditions"]["smb"]["stoch"].as<bool>();
     params.bc.smb.S_0      = node["boundary_conditions"]["smb"]["S_0"].as<double>();
     params.bc.smb.dlta_smb = node["boundary_conditions"]["smb"]["dlta_smb"].as<double>();
     params.bc.smb.x_acc    = node["boundary_conditions"]["smb"]["x_acc"].as<double>();
@@ -290,13 +285,11 @@ void readParams(const YAML::Node& node, NixParams& params)
     params.bc.smb.x_varmid = node["boundary_conditions"]["smb"]["x_varmid"].as<double>();
     params.bc.smb.x_varsca = node["boundary_conditions"]["smb"]["x_varsca"].as<double>();
     params.bc.smb.var_mult = node["boundary_conditions"]["smb"]["var_mult"].as<double>();
-    params.bc.A.A_rate     = node["boundary_conditions"]["rate_factor"]["A_rate"].as<bool>();
-    params.bc.A.t0         = node["boundary_conditions"]["rate_factor"]["t0"].as<double>();
-    params.bc.A.tf         = node["boundary_conditions"]["rate_factor"]["tf"].as<double>();
-    params.bc.M.M_rate     = node["boundary_conditions"]["frontal_ablation"]["M_rate"].as<bool>();
-    params.bc.M.t0         = node["boundary_conditions"]["frontal_ablation"]["t0"].as<double>();
-    params.bc.M.tf         = node["boundary_conditions"]["frontal_ablation"]["tf"].as<double>();
-    params.bc.M.M_f        = node["boundary_conditions"]["frontal_ablation"]["M_f"].as<double>();
+    params.bc.trend.type   = node["boundary_conditions"]["trend"]["type"].as<std::string>();
+    params.bc.trend.t0     = node["boundary_conditions"]["trend"]["t0"].as<double>();
+    params.bc.trend.tf     = node["boundary_conditions"]["trend"]["tf"].as<double>();
+    params.bc.trend.M_0    = node["boundary_conditions"]["trend"]["M_0"].as<double>();
+    params.bc.trend.M_f    = node["boundary_conditions"]["trend"]["M_f"].as<double>();
     params.bc.therm.T_air  = node["boundary_conditions"]["therm"]["T_air"].as<double>();
     params.bc.therm.w_min  = node["boundary_conditions"]["therm"]["w_min"].as<double>();
     params.bc.therm.w_max  = node["boundary_conditions"]["therm"]["w_max"].as<double>();
@@ -321,6 +314,7 @@ void readParams(const YAML::Node& node, NixParams& params)
     params.fric.theta_thw  = node["friction"]["theta_thw"].as<double>();
     params.fric.C_ref_0    = node["friction"]["C_ref"].as<double>() / pow(params.cnst.sec_year, params.fric.m);
     params.fric.C_frz      = node["friction"]["C_frz"].as<double>() / pow(params.cnst.sec_year, params.fric.m);
+    params.fric.C_ews      = node["friction"]["C_ews"].as<double>() / pow(params.cnst.sec_year, params.fric.m);
     params.fric.C_thw      = params.fric.C_frz * node["friction"]["C_thw"].as<double>();
 
     // VISCOSITY.

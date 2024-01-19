@@ -3,11 +3,11 @@
 path:
   nix: /home/dmoreno/scr/nix/                              # Nix path.
   read: /home/dmoreno/nix/data/noise_sigm_ocn.12.0.nc      # File with stochastic bc. 
-  out: /home/dmoreno/nix/oscillations/w_0.0.5_theta_min.253/adv_w0.0.5_theta_norm_C_thw.0.4_nz.15/                     # Output path.
+  out: /home/dmoreno/nix/ews/M_rates/                     # Output path.
 
 time:
   t0: 0.0                 # Starting time [yr].
-  tf: 2.0e4              # End time [yr]. 57.0e3, 54.0, 32.0e4, MISMIP-therm: 3.0e4, 90.0e4, Ending time [yr]. EWR: 5.0e3
+  tf: 3.0e4              # End time [yr]. 57.0e3, 54.0, 32.0e4, MISMIP-therm: 3.0e4, 90.0e4, Ending time [yr]. EWR: 5.0e3
   t_eq: 1.5e3             # Equilibration time [yr]. 1.5e3
   output:
     t_n: 100              # Number of output frames

@@ -47,7 +47,7 @@ ArrayXd f_q(ArrayXd u_bar, ArrayXd H, ArrayXd bed, double t, double m_dot, doubl
         // "One-before-last" approach.
         //q(i) = ub(i) * H(i+1);
     }   
-        
+    
     // GL flux definition (Vieli and Payne, 2005).
     if ( calv.meth == "none" )
     {
@@ -91,7 +91,8 @@ ArrayXd f_q(ArrayXd u_bar, ArrayXd H, ArrayXd bed, double t, double m_dot, doubl
             // Too retreated
             // LAST ATTEMPT.
             // ALMOST GOOD, A BIT TOO RETREATED FOR N=350 POINTS.
-            q(dom.n-1) = H(dom.n-1) * 0.5 * ( u_bar(dom.n-1) + u_bar(dom.n-2) + ( H_f / H(dom.n-1) ) * m_dot );
+            //q(dom.n-1) = H(dom.n-1) * 0.5 * ( u_bar(dom.n-1) + u_bar(dom.n-2) + ( H_f / H(dom.n-1) ) * m_dot );
+            q(dom.n-1) = H(dom.n-1) * ( u_bar(dom.n-1) + ( H_f / H(dom.n-1) ) * m_dot );
 
             // Ice flux at GL computed on the ice thickness grid. Schoof (2007).
             // Mean.

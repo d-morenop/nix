@@ -1,43 +1,39 @@
 
 // NIX MODULE WITH HANDY COMPUTATIONAL TOOLS.
 
-ArrayXd gaussian_filter(ArrayXd w, double sigma, int p, int n)
+ArrayXd gaussian_filter(ArrayXd w, ArrayXd sigma, ArrayXd ds, double sigma_gauss, int p, int n)
 {
     ArrayXd smth(n);
     ArrayXd summ = ArrayXd::Zero(n);
+    ArrayXd norm = ArrayXd::Zero(n);
 
-    double x, y;
-    //double dx = 1.0e-3 * ds * L; // [m] --> [km]. L in metres but bed is in km.
-    
-    // Test forcing dx = 1.0. It must be 1.0 for y-amplitude consistency.
-    double dx = 1.0;
-    //sigma = 2.0 * dx;
+    double kernel;
+
+    // Sigma value is refered as a factor of the minimum separation among grid points.
+    double sigma_new = ds(n-2) * sigma_gauss;
     
     // Handy definition. Standard deviation is a multiple of dx (real distance among gridpoints).
-    double sigma_inv = 1.0 / sigma;
-    double A = sigma_inv / sqrt(2.0 * M_PI);
+    double sigma_inv = 1.0 / sigma_new;
     
     // Weierstrass transform.
-    //for (int i=p; i<n-p; i++)
     for (int i=0; i<n; i++)
     {
-        x = i * dx;
-
         for (int j=0; j<n; j++)
         {
-            y = j * dx;
-            summ(i) += w(j) * exp(- 0.5 * pow((x - y) * sigma_inv, 2) );
+            // Create gaussian kernel with distance from uniform grid sigma.
+            kernel = exp(- 0.5 * pow((sigma(i) - sigma(j)) * sigma_inv, 2) );
+
+            // Smoothed variable and normalisation from kernel.
+            summ(i) += w(j) * kernel;
+            norm(i) += kernel;
         }
     }
 
-    // Normalizing Kernel.
-    smth = A * summ;
-
-    // WE NO LONGER NEED THIS SINCE index i runs over all indexes in summ(i)???
-    // The edges are identical to the original array.
-    // (p-1) since the very element (n-1-p) must be also filled.
-    /*smth.block(0,0,p,1)       = w.block(0,0,p,1);
-    smth.block(n-1-p,0,p+1,1) = w.block(n-1-p,0,p+1,1); */
+    // Normalised smooth. Equivalent to factor sigma_inv / sqrt(2.0 * M_PI).
+    smth = summ / norm;
+    
+    //cout << "\n bed = " << w;
+    //cout << "\n smth = " << smth;
 
     return smth;
 }

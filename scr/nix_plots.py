@@ -18,7 +18,8 @@ from scipy import signal
 import pylab as plt_lab
 
 path_fig        = '/home/dmoreno/figures/flowline/ewr/A_rates/bed_peak/y_p.88_tf_A.2.5e4_A.0.5e-26_5.0e-25/frames/'
-path_now        = '/home/dmoreno/nix/oscillations/w_0.0.5_theta_min.253/adv_w0.0.5_theta_norm_C_thw.0.1_nz.15/'
+path_now        = '/home/dmoreno/nix/ews/M_rates/smooth/sigma.2.0_A.9.0e-26_tf.0.1_yp.88/'
+path_stoch      = '/home/dmoreno/nix/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
 
@@ -29,7 +30,7 @@ file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 save_series        = 1
 save_series_comp   = 0
 save_shooting      = 0
-save_domain        = 0
+save_domain        = 1
 coloured_domain    = 0
 save_var_frames    = 0
 save_series_frames = 0
@@ -39,9 +40,9 @@ save_u             = 0
 save_u_der         = 0
 time_series_gif    = 0
 save_L             = 0
-save_series_2D     = 1
+save_series_2D     = 0
 save_fig           = False
-read_stoch_nc      = False
+read_stoch_nc      = True
 bed_smooth         = False
 
 smth_series        = 0
@@ -50,7 +51,7 @@ smth_series        = 0
 # MISMIP bedrock experiments.
 # exp = 1: inclined bed; exp = 3: overdeepening bed.
 exp_name = ['mismip_1', 'mismip_3', 'glacier_ews']
-idx = 0
+idx = 2
 exp = exp_name[idx]
 
 # Create figures directory if it does not exist.
@@ -321,31 +322,18 @@ if save_series == 1:
 	
 	plt.rcParams['text.usetex'] = True
 
-	# Define variables.
-	area = np.empty(l)
-	u_L  = np.empty(l)
-	u_x_0 = np.empty(l)
-	
-	for i in range(l):
-		# delta_x times H sum over all points.
-		area[i] = (1.0e3 * L[i] / n) * np.sum(H[i,:])
-		
-		# Current u_x value minus analytical.
-		u_x_0[i] = u_bar_x[i,0] # u_x[i,n-1]
-
-
+	# Vertically-averaged velocity.
 	ax6.plot(t_plot, u_bar[:,s[2]-1], linestyle='-', color='blue', marker='None', \
 			 markersize=3.0, linewidth=2.0, alpha=1.0, label=r'$u_{b}(x)$') 
 
+	# Grounding line position.
 	ax.plot(t_plot, L, linestyle='-', color='red', marker='None', \
 			markersize=3.0, linewidth=2.0, alpha=1.0, label=r'$u_{b}(x)$') 
 
-	
+	# Ice thickness at the grounding line.
 	ax2.plot(t_plot, H[:,s[2]-1], linestyle='-', color='black', marker='None', \
 			 markersize=3.0, linewidth=2.0, alpha=1.0, label=r'$u_{b}(x)$') 
 	
-
-
 
 	# Smooth.
 	if smth_series == 1:
@@ -362,22 +350,12 @@ if save_series == 1:
 	#ax3.plot(t_plot, b[:,s[2]-1], linestyle='-', color='purple', marker='None', \
 #			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 
+	# Ice temperature at the grounding line.
 	ax4.plot(t_plot, theta[:,0,s[2]-1], linestyle='-', color='darkgreen', marker='None', \
 			 markersize=3.0, linewidth=2.0, alpha=1.0, label=r'$u_{b}(x)$') 
 	
-
+	# Ice rate factor.
 	#ax4.plot(t_plot, A_s, linestyle='-', color='darkgreen', marker='None', \
-	#		 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
-
-	#ax4.plot(t_plot, m_stoch, linestyle='-', color='darkgreen', marker='None', \
-	#		 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
-	ax5.plot(t_plot, visc_bar_mean, linestyle='-', color='brown', marker='None', \
-			 markersize=3.0, linewidth=2.0, alpha=1.0, label=r'$u_{b}(x)$') 
-
-		
-	#ax6.plot(t, u_x_0, linestyle='-', color='darkgreen', marker='None', \
-	#		 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
-	#ax6.plot(t_plot, var_smth[0][:], linestyle='-', color='blue', marker='None', \
 	#		 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 	
 			 
@@ -388,30 +366,35 @@ if save_series == 1:
 		ax.plot(t_plot, y_p, linestyle='--', color='red', marker='None', \
 				markersize=3.0, linewidth=1.5, alpha=1.0, label=r'$u_{b}(x)$') 
 
-		#ax3.bar(t_plot, smb_stoch, width=0.5, bottom=None, align='center', data=None, color='darkgreen')
-		#ax5.bar(t_plot, m_stoch, width=0.5, bottom=None, align='center', data=None, color='purple')
-		ax3.bar(t_stoch, noise_smb, width=4.0, bottom=None, \
+		ax3.bar(t_plot, smb_stoch, width=0.025, bottom=None, \
+		  			align='center', data=None, color='darkgreen')
+		ax5.bar(t_plot, m_stoch, width=0.025, bottom=None, \
+		  			align='center', data=None, color='purple')
+
+		
+		"""ax3.bar(t_stoch, noise_smb, width=1.0, bottom=None, \
 				align='center', data=None, color='darkgreen')
-		ax5.bar(t_stoch, noise_ocn, width=4.0, bottom=None, \
-				align='center', data=None, color='purple')
-		ax3.set_xlim(t_stoch[0], t_stoch[len(t_stoch)-1])
+		ax5.bar(t_stoch, noise_ocn, width=1.0, bottom=None, \
+				align='center', data=None, color='purple')"""
+		
+		#ax3.set_xlim(t_stoch[0], t_stoch[len(t_stoch)-1])
 
 		# Labels.
 		ax3.set_ylabel(r'$ \mathrm{SMB} \ (m / yr) $', fontsize=18)
 		ax5.set_ylabel(r'$ \dot{m} \ (m/yr)$', fontsize=18)
 
 		# Axis limits.
-		ax.set_ylim(280.0, 360.0)
-		#ax2.set_ylim(0.4, 0.5)
-		#ax6.set_ylim(0.0, 300.0)
-		#ax4.set_ylim(A_s[0]*(1.0 - 0.2), A_s[l-1]*(1.0 + 0.05))
+		ax.set_ylim(330.0, 390.0)
+		ax3.set_ylim(-2.0, 0.5)
+		ax5.set_ylim(0.0, 50.0)
+	
+	#ax.set_xlim(0, t_plot[s[0]-1])
+	#ax2.set_xlim(0, t_plot[s[0]-1])
+	#ax3.set_xlim(0, t_plot[s[0]-1])
 
-	#ax.set_ylim(280.0, 360.0)
-	ax6.set_ylim(0.0, 3000.0)
-
-	ax.set_xlim(0, t_plot[s[0]-1])
-	ax2.set_xlim(0, t_plot[s[0]-1])
-	ax3.set_xlim(0, t_plot[s[0]-1])
+	ax.set_xlim(t_plot[int(0.85*s[0])], t_plot[s[0]-1])
+	ax2.set_xlim(t_plot[int(0.85*s[0])], t_plot[s[0]-1])
+	ax3.set_xlim(t_plot[int(0.85*s[0])], t_plot[s[0]-1])
 	
 	ax.set_ylabel(r'$L \ (\mathrm{km})$', fontsize=18)
 	ax2.set_ylabel(r'$H_{gl} \ (\mathrm{km})$', fontsize=18)
@@ -423,8 +406,9 @@ if save_series == 1:
 	
 	#ax4.set_ylabel(r'$  \theta(0,H) \ (^{\circ} \mathrm{C})$', fontsize=17)
 	#ax4.set_ylabel(r'$ A \ (\mathrm{Pa}^{-3} \mathrm{yr}^{-1})$', fontsize=17)
-	#ax4.set_ylabel(r'$  M \ (\mathrm{m/yr})$', fontsize=17)
-	ax5.set_ylabel(r'$ \bar{\eta} \ (\mathrm{Pa \cdot s}) $', fontsize=18)
+	ax5.set_ylabel(r'$ \dot{m} \ (\mathrm{m/yr})$', fontsize=17)
+	
+	#ax5.set_ylabel(r'$ \bar{\eta} \ (\mathrm{Pa \cdot s}) $', fontsize=18)
 	ax6.set_ylabel(r'$ \bar{u}(L) \ (\mathrm{m/yr})$', fontsize=18)
 	#ax3.set_xlabel(r'$\mathrm{Time} \ (\mathrm{kyr})$', fontsize=18)
 	ax3.set_xlabel(r'$\mathrm{Time} \ (\mathrm{kyr})$', fontsize=18)
@@ -435,9 +419,9 @@ if save_series == 1:
 		
 	ax.yaxis.label.set_color('red')
 	ax2.yaxis.label.set_color('black')
-	ax4.yaxis.label.set_color('darkgreen')
-	ax3.yaxis.label.set_color('purple')
-	ax5.yaxis.label.set_color('brown')
+	ax3.yaxis.label.set_color('darkgreen')
+	ax5.yaxis.label.set_color('purple')
+	#ax5.yaxis.label.set_color('brown')
 	ax6.yaxis.label.set_color('blue')
 	
 	ax.set_xticklabels([])
@@ -447,11 +431,11 @@ if save_series == 1:
 	ax.tick_params(axis='y', which='major', length=4, colors='red', labelsize=16)
 	ax2.tick_params(axis='y', which='major', length=4, colors='black', labelsize=16)
 	ax2.tick_params(axis='x', which='major', length=4, colors='black', labelsize=16)
-	ax3.tick_params(axis='y', which='major', length=4, colors='purple', labelsize=16)
+	ax5.tick_params(axis='y', which='major', length=4, colors='purple', labelsize=16)
 	ax3.tick_params(axis='x', which='major', length=4, colors='black', labelsize=16)
-	ax4.tick_params(axis='y', which='major', length=4, colors='darkgreen', labelsize=16)
+	ax3.tick_params(axis='y', which='major', length=4, colors='darkgreen', labelsize=16)
 	#ax3.tick_params(axis='y', which='major', length=4, colors='brown', labelsize=16)
-	ax5.tick_params(axis='y', which='major', length=4, colors='brown', labelsize=16)
+	#ax5.tick_params(axis='y', which='major', length=4, colors='brown', labelsize=16)
 	ax6.tick_params(axis='y', which='major', length=4, colors='blue', labelsize=16)
 	
 	ax.grid(axis='x', which='major', alpha=0.85)
@@ -632,7 +616,7 @@ if save_shooting == 1:
 
 if save_domain == 1:
 	
-	for i in range(0, l, 10): # range(0, l, 2), (l-1, l, 20)
+	for i in range(l-1, l, 1): # range(0, l, 2), (l-1, l, 20)
 		
 		# Horizontal dimension [km].
 		#L_plot  = np.linspace(0, L[i], s[2])

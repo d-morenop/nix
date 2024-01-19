@@ -33,7 +33,7 @@ int main()
 {
 
     // Specify the path to YAML file.
-    string file_path = "/home/dmoreno/scr/nix/par/nix_params_oscillations.yaml";
+    string file_path = "/home/dmoreno/scr/nix/par/nix_params_ews.yaml";
 
     // Load the YAML file
     YAML::Node config = YAML::LoadFile(file_path);
@@ -75,6 +75,11 @@ int main()
         n_s = 18;
         L   = 473.1e3;
     }  
+    else if ( exp == "ews" )
+    {
+        n_s = 2; // ????
+        L   = 50.0e3;
+    }
 
 
     // Prepare scalar variables.
@@ -82,7 +87,8 @@ int main()
     double dt;                           // Time step [yr].
     double dL_dt;                        // GL migration rate [m/yr]. 
     double m_stoch;                      // Stochatic contribution to calving [m/yr].     
-    double smb_stoch;                    // Stochatic contribution to smb [m/yr].
+    double smb_stoch;                    // Stochatic contribution to smb [m/yr].ç
+    double alpha;                        // Fraction time to apply forcing trends [0,1].
     int t_stoch;                         // Stochactic time index.
     double T_air;                        // Current value of atmospheric temperature forcing [K] 
     double T_oce;                        // Current value of ocean temperature anomaly forcing [K]   
@@ -441,16 +447,14 @@ int main()
     // TRANSITION INDICATORS EXPERIMENTS.
     else if ( exp == "ews" )
     {
-    
-        //int const A_rate = 1;         // 0: constant A, 1: linear increase in A.
-
-        //ArrayXd A_s(2);  
-        //ArrayXd t_s(1); 
-        //A_s << 2.0e-25, 20.0e-25; // Christian: 4.23e-25. 2.0e-25 is right at the peak for ewr.
-        
         // WE NEED TO TUNE THIS NUMBER TOGEHTER WITH THE FLUX DISCRETIAZTION TO OBTAIN THE SAME EXTENT.
-        A_s << 0.5e-26, 5.0e-25; // 4.227e-25, (0.5e-26, 5.0e-25)
-        //t_s << 2.0e4;
+        //A_s << 0.5e-26, 5.0e-25; //(0.5e-26, 5.0e-25)
+        // Decrease A_s values for all peaks to be reduced.
+        A_s << 7.25e-26, 5.0e-25; //(0.5e-26, 5.0e-25)
+
+
+        // Unit conversion: [Pa^-3 s^-1] --> [Pa^-3 yr^-1].
+        A_s = A_s * nixParams.cnst.sec_year;     
 
         // FORCING CAN BE IMPOSED DIRECTLY ON A_s (i.e., an increase in temperature) or
         // on the calving at the front as a consequence of ocean warming.
@@ -467,6 +471,7 @@ int main()
     // Call nc read function.
     if ( nixParams.stoch.stoch == true )
     {
+        //cout << "\n nixParams.path.read = " << nixParams.path.read;
         noise = f_nc_read(nixParams.stoch.N, nixParams.path.read);
     }
     
@@ -490,7 +495,6 @@ int main()
     t  = t0;
     dt = nixParams.tmstep.dt_min;
 
-    
 
     // TIME INTEGRATION.
     while (t < tf)
@@ -500,21 +504,30 @@ int main()
         // Update time-dependent boundary conditions after equilibration.
         if ( nixParams.stoch.stoch == true )
         {
-            // Christian's spin-up also considers stochastic anomalies?
-            // Lower bound of zero in m to avoid numerical issues.
-            // Start counting time when stoch is applied (t0_stoch).
+            if ( t < nixParams.stoch.t0 )
+            {
+                m_stoch   = 0.0;
+                smb_stoch = 0.0;
+            }
+            else
+            {
+                // Christian's spin-up also considers stochastic anomalies?
+                // Lower bound of zero in m to avoid numerical issues.
+                // Start counting time when stoch is applied.
+                t_stoch = floor(max(0.0, t - nixParams.stoch.t0));
+                        
+                noise_now = noise.col(t_stoch);
 
-            t_stoch = floor(max(0.0, t - nixParams.bc.A.t0));
-            //cout << "\n t_sotch = " << t_stoch;
-            
-            noise_now = noise.col(t_stoch);
-            m_stoch   = max(0.0, noise_now(0)); 
-            smb_stoch = noise_now(1);
+                //m_stoch   = max(0.0, noise_now(0)); 
+                m_stoch   = noise_now(0); 
+                smb_stoch = noise_now(1);
 
-            // Update SMB considering new domain extension and current stochastic term.
-            S = f_smb(sigma, L, t, smb_stoch, nixParams.bc, \
-                        nixParams.dom, nixParams.tm);
+                // Update SMB considering new domain extension and current stochastic term.
+                S = f_smb(sigma, L, t, smb_stoch, nixParams.bc, \
+                            nixParams.dom, nixParams.tm);
+            }
         }
+        
 
         // MISMIP EXPERIMENTS 1, 3 and 3.
         if ( exp == "mismip_1" || exp == "mismip_3" )
@@ -526,12 +539,12 @@ int main()
             }
             
             // Ice hardness.
-            //A = A_s(c_s);
-            //B = pow(A, (-1 / nixParams.vis.n_gln) );
+            A = A_s(c_s);
+            B = pow(A, (-1 / nixParams.vis.n_gln) );
 
             // OSCILLATIONS.
-            A = A_s(0);
-            B = pow(A, (-1 / nixParams.vis.n_gln) );
+            //A = A_s(0);
+            //B = pow(A, (-1 / nixParams.vis.n_gln) );
 
         }
 
@@ -564,59 +577,69 @@ int main()
         else if ( exp == "ews" )
         {
             // Constant A throughout the sim.
-            if ( nixParams.bc.A.A_rate == false )
+            if ( nixParams.bc.trend.type == "none" )
             {
                 A = A_s(0);
             }
 
             // Forcing in A.
-            else if ( nixParams.bc.A.A_rate == true )
+            else if ( nixParams.bc.trend.type == "rate_factor" )
             {
                 // Equilibration with constant A.
-                if ( t < nixParams.bc.A.t0 )
+                if ( t < nixParams.bc.trend.t0 )
                 {
                     A = A_s(0);
                 }
                 
-                else if ( t >= nixParams.bc.A.t0 && t <= nixParams.bc.A.tf )
+                else if ( t >= nixParams.bc.trend.t0 && t <= nixParams.bc.trend.tf )
                 {
-                    A = A_s(0) + ( A_s(1) - A_s(0) ) * (t - nixParams.bc.A.t0) \
-                                / (nixParams.bc.A.tf - nixParams.bc.A.t0);
+                    A = A_s(0) + ( A_s(1) - A_s(0) ) * (t - nixParams.bc.trend.t0) \
+                                / (nixParams.bc.trend.tf - nixParams.bc.trend.t0);
                 }
 
-                else if ( t > nixParams.bc.A.tf )
+                else if ( t > nixParams.bc.trend.tf )
                 {
                     A = A_s(1);
                 }
             }
 
-            else if ( nixParams.bc.M.M_rate == true )
+            // Forcing in frontal ablation.
+            else if ( nixParams.bc.trend.type == "ablation" )
             {
-                // Temperature is fixed for now via constant ice rate factor.
+                // Temperature is fixed for now via a constant ice rate factor.
                 A = A_s(0);
 
                 // We need to add a value to the stochastic perturbation. The added value
                 // corresponds to a linear increase with a maximum value of 80% of the mean original
-                // melting, i.e. 30 m/yr. At t=tf, we will have the perturbation plus 24 m/yr.
+                // melting, i.e. M_0 = 30 m/yr. At t=tf, we will have the perturbation plus 24 m/yr.
                 
                 // Increase from trend is only applied to non-zero perturbations (Fig. 5a in Christian et al., 2022).
-                if ( m_stoch != 0.0 && t >= nixParams.bc.M.t0 )
+                if ( t >= nixParams.bc.trend.t0 && t < nixParams.bc.trend.tf )
                 {
-                    double alpha = (t - nixParams.bc.M.t0) / (nixParams.bc.M.tf - nixParams.bc.M.t0);
-                    m_stoch = m_stoch + alpha * nixParams.bc.M.M_f;
+                    // The trend increases linearly with time and it is an additional fraction M_f 
+                    // of the original mean frontal ablation M_0 (Fig. 5, Christian et al., 2022).
+                    alpha   = (t - nixParams.bc.trend.t0) / (nixParams.bc.trend.tf - nixParams.bc.trend.t0);
+                    m_stoch = m_stoch + alpha * nixParams.bc.trend.M_f * nixParams.bc.trend.M_0;
                 }
+
+                else if ( t >= nixParams.bc.trend.tf )
+                {
+                    m_stoch = m_stoch + nixParams.bc.trend.M_f * nixParams.bc.trend.M_0;
+                }
+                
             }
 
+            // Ensure positive values of frontal ablation as Christian et al. (2022).
+            m_stoch = max(0.0, m_stoch);
 
             // Ice hardness.
-            A = A * nixParams.cnst.sec_year;
             B = pow(A, ( -1 / nixParams.vis.n_gln ) );
         }
     
 
 
         // Update bedrock with new domain extension L.
-        bed = f_bed(L, sigma, nixParams.dom);
+        bed = f_bed(L, sigma, ds, nixParams.dom);
 
         // Friction coefficient.
         C_bed = f_C_bed(C_ref, theta, H, t, nixParams.dom, \
