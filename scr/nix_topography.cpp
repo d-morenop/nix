@@ -6,7 +6,7 @@
 // It does not follow the ice sheet, but rather there's a certain 
 // value for each position x.
 
-ArrayXd f_bed(double L, ArrayXd sigma, ArrayXd ds, DomainParams dom)
+ArrayXd f_bed(double L, ArrayXd sigma, ArrayXd ds, double t, DomainParams dom)
 {
     
     // Prepare variables.
@@ -82,17 +82,21 @@ ArrayXd f_bed(double L, ArrayXd sigma, ArrayXd ds, DomainParams dom)
     // Potential smooth bed.
     // Note that the smoothing is computed at every time step and thus changes over time
     // as the edges that the ice sheet "sees" move.
-    if ( dom.ews.smooth == "gauss" )
+    if ( t >= dom.ews.t0_smth )
     {
-        // Gaussian smooth.
-        bed = gaussian_filter(bed, sigma, ds, dom.ews.sigma_gauss, dom.ews.p, dom.n);
+        if ( dom.ews.smooth == "gauss" )
+        {
+            // Gaussian smooth.
+            bed = gaussian_filter(bed, sigma, ds, dom.ews.sigma_gauss, dom.ews.p, dom.n);
+        }
+        
+        else if ( dom.ews.smooth == "running_mean" )
+        {
+            // Running mean.
+            bed = running_mean(bed, dom.ews.p, dom.n);
+        }
     }
     
-    else if ( dom.ews.smooth == "running_mean" )
-    {
-        // Running mean.
-        bed = running_mean(bed, dom.ews.p, dom.n);
-    }
 
     return bed;
 }

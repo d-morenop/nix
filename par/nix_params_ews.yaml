@@ -3,7 +3,7 @@
 path:
   nix: /home/dmoreno/scr/nix/                              # Nix path.
   read: /home/dmoreno/nix/data/noise_sigm_ocn.12.0.nc      # File with stochastic bc. 
-  out: /home/dmoreno/nix/ews/M_rates/smooth/sigma.2.0_A.9.0e-26_tf.0.1_yp.88/                     # Output path.
+  out: /home/dmoreno/nix/ews/M_rates/smooth/sigma.1.0_A.3.0e-26_tf.1.0_yp.44/                     # Output path.
 time:
   t0: 0.0                 # Starting time [yr].
   tf: 3.2e4               # End time [yr]. 57.0e3, 54.0, 32.0e4, MISMIP-therm: 3.0e4, 90.0e4, Ending time [yr]. EWR: 5.0e3
@@ -25,14 +25,13 @@ domain:
   grid: even              # Nix grid type.
   grid_exp: 0.5           # Exponent of horizontal grid points distibution. 
   bedrock_ews:            # Transition indicators domain.
-    smooth_bed: none_22
-         # Apply smooth on bed topography. "gauss", "runnning_mean".
+    smooth_bed: none      # Apply smooth on bed topography. "gauss", "runnning_mean".
     p: 3                  # Running_mean: Number of points at the edges of the array that are not smoothed out.
     sigma_gauss: 1.0      # Sigma gaussian filter (times minimum separation among grid points). 
-    t0_gauss: 1.5e4       # Init time to apply gaussian filter.
+    t0_smth: 2.0e4        # Init time to apply gaussian filter. 2.0e4.
     x_1: 346.0e3          # Peak beginning [m].
     x_2: 350.0e3          # Peak end [m]. 
-    y_p: 88.0             # Peak height [m]. 44.0, 88.0, 176.0  
+    y_p: 44.0             # Peak height [m]. 44.0, 88.0, 176.0  
     y_0: 70.0             # Initial bedrock elevation (x=0) [m].
     
 
@@ -69,8 +68,8 @@ boundary_conditions:
     w_max: 0.0            # Prescribed basal vertical advection in theta.
   trend:
     type: ablation     # None, rate_factor, ablation.
-    t0: 3.0e4             # Start time to apply increase in ice rate factor. 3.0e4 [yr]
-    tf: 3.01e4
+    t0: 3.0e4             # Start time to apply trend. 3.0e4 [yr]
+    tf: 3.1e4
     M_0: 30.0             # Original mean frontal ablation [m/yr].
     M_f: 0.8              # Ablation: increased factor from original frontal ablation (80% as in Christian et al., 2022).0.8
 

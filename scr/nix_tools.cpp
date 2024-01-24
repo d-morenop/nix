@@ -12,7 +12,7 @@ ArrayXd gaussian_filter(ArrayXd w, ArrayXd sigma, ArrayXd ds, double sigma_gauss
     // Sigma value is refered as a factor of the minimum separation among grid points.
     double sigma_new = ds(n-2) * sigma_gauss;
     
-    // Handy definition. Standard deviation is a multiple of dx (real distance among gridpoints).
+    // Handy definition. Standard deviation is a multiple of ds (dimensionless distance among gridpoints).
     double sigma_inv = 1.0 / sigma_new;
     
     // Weierstrass transform.

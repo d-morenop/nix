@@ -21,9 +21,32 @@ import shutil
 import yaml
 
 
+def modify_yaml(yaml_file_path, key, value):
+    
+    with open(yaml_file_path, 'r') as f:
+        
+        # Load data.
+        data = yaml.safe_load(f)
+
+        # Modify values of interest.
+        data[f'{key}'] = f'{value}' 
+
+        print(data) 
+    
+    print('done!')
+    
+
+
 
 # Specify the path to your YAML file
-yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_ews.yaml"
+yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_oscillations.yaml"
+
+
+# Modify the yaml file to run large ensembles of simulations.
+"""w_0 = np.array([0.0, 0.3, 0.5])
+keys = ['path']
+modify_yaml('output', key='Age', value=30)"""
+
 
 # Read the YAML file
 with open(yaml_file_path, 'r') as file:

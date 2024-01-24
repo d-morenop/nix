@@ -33,7 +33,7 @@ int main()
 {
 
     // Specify the path to YAML file.
-    string file_path = "/home/dmoreno/scr/nix/par/nix_params_ews.yaml";
+    string file_path = "/home/dmoreno/scr/nix/par/nix_params_oscillations.yaml";
 
     // Load the YAML file
     YAML::Node config = YAML::LoadFile(file_path);
@@ -450,7 +450,7 @@ int main()
         // WE NEED TO TUNE THIS NUMBER TOGEHTER WITH THE FLUX DISCRETIAZTION TO OBTAIN THE SAME EXTENT.
         //A_s << 0.5e-26, 5.0e-25; //(0.5e-26, 5.0e-25)
         // Decrease A_s values for all peaks to be reduced.
-        A_s << 7.25e-26, 5.0e-25; //(0.5e-26, 5.0e-25)
+        A_s << 3.0e-26, 5.0e-25; //(0.5e-26, 5.0e-25)
 
 
         // Unit conversion: [Pa^-3 s^-1] --> [Pa^-3 yr^-1].
@@ -639,7 +639,7 @@ int main()
 
 
         // Update bedrock with new domain extension L.
-        bed = f_bed(L, sigma, ds, nixParams.dom);
+        bed = f_bed(L, sigma, ds, t, nixParams.dom);
 
         // Friction coefficient.
         C_bed = f_C_bed(C_ref, theta, H, t, nixParams.dom, \

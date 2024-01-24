@@ -38,7 +38,7 @@ struct BedrockEwsParams
     string smooth;
     int p;
     double sigma_gauss;
-    double t0_gauss;
+    double t0_smth;
     double x_1;
     double x_2;
     double y_p;
@@ -254,7 +254,7 @@ void readParams(const YAML::Node& node, NixParams& params)
     params.dom.ews.smooth      = node["domain"]["bedrock_ews"]["smooth_bed"].as<string>();
     params.dom.ews.p           = node["domain"]["bedrock_ews"]["p"].as<int>();
     params.dom.ews.sigma_gauss = node["domain"]["bedrock_ews"]["sigma_gauss"].as<double>();
-    params.dom.ews.t0_gauss    = node["domain"]["bedrock_ews"]["t0_gauss"].as<double>();
+    params.dom.ews.t0_smth    = node["domain"]["bedrock_ews"]["t0_smth"].as<double>();
     params.dom.ews.x_1         = node["domain"]["bedrock_ews"]["x_1"].as<double>();
     params.dom.ews.x_2         = node["domain"]["bedrock_ews"]["x_2"].as<double>();
     params.dom.ews.y_p         = node["domain"]["bedrock_ews"]["y_p"].as<double>();

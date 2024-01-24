@@ -16,21 +16,23 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy import signal
 import pylab as plt_lab
+from scipy.signal import argrelextrema
 
-path_fig        = '/home/dmoreno/figures/flowline/ewr/A_rates/bed_peak/y_p.88_tf_A.2.5e4_A.0.5e-26_5.0e-25/frames/'
-path_now        = '/home/dmoreno/nix/ews/M_rates/smooth/sigma.2.0_A.9.0e-26_tf.0.1_yp.88/'
+
+path_fig        = '/home/dmoreno/figures/nix/oscillations/C_thw-w_0/'
+path_now        = '/home/dmoreno/nix/oscillations/S-w_0/w0.0.3_S.0.20_nz.15/'
 path_stoch      = '/home/dmoreno/nix/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
 
-# /home/dmoreno/flowline/ewr/A_rates/bed_smooth/gauss_dx/dx.2/p.3/y_p.176_tf_A.2.5e4_A.0.5e-26_5.0e-25/'
+# '/home/dmoreno/nix/ews/M_rates/smooth/sigma.1.0_A.3.0e-26_yp.176/''
 # /home/dmoreno/flowline/mismip_bp/exp_3/n.100_nz.10/
 
 # Select plots to be saved (boolean integer).
-save_series        = 1
+save_series        = 0
 save_series_comp   = 0
 save_shooting      = 0
-save_domain        = 1
+save_domain        = 0
 coloured_domain    = 0
 save_var_frames    = 0
 save_series_frames = 0
@@ -40,9 +42,10 @@ save_u             = 0
 save_u_der         = 0
 time_series_gif    = 0
 save_L             = 0
-save_series_2D     = 0
+save_series_2D     = 1
+heat_map_fourier   = 0
 save_fig           = False
-read_stoch_nc      = True
+read_stoch_nc      = False
 bed_smooth         = False
 
 smth_series        = 0
@@ -51,7 +54,7 @@ smth_series        = 0
 # MISMIP bedrock experiments.
 # exp = 1: inclined bed; exp = 3: overdeepening bed.
 exp_name = ['mismip_1', 'mismip_3', 'glacier_ews']
-idx = 2
+idx = 0
 exp = exp_name[idx]
 
 # Create figures directory if it does not exist.
@@ -65,7 +68,7 @@ data   = Dataset(nc_SSA, mode='r')
 
 
 # Let us create a dictionary with variable names.
-flowline_name = ['u_bar', 'ub', 'u_bar_x', 'u_z', 'u', 'H', 'visc_bar', 'tau_b', 'tau_d', \
+nix_name = ['u_bar', 'ub', 'u_bar_x', 'u_z', 'u', 'H', 'visc_bar', 'tau_b', 'tau_d', \
 				 'L', 'dL_dt', 't', 'b', 'C_bed', 'dudx_bc', \
 				 'BC_error', 'u2_0_vec', 'u2_dif_vec', 'picard_error', \
 				 'c_picard', 'dt', 'mu', 'omega', 'A', 'theta', 'S', \
@@ -87,7 +90,7 @@ l_var = len(var_name)
 # Load data from flowline.nc. t_n can be an array, np.shape(x) = (len(t_n), y, x)
 # Access the globals() dictionary to introduce new variables.
 for i in range(l_var):
-	globals()[var_name[i]] = data.variables[flowline_name[i]][:]
+	globals()[var_name[i]] = data.variables[nix_name[i]][:]
 
 
 # Desired units.
@@ -334,6 +337,10 @@ if save_series == 1:
 	ax2.plot(t_plot, H[:,s[2]-1], linestyle='-', color='black', marker='None', \
 			 markersize=3.0, linewidth=2.0, alpha=1.0, label=r'$u_{b}(x)$') 
 	
+	# Basal temperature at the grounding line.
+	ax4.plot(t_plot, theta[:,0,s[2]-1], linestyle='-', color='brown', marker='None', \
+					 markersize=3.0, linewidth=1.5, alpha=1.0, label=r'$u_{b}(x)$')
+	
 
 	# Smooth.
 	if smth_series == 1:
@@ -350,9 +357,7 @@ if save_series == 1:
 	#ax3.plot(t_plot, b[:,s[2]-1], linestyle='-', color='purple', marker='None', \
 #			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 
-	# Ice temperature at the grounding line.
-	ax4.plot(t_plot, theta[:,0,s[2]-1], linestyle='-', color='darkgreen', marker='None', \
-			 markersize=3.0, linewidth=2.0, alpha=1.0, label=r'$u_{b}(x)$') 
+	
 	
 	# Ice rate factor.
 	#ax4.plot(t_plot, A_s, linestyle='-', color='darkgreen', marker='None', \
@@ -384,7 +389,7 @@ if save_series == 1:
 		ax5.set_ylabel(r'$ \dot{m} \ (m/yr)$', fontsize=18)
 
 		# Axis limits.
-		ax.set_ylim(330.0, 390.0)
+		ax.set_ylim(200.0, 400.0)
 		ax3.set_ylim(-2.0, 0.5)
 		ax5.set_ylim(0.0, 50.0)
 	
@@ -392,9 +397,9 @@ if save_series == 1:
 	#ax2.set_xlim(0, t_plot[s[0]-1])
 	#ax3.set_xlim(0, t_plot[s[0]-1])
 
-	ax.set_xlim(t_plot[int(0.85*s[0])], t_plot[s[0]-1])
-	ax2.set_xlim(t_plot[int(0.85*s[0])], t_plot[s[0]-1])
-	ax3.set_xlim(t_plot[int(0.85*s[0])], t_plot[s[0]-1])
+	ax.set_xlim(t_plot[int(0.15*s[0])], t_plot[s[0]-1])
+	ax2.set_xlim(t_plot[int(0.15*s[0])], t_plot[s[0]-1])
+	ax3.set_xlim(t_plot[int(0.15*s[0])], t_plot[s[0]-1]) #0.5
 	
 	ax.set_ylabel(r'$L \ (\mathrm{km})$', fontsize=18)
 	ax2.set_ylabel(r'$H_{gl} \ (\mathrm{km})$', fontsize=18)
@@ -402,11 +407,11 @@ if save_series == 1:
 	
 	#ax3.set_ylabel(r'$ T{\mathrm{air}} \ (^{\circ} \mathrm{C})$', fontsize=18)
 	#ax3.set_ylabel(r'$ \Delta T_{\mathrm{oce}} \ (^{\circ} \mathrm{C})$', fontsize=18)
-	ax4.set_ylabel(r'$ \theta(z=0,L) $', fontsize=18)
+	#ax4.set_ylabel(r'$ \theta(z=0,L) $', fontsize=18)
 	
-	#ax4.set_ylabel(r'$  \theta(0,H) \ (^{\circ} \mathrm{C})$', fontsize=17)
+	ax4.set_ylabel(r'$  \theta(0,L) \ (^{\circ} \mathrm{C})$', fontsize=17)
 	#ax4.set_ylabel(r'$ A \ (\mathrm{Pa}^{-3} \mathrm{yr}^{-1})$', fontsize=17)
-	ax5.set_ylabel(r'$ \dot{m} \ (\mathrm{m/yr})$', fontsize=17)
+	#ax5.set_ylabel(r'$ \dot{m} \ (\mathrm{m/yr})$', fontsize=17)
 	
 	#ax5.set_ylabel(r'$ \bar{\eta} \ (\mathrm{Pa \cdot s}) $', fontsize=18)
 	ax6.set_ylabel(r'$ \bar{u}(L) \ (\mathrm{m/yr})$', fontsize=18)
@@ -421,7 +426,7 @@ if save_series == 1:
 	ax2.yaxis.label.set_color('black')
 	ax3.yaxis.label.set_color('darkgreen')
 	ax5.yaxis.label.set_color('purple')
-	#ax5.yaxis.label.set_color('brown')
+	ax4.yaxis.label.set_color('brown')
 	ax6.yaxis.label.set_color('blue')
 	
 	ax.set_xticklabels([])
@@ -434,8 +439,8 @@ if save_series == 1:
 	ax5.tick_params(axis='y', which='major', length=4, colors='purple', labelsize=16)
 	ax3.tick_params(axis='x', which='major', length=4, colors='black', labelsize=16)
 	ax3.tick_params(axis='y', which='major', length=4, colors='darkgreen', labelsize=16)
-	#ax3.tick_params(axis='y', which='major', length=4, colors='brown', labelsize=16)
-	#ax5.tick_params(axis='y', which='major', length=4, colors='brown', labelsize=16)
+	ax4.tick_params(axis='y', which='major', length=4, colors='brown', labelsize=16)
+	#ax4.tick_params(axis='y', which='major', length=4, colors='brown', labelsize=16)
 	ax6.tick_params(axis='y', which='major', length=4, colors='blue', labelsize=16)
 	
 	ax.grid(axis='x', which='major', alpha=0.85)
@@ -876,7 +881,7 @@ if save_domain == 1:
 
 if save_var_frames == 1:
 	
-	for i in range(0, l, 10): # (0, l, 10), (l-1, l, 1)
+	for i in range(int(0.8*l), l, 50): # (0, l, 10), (l-1, l, 1)
 		
 		#L_plot  = np.linspace(0, L[i], s[2])
 		L_plot = sigma_plot * L[i]
@@ -1696,14 +1701,8 @@ if save_L == 1:
 if save_series_2D == 1:
 
 	# Number of ticks.
-	n_ticks = 5
-	x_ticks = np.linspace(0, s[2], n_ticks)
-	n_z     = np.shape(theta)[1]
-	z_ticks = int(0.2 * n_z + 1)
-
-	# n_z-0.5 to avoid half of grid cell in black when plotting.
-	y_ticks  = np.linspace(0, n_z-0.5, z_ticks, dtype=int)
-	y_labels = np.linspace(0, n_z, z_ticks, dtype=int)
+	n_x = 3
+	n_z = 6
 
 	# Theta limits.
 	u_bar_min = 0.0
@@ -1712,15 +1711,24 @@ if save_series_2D == 1:
 	H_min = 0.0
 	H_max = 3.0
 
-	cb_ticks_1 = np.round(np.linspace(u_bar_min, u_bar_max, 6),0)
-	cb_ticks_2 = np.round(np.linspace(H_min, H_max, 6),0)
+	# Colourbar ticks.
+	cb_ticks_1  = [0.0, 1.0, 2.0, 3.0]
+	cb_labels_1 = [r'$10^0$', r'$10^1$', r'$10^2$', r'$10^3$']
+
+	cb_ticks_2  = [0.0, 1.0, 2.0, 3.0]
+	cb_labels_2 = [r'$0$', r'$1$', r'$2$', r'$3$']
 
 	u_bar = np.where(u_bar>0, u_bar, 1.0e-3)
 	u_bar = np.log10(u_bar)
 
 
 	# Update x_labels as domain extension changes in each iteration.
-	x_labels  = np.linspace(0, L[i], n_ticks, dtype=int)
+	#x_labels  = np.linspace(0, L[i], n_ticks, dtype=int)
+	x_ticks = np.linspace(0, s[2], n_x)
+	x_labels = [r'$0$', r'$L/2$', r'$L$', ]
+
+	y_ticks  = np.linspace(0, s[0]-1, n_z, dtype=int)
+	y_labels = [r'$0$', r'$8$', r'$16$', r'$24$', r'$32$', r'$40$']
 
 	# Colourmap.
 	cmap = plt.get_cmap("RdYlBu") # spectral, rainbow, jet, turbo
@@ -1741,28 +1749,28 @@ if save_series_2D == 1:
 	im2 = ax2.imshow(np.flip(H,axis=0), cmap=cmap_2, \
 					vmin=H_min, vmax=H_max, aspect='auto', interpolation='bilinear')
 
-	ax1.set_ylabel(r'$ t \ (\mathrm{yr}) $', fontsize=20)
-	ax2.set_xlabel(r'$ x \ (\mathrm{km})$', fontsize=20)
-	ax2.set_xlabel(r'$ x \ (\mathrm{km})$', fontsize=20)
+	ax1.set_ylabel(r'$ t \ (\mathrm{kyr}) $', fontsize=20)
+	#ax1.set_xlabel(r'$ x \ (\mathrm{km})$', fontsize=20)
+	#ax2.set_xlabel(r'$ x \ (\mathrm{km})$', fontsize=20)
 
 	
 	divider_1 = make_axes_locatable(ax1)
-	cax_1     = divider_1.append_axes("right", size="10%", pad=0.2)
-	cb_1      = fig.colorbar(im1, cax=cax_1, extend='neither')
+	cax_1     = divider_1.append_axes("right", size="10%", pad=0.2, aspect=5)
+	cb_1      = fig.colorbar(im1, cax=cax_1, extend='neither', orientation='vertical')
 
 	cb_1.set_ticks(cb_ticks_1)
-	cb_1.set_ticklabels(list(cb_ticks_1), fontsize=14)
+	cb_1.set_ticklabels(cb_labels_1, fontsize=14)
 
 	cb_1.set_label(r'$ \overline{u} (x,t) \ (\mathrm{m/yr})$', \
 					rotation=90, labelpad=6, fontsize=20)
 	
 	
 	divider_2 = make_axes_locatable(ax2)
-	cax_2     = divider_2.append_axes("right", size="10%", pad=0.2)
-	cb_2      = fig.colorbar(im2, cax=cax_2, extend='neither')
+	cax_2     = divider_2.append_axes("right", size="10%", pad=0.2, aspect=5)
+	cb_2      = fig.colorbar(im2, cax=cax_2, extend='neither', orientation='vertical')
 
 	cb_2.set_ticks(cb_ticks_2)
-	cb_2.set_ticklabels(list(cb_ticks_2), fontsize=14)
+	cb_2.set_ticklabels(cb_labels_2, fontsize=14)
 
 	cb_2.set_label(r'$ H (x,t) \ (\mathrm{km})$', \
 					rotation=90, labelpad=6, fontsize=20)
@@ -1770,16 +1778,20 @@ if save_series_2D == 1:
 	ax1.set_xticks(x_ticks)
 	ax1.set_xticklabels(list(x_labels), fontsize=15)
 
-	ax1.set_yticks(y_ticks)
-	ax1.set_yticklabels(list(y_labels[::-1]), fontsize=15)
-
 	ax2.set_xticks(x_ticks)
 	ax2.set_xticklabels(list(x_labels), fontsize=15)
 
-	#ax.set_xlim(0.0, s[2]-1)
-	
+	ax1.set_yticks(y_ticks)
+	ax1.set_yticklabels(y_labels[::-1], fontsize=15)
 
-	#ax.set_title(r'$i = \ $'+str(i)+r'$, \ t =  \ $'+str(np.round(t[i],2))+r'$ \ yr$', fontsize=16)
+	ax2.set_yticks(y_ticks)
+	ax2.set_yticklabels([], fontsize=15)
+
+	
+	ax1.set_title(r'$ \mathrm{(a)} $', fontsize=16)
+	ax2.set_title(r'$ \mathrm{(b)} $', fontsize=16)
+
+
 	plt.tight_layout()
 
 	if save_fig == True:
@@ -1790,4 +1802,325 @@ if save_series_2D == 1:
 	plt.close(fig)
 
 
+# We perform fft for number of variable time series to study the 
+# main periodicity in oscillatory Nix sims.
+if heat_map_fourier == 1:
+
+	# Method of calculating periodicity.
+	meth_period = 'local_max'
+
+	# Fast Fourier Transform.
+	def fft(x):
+		
+		# FFT.
+		fft_x = np.fft.fft(x) 
+
+		# Power spectrum.
+		fft_x_plot = np.abs(fft_x)**2
+
+		# Only real frequencies.
+		#n = int(0.5*len(x)-1)
+		n = len(x)
+
+		# Frequencies given a time series with n points.
+		nu = np.fft.fftfreq(n)
+
+		# Save period and corresponding power spetrum.
+		nu_new = 1.0 / nu[1:n]
+		f = fft_x_plot[1:n]
+
+		return [nu_new,f]
+
+	# Parent folder.
+	parent_folder = '/home/dmoreno/nix/oscillations/C_thw-w_0/'
+
+	var_fft   = ['u_bar']
+	l_var_fft = len(var_fft)
+
+	# List all subfolders in the parent folder
+	subfolders = [f.path for f in os.scandir(parent_folder) if f.is_dir()]
+
+	# Lists.
+	fft_tot    = []
+	nu_tot_fft = []
+	u_bar_all  = []
+	nu_max     = []
+	local_max_all = []
+	T_mean_all   = []
+
+
+	# Loop through each subfolder.
+	#subfolders = ['/home/dmoreno/nix/oscillations/C_thw-w_0/w0.0.5_C_thw.0.75_nz.15/']
+	
+	for subfolder in subfolders:
+
+		print('Exp = ', subfolder)
+		
+		# Define the path to the netCDF file in the current subfolder
+		path_nc = os.path.join(get_datadir(), subfolder, 'nix_hr.nc')
+
+		# Check if the file exists before attempting to open it
+		if os.path.exists(path_nc):
+			
+			# Open the netCDF file
+			data = Dataset(path_nc, mode='r')
+
+			# Load variables of interest.
+			t     = data.variables['t'][:]
+			u_bar = data.variables['u_bar'][:]
+
+			# Append values of all experiments.
+			#u_bar = np.sin(4*t) + np.sin(2*t)
+			u_bar_all.append(u_bar)
+
+		# Define dimensions.
+		s = np.shape(u_bar)
+		
+		# Set beginning and end of the time series. Evaluated at the GL.
+		n_t0  = int(0.5*s[0])         # 0.5
+		var   = u_bar[n_t0:(s[0]-1)]
+		l_var = len(var)
+
+		###########################################################################
+		###########################################################################
+		# METHOD 1: FFT.
+		if meth_period == 'fft':
+			# Call FFT function and save period and transformed function to be plotted.
+			[nu_fft, u_fft_plot] = fft(var) 
+
+			# Append FFT series, frequencies and main frequencies. 
+			fft_tot.append(u_fft_plot)
+			nu_tot_fft.append(nu_fft)
+			nu_max.append(nu_fft[np.argmax(u_fft_plot)])
+
+			# We convert to real frequencies and then to period.
+			# In FFT, the frequency depends on the number of given points.
+			# nu_max_real returns w_0 in f(t) = sin(w_0 * t). T = 2*pi/w_0.
+			nu_max_real = l_var / np.array(nu_max)
+			T_real      = 2.0 * np.pi / nu_max_real
+
+		
+		###########################################################################
+		###########################################################################
+		# METHOD 2: Local maxima.
+		elif meth_period == 'local_max':
+
+			# A point will be considered a local maximum if it is greater 
+			# than its 15 neighboring points on each side (total of 11 points, including the point itself).
+			thresh = 400
+			local_max = argrelextrema(u_bar, np.greater, order=thresh)[0] # argrelextrema returs a tuple.
+			l_max     = len(local_max)
+
+			# Maximum velocity to find surges.
+			u_max = np.max(u_bar)
+			print('u_max = ', u_max)
+			
+			# If the sim does not oscillate
+			if u_max < 2.0e3:
+			#if l_max < 10:
+				T_mean       = np.nan
+				local_max_eq = np.nan
+
+			else:
+				# Use boolean indexing to keep values above the threshold.
+				# We delete all indexes value below n_t0 to focus on the equilibrium.
+				local_max_eq = local_max[local_max >= n_t0]
+				l_local_max  = len(local_max_eq) 
+
+				# Find local maxima.
+				T = np.empty(l_local_max-1)
+				n0_local_max = int(0.5*l_local_max)
+				nf_local_max = l_local_max-1
+
+				# Distance between two consequtive peaks.
+				for i in range(n0_local_max, nf_local_max, 1):
+
+					T[i] = t[local_max_eq[i+1]] - t[local_max_eq[i]]
+			
+				# Mean value of the spacing among peak gives us the surge preiodicity.
+				T_mean = 1.0e-3 * np.mean(T[n0_local_max:nf_local_max])
+
+			# Append results.
+			local_max_all.append(local_max_eq)
+			T_mean_all.append(T_mean)
+
+			
+			print('T_mean = ', T_mean)
+
+
+	# Reshape for heat map.
+	# Rows: w_0 values. Columns: C_thw values.
+	# Define the number of rows and columns
+	num_rows = 5
+	num_cols = 10 #11
+
+	T_mean_all = np.reshape(T_mean_all, [num_rows,num_cols])
+
+	print('T_mean_all = ', T_mean_all)
+
+
+	# PLOTS.
+	# Run over all subfolders.
+	plot = True
+
+	#for i in range(len(subfolders)):
+
+	if plot == True:
+
+		total_panels = num_rows * num_cols
+
+		# Create a figure with the specified number of panels
+		fig, axs = plt.subplots(num_rows, num_cols, figsize=(15, 10), dpi=800)
+		
+		c = 0
+
+		# Iterate through each panel and customize as needed
+		for i in range(num_rows):
+			for j in range(num_cols):
+				
+				# Customize each panel if necessary
+				axs[i,j].set_title(f'u_max = {np.round(np.max(u_bar_all[i]),0)}')
+
+				# Original time series.
+				axs[i,j].plot(t[n_t0:(s[0]-1)], u_bar_all[i][n_t0:(s[0]-1)], linestyle='-', color='blue', \
+							marker='None', linewidth=1.5, markersize=4, alpha=1.0)
+				
+				# Local maxima.
+				if np.size(local_max_all[i]) != 1:
+					
+					axs[i,j].plot(t[local_max_all[i]], u_bar_all[i][local_max_all[i]], linestyle='None', color='black', \
+								marker='o', linewidth=1.5, markersize=4, alpha=1.0)
+
+				
+				axs[i,j].set_xticklabels([])
+				#axs[i,j].set_yticklabels([])
+
+				c += 1
+
+		# FFT series.
+		"""ax1.plot(nu_tot_fft[i], fft_tot[i], linestyle='-', color='blue', \
+					marker='o', linewidth=1.5, markersize=4, alpha=1.0)"""
+
+		"""ax2.plot(u_bar_all[i][n_t0:(s[0]-1),s[2]-1], linestyle='-', color='red', \
+					marker='o', linewidth=1.5, markersize=4, alpha=1.0)"""
+
+		
+		"""# Original time series.
+		ax2.plot(t[n_t0:(s[0]-1)], u_bar_all[i][n_t0:(s[0]-1)], linestyle='-', color='red', \
+					marker='None', linewidth=1.5, markersize=4, alpha=1.0)
+		
+		# Local maxima.
+		if np.isnan(local_max_all[i]) == False:
+			
+			ax2.plot(t[local_max_all[i]], u_bar_all[i][local_max_all[i]], linestyle='None', color='black', \
+						marker='o', linewidth=1.5, markersize=4, alpha=1.0)"""
+
+
+		#ax1.set_xlim(0,100.0)
+
+		plt.tight_layout()
+
+		if save_fig == True:
+			plt.savefig(path_fig+'oscillations.png', bbox_inches='tight')
+
+		plt.show()
+		plt.close(fig)
+
+
+
+
+	
+	
+	# Theta limits.
+	T_min = 0.0
+	T_max = 2.0
+
+	
+	# Colourbar ticks.
+	cb_ticks_1  = [0.0, 0.5, 1.0, 1.5, 2.0]
+	cb_labels_1 = [r'$0.0$', r'$0.5$', r'$1.0$', r'$1.5$', r'$2.0$']
+
+	cb_ticks_2  = [0.0, 1.0, 2.0, 3.0]
+	cb_labels_2 = [r'$0$', r'$1$', r'$2$', r'$3$']
+
+
+	
+	# Update x_labels as domain extension changes in each iteration.
+	#x_labels  = np.linspace(0, L[i], n_ticks, dtype=int)
+	"""x_ticks = np.linspace(0, s[2], n_x)
+	x_labels = [r'$0$', r'$L/2$', r'$L$', ]
+
+	y_ticks  = np.linspace(0, s[0]-1, n_z, dtype=int)
+	y_labels = [r'$0$', r'$6$', r'$12$', r'$18$', r'$24$', r'$30$']"""
+
+	# Colourmap.
+	cmap = plt.get_cmap("RdYlBu") # spectral, rainbow, jet, turbo
+	reversed_cmap = cmap.reversed()
+
+	cmap_2 = plt.get_cmap("PRGn") # spectral, rainbow, jet, turbo
+	#reversed_cmap = cmap.reversed()
+
+	fig = plt.figure(dpi=600, figsize=(8,6))
+	plt.rcParams['text.usetex'] = True
+	ax1  = fig.add_subplot(121)
+	ax2  = fig.add_subplot(122)
+
+	# Flip theta matrix so that the plot is not upside down.
+	im1 = ax1.imshow(np.flip(T_mean_all,axis=0), cmap=reversed_cmap, \
+					vmin=T_min, vmax=T_max, aspect='auto', \
+						interpolation='none')
+
+	#im2 = ax2.imshow(np.flip(H,axis=0), cmap=cmap_2, \
+	#				vmin=H_min, vmax=H_max, aspect='auto', interpolation='bilinear')
+
+	ax1.set_ylabel(r'$ w_0 \ (\mathrm{m/yr}) $', fontsize=20)
+	ax1.set_xlabel(r'$ C_{\mathrm{thw}} $', fontsize=20)
+
+
+	divider_1 = make_axes_locatable(ax1)
+	cax_1     = divider_1.append_axes("right", size="10%", pad=0.2, aspect=5)
+	cb_1      = fig.colorbar(im1, cax=cax_1, extend='neither', orientation='vertical')
+
+	cb_1.set_ticks(cb_ticks_1)
+	cb_1.set_ticklabels(cb_labels_1, fontsize=14)
+
+	cb_1.set_label(r'$ \overline{u} (x,t) \ (\mathrm{m/yr})$', \
+					rotation=90, labelpad=6, fontsize=20)
+
+	"""
+	divider_2 = make_axes_locatable(ax2)
+	cax_2     = divider_2.append_axes("right", size="10%", pad=0.2, aspect=5)
+	cb_2      = fig.colorbar(im2, cax=cax_2, extend='neither', orientation='vertical')
+
+	cb_2.set_ticks(cb_ticks_2)
+	cb_2.set_ticklabels(cb_labels_2, fontsize=14)
+
+	cb_2.set_label(r'$ H (x,t) \ (\mathrm{km})$', \
+					rotation=90, labelpad=6, fontsize=20)
+
+	ax1.set_xticks(x_ticks)
+	ax1.set_xticklabels(list(x_labels), fontsize=15)
+
+	ax2.set_xticks(x_ticks)
+	ax2.set_xticklabels(list(x_labels), fontsize=15)
+
+	ax1.set_yticks(y_ticks)
+	ax1.set_yticklabels(y_labels[::-1], fontsize=15)
+
+	ax2.set_yticks(y_ticks)
+	ax2.set_yticklabels([], fontsize=15)"""
+
+
+	ax1.set_title(r'$ \mathrm{(a)} $', fontsize=16)
+	ax2.set_title(r'$ \mathrm{(b)} $', fontsize=16)
+
+
+	plt.tight_layout()
+
+	if save_fig == True:
+
+		plt.savefig(path_fig+'nix_period_oscillations.png', bbox_inches='tight')
+		
+	plt.show()
+	plt.close(fig)
 
