@@ -9,6 +9,7 @@
 #include <netcdf.h>
 #include <chrono>
 #include <yaml-cpp/yaml.h>
+#include <unistd.h>
 
 using namespace Eigen;
 using namespace std;
@@ -33,10 +34,45 @@ int main()
 {
 
     // Specify the path to YAML file.
-    string file_path = "/home/dmoreno/scr/nix/par/nix_params_oscillations.yaml";
+    string yaml_name = "nix_params_oscillations.yaml";
 
+    // Assuming the path won't exceed 4096 characters.
+    char buffer[4096];
+
+    // Rad the symbolic link /proc/self/exe, which points to the executable file of the calling process.
+    ssize_t len = readlink("/proc/self/exe", buffer, sizeof(buffer) - 1);
+
+    if (len != -1) 
+    {
+        // Null-terminate the string.
+        buffer[len] = '\0'; 
+
+        // Extract the directory from the full path.
+        char *last_slash = strrchr(buffer, '/');
+        if (last_slash != nullptr) 
+        {
+            // Null-terminate at the last slash to get the directory
+            *last_slash = '\0'; 
+            //std::cout << "Executable directory: " << buffer << std::endl;
+        } 
+        else 
+        {
+            std::cerr << "Error extracting directory." << std::endl;
+        }
+    } 
+    else 
+    {
+        std::cerr << "Error getting executable path." << std::endl;
+    }
+
+    // Convert char to string and concatenate full path.
+    string path = buffer;
+    string full_path = path+"/par/"+yaml_name;
+
+    cout << "\n full_path = " << full_path;
+    
     // Load the YAML file
-    YAML::Node config = YAML::LoadFile(file_path);
+    YAML::Node config = YAML::LoadFile(full_path);
 
     // Parse parameters
     NixParams nixParams;
@@ -523,8 +559,8 @@ int main()
                 smb_stoch = noise_now(1);
 
                 // Update SMB considering new domain extension and current stochastic term.
-                S = f_smb(sigma, L, t, smb_stoch, nixParams.bc, \
-                            nixParams.dom, nixParams.tm);
+                //S = f_smb(sigma, L, t, smb_stoch, nixParams.bc, \
+                //            nixParams.dom, nixParams.tm);
             }
         }
         
@@ -637,6 +673,9 @@ int main()
         }
     
 
+        // Update SMB considering new domain extension and current stochastic term.
+        S = f_smb(sigma, L, t, smb_stoch, \
+                    nixParams.bc, nixParams.dom, nixParams.tm);
 
         // Update bedrock with new domain extension L.
         bed = f_bed(L, sigma, ds, t, nixParams.dom);
