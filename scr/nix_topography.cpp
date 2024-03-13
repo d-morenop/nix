@@ -116,33 +116,42 @@ ArrayXd f_smb(ArrayXd sigma, double L, double t, double smb_stoch, \
     x = L * sigma;
 
     // Start with constant accumulation value for smoothness.
-    if ( t < tm.t_eq || bc.smb.stoch == false)
+    if ( t < tm.t_eq )
     {
-        S = ArrayXd::Constant(dom.n, bc.smb.S_0);
+        // Ensure healthy equilibiration before desired surface accumulation: 0.4 m/yr.
+        S = ArrayXd::Constant(dom.n, 0.4);
     }
-    
-    // After equilibration, spatially dependent and potentially stochastic term.
     else
     {
-        // Error function from Christian et al. (2022)
-        for (int i=0; i<dom.n; i++)
+        // Deterministic SMB.
+        if ( bc.smb.stoch == false )
         {
-            // No stochastic variability.
-            //S(i) = S_0 + 0.5 * dlta_smb * ( 1.0 + erf((x(i) - x_mid) / x_sca) );
+            S = ArrayXd::Constant(dom.n, bc.smb.S_0);
+        }
 
-            // SMB stochastic variability sigmoid.
-            stoch_pattern = bc.smb.var_mult + ( 1.0 - bc.smb.var_mult ) * 0.5 * \
-                            ( 1.0 + erf((x(i) - bc.smb.x_varmid) / bc.smb.x_varsca) );
+        // Stochastic SMB.
+        else
+        {
+            // Error function from Christian et al. (2022)
+            for (int i=0; i<dom.n; i++)
+            {
+                // No stochastic variability.
+                //S(i) = S_0 + 0.5 * dlta_smb * ( 1.0 + erf((x(i) - x_mid) / x_sca) );
 
-            // Deterministic SMB sigmoid.
-            smb_determ = bc.smb.S_0 + 0.5 * bc.smb.dlta_smb * \
-                                    ( 1.0 + erf((x(i) - bc.smb.x_mid) / bc.smb.x_sca) );
-            
-            // Total SMB: stochastic sigmoid + deterministic sigmoid.
-            S(i) = smb_stoch * stoch_pattern + smb_determ;
+                // SMB stochastic variability sigmoid.
+                stoch_pattern = bc.smb.var_mult + ( 1.0 - bc.smb.var_mult ) * 0.5 * \
+                                ( 1.0 + erf((x(i) - bc.smb.x_varmid) / bc.smb.x_varsca) );
+
+                // Deterministic SMB sigmoid.
+                smb_determ = bc.smb.S_0 + 0.5 * bc.smb.dlta_smb * \
+                                        ( 1.0 + erf((x(i) - bc.smb.x_mid) / bc.smb.x_sca) );
+                
+                // Total SMB: stochastic sigmoid + deterministic sigmoid.
+                S(i) = smb_stoch * stoch_pattern + smb_determ;
+            }
         }
     }
-    
+ 
     return S;
 }
 

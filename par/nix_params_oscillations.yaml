@@ -3,7 +3,7 @@
 path:
   nix: /home/dmoreno/scr/nix/                              # Nix path.
   read: /home/dmoreno/nix/data/noise_sigm_ocn.12.0.nc      # File with stochastic bc. 
-  out: /home/dmoreno/nix/oscillations/S-w_0/w0.0.0_S.0.10_nz.15/                     # Output path.
+  out: /home/dmoreno/nix/oscillations/S-C_thw_hr_dt.fixed/                     # Output path.
 
 time:
   t0: 0.0                 # Starting time [yr].
@@ -40,7 +40,7 @@ dynamics:
   vel_meth: SSA           # Velocity solver: const, SSA, DIVA, Blatter-Pattyn.
 
 timestep:
-  dt_meth: adapt          # Time-stepping method. fixed, adapt.
+  dt_meth: fixed          # Time-stepping method. fixed, adapt.
   dt_min: 0.1             # Minimum time step [yr]. 0.1
   dt_max: 5.0             # Maximum time step [yr]. 2.0, 5.0
   t_eq_dt: 3.0e3          # Eq. time until adaptative timestep is applied.
@@ -89,7 +89,7 @@ thermodynamics:
   theta_act: 263.15       # Threshold temperature for the two regimes in activation energy [K] 
   adv_w: 
     apply: true           # Vertical advection in therm.
-    w_0: 0.0              # Vertical velocity at the ice surface (usually equals to accumulation) 0.3 [m/yr]
+    w_0: 0.3              # Vertical velocity at the ice surface (usually equals to accumulation) 0.3 [m/yr]
     w_exp: 0.33333        # Exponent of the vertical velocity profile. 1/3 []
   
 
@@ -102,7 +102,7 @@ friction:
   C_ref: 7.624e6         # Reference firction value.
   C_frz: 7.624e6         # Frozen friction coeff. 7.624e6 [Pa m^-1/3 yr^1/3]
   C_ews: 7.0e6           # Friction coeff. for early warning signals [Pa m^-1/3 yr^1/3]
-  C_thw: 0.05             # Thawed reduction in friction coeff. []
+  C_thw: 0.1             # Thawed reduction in friction coeff. []
 
 viscosity:
   n_gln: 3.0             # Glen flow law exponent
@@ -140,7 +140,7 @@ picard:
 
 initialisation:
   H: 10.0                # Ice thickness. [m]
-  S: 0.10                 # Surface mass balance. [m/yr]
+  S: 0.3                 # Surface mass balance. [m/yr]
   u: 1.0                 # Ice velocity. [m/yr]
   visc_0: 1.0e8          # Viscosity [Pa yr].
   theta: 253.15          # Ice temperature [K].
