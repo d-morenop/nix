@@ -188,7 +188,7 @@ struct CalvingParams
 
 struct PicardParams 
 {
-    int n;
+    int n_picard;
     double tol;
     double omega_1;
     double omega_2;
@@ -346,10 +346,10 @@ void readParams(const YAML::Node& node, NixParams& params)
     params.calv.sub_shelf_melt.T_0        = node["calving"]["sub_shelf_melt"]["T_0"].as<double>();
 
     // PICARD ITERATION.
-    params.pcrd.n       = node["picard"]["n"].as<int>();
-    params.pcrd.tol     = node["picard"]["tol"].as<double>();
-    params.pcrd.omega_1 = M_PI * node["picard"]["omega_1"].as<double>();
-    params.pcrd.omega_2 = M_PI * node["picard"]["omega_2"].as<double>();
+    params.pcrd.n_picard = node["picard"]["n_picard"].as<int>();
+    params.pcrd.tol      = node["picard"]["tol"].as<double>();
+    params.pcrd.omega_1  = M_PI * node["picard"]["omega_1"].as<double>();
+    params.pcrd.omega_2  = M_PI * node["picard"]["omega_2"].as<double>();
 
     // INTIALISATION.
     params.init.H      = node["initialisation"]["H"].as<double>();

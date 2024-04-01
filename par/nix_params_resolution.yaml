@@ -3,15 +3,15 @@
 path:
   nix: /home/dmoreno/scr/nix/                              # Nix path.
   read: /home/dmoreno/nix/data/noise_sigm_ocn.12.0.nc      # File with stochastic bc. 
-  out: /home/dmoreno/nix/oscillations/S-C_thw_hr_dt.fixed/                     # Output path.
+  out: /home/dmoreno/nix/resolution.even/                     # Output path.
 
 time:
   t0: 0.0                 # Starting time [yr].
-  tf: 6.0e4              # End time [yr]. 57.0e3, 54.0, 32.0e4, MISMIP-therm: 3.0e4, 90.0e4, Ending time [yr]. EWR: 5.0e3
+  tf: 3.0e4              # End time [yr]. 57.0e3, 54.0, 32.0e4, MISMIP-therm: 3.0e4, 90.0e4, Ending time [yr]. EWR: 5.0e3
   t_eq: 1.5e3             # Equilibration time [yr]. 1.5e3
   output:
-    t_n: 200              # Number of output frames
-    out_hr: true         # Allow high resolution output.
+    t_n: 100              # Number of output frames
+    out_hr: false         # Allow high resolution output.
 
 constants:
   g: 9.8                  # Gravitational acceleration [m/s²].
@@ -24,7 +24,7 @@ domain:
   n: 50                  # Number of horizontal points
   n_z: 15                 # Number vertical layers
   grid: even              # Nix grid type.
-  grid_exp: 0.5           # Exponent of unevenly-spaced grid.
+  grid_exp: 1.0           # Exponent of unevenly-spaced grid. 0.5
   bedrock_ews:            # Transition indicators domain.
     smooth_bed: none      # Apply smooth on bed topography. "gauss", "runnning_mean".
     p: 3                  # Number of points at the edges of the array that are not smoothed out.
@@ -40,8 +40,8 @@ dynamics:
   vel_meth: SSA           # Velocity solver: const, SSA, DIVA, Blatter-Pattyn.
 
 timestep:
-  dt_meth: fixed          # Time-stepping method. fixed, adapt.
-  dt_min: 0.1             # Minimum time step [yr]. 0.1
+  dt_meth: adapt          # Time-stepping method. fixed, adapt.
+  dt_min: 0.05             # Minimum time step [yr]. 0.1
   dt_max: 5.0             # Maximum time step [yr]. 2.0, 5.0
   t_eq_dt: 3.0e3          # Eq. time until adaptative timestep is applied.
   rel: 0.7                # Relaxation between interations [0,1]. 0.5
@@ -81,7 +81,7 @@ boundary_conditions:
 
 
 thermodynamics:
-  therm: true            # Apply thermodynamic solver at each time step.
+  therm: false            # Apply thermodynamic solver at each time step.
   k: 2.0                  # Thermal conductivity of ice [W / m · ºC].
   G: 0.05                 # Geothermal heat flow [W / m^2] = [J / s · m^2].
   kappa: 1.4e-6           # Thermal diffusivity of ice [m^2/s] --> [m^2/yr].
@@ -96,7 +96,7 @@ thermodynamics:
 friction:
   m: 0.33333
   u_0: 150.0
-  therm: two-valued            # Temperature-dependent friction. none, two-valued, N_eff
+  therm: none            # Temperature-dependent friction. none, two-valued, N_eff
   theta_thw: 273.15      # Basal temperature considered to be fully thawed. 268.15, 273.15
   theta_frz: 253.15      # Basal temperature considered to be fully frozen. 253.15, 233.15.
   C_ref: 7.624e6         # Reference firction value.
