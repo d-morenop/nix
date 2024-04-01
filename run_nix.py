@@ -72,9 +72,8 @@ def update_value_recursive(data, key, new_value):
     # If no match is found in the current dictionary or its nested dictionaries, return False.
     return False
 
-
 # Modify the dictionary and then save as the yaml file.
-def modify_yaml(file_path, path_modified, yaml_file_name, var_names, values):
+def modify_yaml(file_path, path_modified, yaml_file_name, var_names, data_types, values):
 
     # Full path with name.
     full_path = file_path + yaml_file_name
@@ -86,13 +85,18 @@ def modify_yaml(file_path, path_modified, yaml_file_name, var_names, values):
     # Update output path.
     update_value_recursive(data, 'out', path_modified)
 
-    # Update all desried parametersin yaml file.
+    # Update all desired parameters in yaml file.
     # Retrieve each entry in the dictionary and update its value.
     for i in range(len(var_names)):
+        
+        data_type = data_types[i]
+        converted_value = data_type(values[i])
+    
+        print('converted_value = ', converted_value)
 
-        # We have included float() to make sure it is given as a number.
-        if update_value_recursive(data, var_names[i], float(values[i])):
-            print(f" '{var_names[i]}' = '{float(values[i])}'.")
+        # We have included float() to make sure it is given as a number. float(values[i])
+        if update_value_recursive(data, var_names[i], converted_value):
+            print(f" '{var_names[i]}' = '{converted_value}'.")
         else:
             print(f"Could not find '{var_names[i]}' in the dictionary.")
 
@@ -105,8 +109,8 @@ def modify_yaml(file_path, path_modified, yaml_file_name, var_names, values):
 
 
 # Specify the path to your YAML file
-yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_oscillations.yaml"
-yaml_file_name = "nix_params_oscillations.yaml"
+yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_resolution.yaml"
+yaml_file_name = "nix_params_resolution.yaml"
 
 
 # Modify yaml file to run large ensembles of simulations.
@@ -114,11 +118,23 @@ yaml_file_name = "nix_params_oscillations.yaml"
 #######################################################################
 #######################################################################
 # Define variable names and their corresponding values.
-var_names = ['S_0', 'C_thw']
+
+# Nix oscillations.
+"""var_names = ['S_0', 'C_thw']
 
 values_0 = np.array([0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60])
-values_1 = np.array([0.01, 0.02, 0.03, 0.04])
+values_1 = np.array([0.01, 0.02, 0.03, 0.04])"""
 
+# Resolution study.
+var_names = ['n', 'dt_min']
+
+values_0 = np.array([2**4, 2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12])
+#values_0 = np.array([2**4, 2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12])
+
+values_1 = np.array([0.05])
+
+# Data type of each array.
+data_types = [int, float]
 
 """values_0 = np.array([0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60])
 values_1 = np.array([0.05, 0.10, 0.15, 0.20, 0.25, 0.30])
@@ -129,9 +145,13 @@ values_1 = np.array([0.05, 0.10, 0.15, 0.20, 0.25, 0.30])
 
 # Preserve the trailing zero in cases where there are trailing zeros after the decimal point. 
 # two decimals: {:.2f}.
-values_0_str = ['{:.2f}'.format(value, len(str(value).split('.')[1])) for value in values_0]
-values_1_str = ['{:.2f}'.format(value, len(str(value).split('.')[1])) for value in values_1]
+# FIX THIS!!
+values_0_str = len(values_0) * [None]
+values_1_str = len(values_1) * [None]
+values_0_str = ['{:.2f}'.format(value, len(str(value).split('.')[0])) for value in values_0]
+values_1_str = ['{:.2f}'.format(value, len(str(value).split('.')[0])) for value in values_1]
 
+# Create a string with all input values.
 str_all = [values_0_str, values_1_str]
 
 l_names = len(var_names)
@@ -145,6 +165,7 @@ for i in range(l_names):
 
 # Create a dictionary to store variable names and their corresponding values.
 variables = {var_names[0]: values_0, var_names[1]: values_1}
+
 
 
 # Read the YAML file
@@ -215,9 +236,9 @@ for i in range(N):
     shutil.copytree(path_nix_scr, path_output_scr)
     shutil.copytree(path_nix_par, path_output_par)
 
-    # The copied yaml version in the modifed directory is then modify
+    # The copied yaml version in the modifed directory is then modified
     # for compilation therein.
-    modify_yaml(path_output_par, path_modified, yaml_file_name, var_names, perm[i])
+    modify_yaml(path_output_par, path_modified, yaml_file_name, var_names, data_types, perm[i])
 
 
     # Compilation configuration. ['local', 'iceberg', 'brigit']
@@ -239,7 +260,6 @@ for i in range(N):
         #cmd = "g++ -std=c++11 -I /usr/include/eigen3/ -o "+path_output+"nix.o "+path_output_scr+"nix.cpp -lnetcdf"
 
         # Compiling command. -std=c++17
-        #cmd = "g++ -std=c++11 -I /usr/include/eigen3/ -o "+path_output+"nix.o "+path_output_scr+"nix.cpp -lnetcdf -lyaml-cpp"
         cmd = "g++ -std=c++17 -I /usr/include/eigen3/ -o "+path_modified+"nix.o "+path_output_scr+"nix.cpp -lnetcdf -lyaml-cpp"
 
     elif config == 'brigit':

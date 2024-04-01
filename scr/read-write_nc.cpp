@@ -201,7 +201,7 @@ int f_nc(int N, int N_Z, string path)
         ERR(retval);
         
     /* Define the coordinate variables. We will only define coordinate
-        variables for x and z. Ordinarily we would need to provide
+        variables for x and z. Ordinarily, we would need to provide
         an array of dimension IDs for each variable's dimensions, but
         since coordinate variables only have one dimension, we can
         simply provide the address of that dimension ID (&x_dimid). */

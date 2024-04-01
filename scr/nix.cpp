@@ -34,7 +34,7 @@ int main()
 {
 
     // Specify the path to YAML file.
-    string yaml_name = "nix_params_oscillations.yaml";
+    string yaml_name = "nix_params_resolution.yaml";
 
     // Assuming the path won't exceed 4096 characters.
     char buffer[4096];
@@ -692,7 +692,7 @@ int main()
         // Implicit velocity solver. Picard iteration for non-linear viscosity and beta.
         // Loop over the vertical level for Blatter-Pattyn.
         // We solve one tridiagonal solver for each vertical level.
-        while ( error > nixParams.pcrd.tol && c_picard < nixParams.pcrd.n )
+        while ( error > nixParams.pcrd.tol && c_picard < nixParams.pcrd.n_picard )
         {
             // Save previous iteration solution.
             u_bar_old_1 = u_bar;
@@ -833,10 +833,12 @@ int main()
             // std::cout is typically buffered by default.
             // By using std::flush or std::endl, you ensure that the data is 
             // immediately written to the output device. 
-            cout << "\n t =                  " << t << std::flush;
-            cout << "\n dx_min =             " << 1.0e-3*L*ds(n-2) << std::flush;
-            cout << "\n #Picard iterations:  " << c_picard << std::flush;
-            cout << "\n Estimated error:     " << error << std::flush;
+            cout << "\n t                 = " << t << std::flush;
+            cout << "\n dt                = " << dt << std::flush;
+            cout << "\n dx_min            = " << 1.0e-3*L*ds(n-2) << std::flush;
+            cout << "\n Picard iterations = " << c_picard << std::flush;
+            //cout << "\n Path:                " << nixParams.path.out << std::flush;
+            //cout << "\n Estimated error:     " << error << std::flush;
             
             //cout << "\n noise_now(0) = " << noise_now(0);
             //cout << " theta = " << theta;
