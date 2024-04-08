@@ -3,12 +3,12 @@
 path:
   nix: /home/dmoreno/scr/nix/                              # Nix path.
   read: /home/dmoreno/nix/data/noise_sigm_ocn.12.0.nc      # File with stochastic bc. 
-  out: /home/dmoreno/nix/resolution.even/                     # Output path.
+  out: /home/dmoreno/nix/resolution.even.t.eq/                     # Output path.
 
 time:
   t0: 0.0                 # Starting time [yr].
   tf: 3.0e4              # End time [yr]. 57.0e3, 54.0, 32.0e4, MISMIP-therm: 3.0e4, 90.0e4, Ending time [yr]. EWR: 5.0e3
-  t_eq: 1.5e3             # Equilibration time [yr]. 1.5e3
+  t_eq: 1.0e3             # Equilibration time [yr]. 1.5e3
   output:
     t_n: 100              # Number of output frames
     out_hr: false         # Allow high resolution output.
@@ -99,7 +99,7 @@ friction:
   therm: none            # Temperature-dependent friction. none, two-valued, N_eff
   theta_thw: 273.15      # Basal temperature considered to be fully thawed. 268.15, 273.15
   theta_frz: 253.15      # Basal temperature considered to be fully frozen. 253.15, 233.15.
-  C_ref: 7.624e6         # Reference firction value.
+  C_ref: 7.624e6         # Reference friction value.
   C_frz: 7.624e6         # Frozen friction coeff. 7.624e6 [Pa m^-1/3 yr^1/3]
   C_ews: 7.0e6           # Friction coeff. for early warning signals [Pa m^-1/3 yr^1/3]
   C_thw: 0.1             # Thawed reduction in friction coeff. []
@@ -107,7 +107,7 @@ friction:
 viscosity:
   n_gln: 3.0             # Glen flow law exponent
   eps: 1.0e-8            # Viscosity regularisation term. 
-  therm: true           # Temperature-dependent viscosity.
+  therm: false           # Temperature-dependent viscosity.
   t_eq_A_theta: 1.5e3    # Eq. time to start applying Arrhenius dependency.
   A_act: 4.9e-25         # Threshold rate factor for the two regimes in activation energy [Pa^-3 s^-1] 
   Q_act_1: 60.0          # Activation energies [kJ/mol]. (below theta_act)

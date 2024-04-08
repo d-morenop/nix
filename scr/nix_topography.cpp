@@ -182,11 +182,6 @@ ArrayXd f_H(ArrayXd u_bar, ArrayXd H, ArrayXd S, ArrayXd sigma, \
     {
         for (int i=1; i<dom.n-1; i++)
         {
-            // Centred in sigma, upwind in flux.
-            //H_now(i) = H(i) + dt * ( dx_inv(i) * ( sigma(i) * dL_dt * 0.5 * ( H(i+1) - H(i-1) ) + \
-            //                                - ( q(i) - q(i-1) ) ) + S(i) );
-            
-
             // Centred in sigma, upwind in flux. Unevenly-spaced horizontal grid.
             H_now(i) = H(i) + dt * ( sigma(i) * dL_dt * ( H(i+1) - H(i-1) ) * dx_sym_inv(i) + \
                                             - dx_inv(i) * ( q(i) - q(i-1) ) + S(i) );
@@ -205,6 +200,13 @@ ArrayXd f_H(ArrayXd u_bar, ArrayXd H, ArrayXd S, ArrayXd sigma, \
         
         // Make sure that grounding line thickness is above minimum?
         //H_now(n-1) = max( (rho_w/rho)*D, H_now(n-1));
+
+        // Try relaxation during equilibration to avoid early crashing?
+        if ( t < tm.t_eq )
+        {
+            double rel = 0.7;
+            H_now = H * rel  + ( 1.0 - rel ) * H_now;
+        }
     }
     
     // Implicit scheme.

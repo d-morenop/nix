@@ -19,7 +19,7 @@ Array2d f_dt(double L, double t, double dt, double u_bar_max, \
 
 
     // Fixed time step.
-    if ( tmstep.dt_meth == "fixed" || t < tm.t_eq )
+    if ( tmstep.dt_meth == "fixed" || t < tmstep.t_eq_dt )
     {
         dt = tmstep.dt_min;
     }
