@@ -29,6 +29,7 @@
 #define U_X_NAME "u_x"
 #define U_Z_NAME "u_z"
 #define U_NAME "u"
+#define W_NAME "w"
 #define VISC_NAME "visc"
 #define VISC_BAR_NAME "visc_bar"
 #define A_NAME "A"
@@ -72,6 +73,7 @@
 #define U_X_UNITS "1/yr"
 #define U_Z_UNITS "1/yr"
 #define U_UNITS "m/yr"
+#define W_UNITS "m/yr"
 #define VISC_UNITS "Pa s"
 #define VISC_BAR_UNITS "Pa s"
 #define A_UNITS "Pa^-3 s^-1"
@@ -115,8 +117,8 @@ int retval;
 // SOLUTION SAVED IN .NC FILE: flow_line.nc
 /* IDs for the netCDF file, dimensions, and variables. */
 int ncid, x_dimid, z_dimid, time_dimid;
-int x_varid, z_varid, u_bar_varid, ub_varid, u_bar_x_varid, u_x_varid, u_z_varid, u_varid,H_varid, \
-    visc_varid, visc_bar_varid, a_varid, a_theta_varid, s_varid, \
+int x_varid, z_varid, u_bar_varid, ub_varid, u_bar_x_varid, u_x_varid, u_z_varid, u_varid, w_varid, 
+    H_varid, visc_varid, visc_bar_varid, a_varid, a_theta_varid, s_varid, \
     tau_varid, beta_varid, lmbd_varid, taud_varid, b_varid, L_varid, dL_dt_varid, dt_varid, \
     c_pic_varid, t_varid, mu_varid, omega_varid, u2_bc_varid, u2_dif_varid, \
     picard_error_varid, u2_0_vec_varid, u2_dif_vec_varid, theta_varid, T_oce_varid, C_bed_varid, Q_fric_varid, \
@@ -343,6 +345,9 @@ int f_nc(int N, int N_Z, string path)
     if ((retval = nc_def_var(ncid, U_NAME, NC_DOUBLE, NDIMS_Z,
                     dimids_z, &u_varid)))
         ERR(retval);
+    if ((retval = nc_def_var(ncid, W_NAME, NC_DOUBLE, NDIMS_Z,
+                    dimids_z, &w_varid)))
+        ERR(retval);
     if ((retval = nc_def_var(ncid, LMBD_NAME, NC_DOUBLE, NDIMS_Z,
                     dimids_z, &lmbd_varid)))
         ERR(retval);
@@ -461,6 +466,9 @@ int f_nc(int N, int N_Z, string path)
         ERR(retval);
     if ((retval = nc_put_att_text(ncid, u_varid, UNITS,
                     strlen(U_UNITS), U_UNITS)))
+        ERR(retval);
+    if ((retval = nc_put_att_text(ncid, w_varid, UNITS,
+                    strlen(W_UNITS), W_UNITS)))
         ERR(retval);
     if ((retval = nc_put_att_text(ncid, lmbd_varid, UNITS,
                     strlen(LMBD_UNITS), LMBD_UNITS)))
@@ -694,7 +702,7 @@ int f_write(int c, ArrayXd u_bar, ArrayXd ub, ArrayXd u_bar_x, ArrayXd H, ArrayX
             ArrayXd C_bed, ArrayXd Q_fric, ArrayXd u2_dif_vec, ArrayXd u2_0_vec, \
             double L, double t, double u2_bc, double u2_dif, double error, \
             double dt, int c_picard, double mu, double omega, ArrayXXd theta, \
-            ArrayXXd visc, ArrayXXd u_z, ArrayXXd u_x, ArrayXXd u, double A, double dL_dt, \
+            ArrayXXd visc, ArrayXXd u_z, ArrayXXd u_x, ArrayXXd u, ArrayXXd w, double A, double dL_dt, \
             ArrayXd F_1, ArrayXd F_2, double m_stoch, double smb_stoch, ArrayXXd A_theta, double T_oce, \
             ArrayXXd lmbd)
 {
@@ -777,6 +785,8 @@ int f_write(int c, ArrayXd u_bar, ArrayXd ub, ArrayXd u_bar_x, ArrayXd H, ArrayX
     if ((retval = nc_put_vara_double(ncid, u_x_varid, start_z, cnt_z, &u_x(0,0))))
     ERR(retval);
     if ((retval = nc_put_vara_double(ncid, u_varid, start_z, cnt_z, &u(0,0))))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid, w_varid, start_z, cnt_z, &w(0,0))))
     ERR(retval);
     if ((retval = nc_put_vara_double(ncid, lmbd_varid, start_z, cnt_z, &lmbd(0,0))))
     ERR(retval);

@@ -4,12 +4,14 @@
 
 ArrayXXd f_theta(ArrayXXd theta, ArrayXd ub, ArrayXd H, ArrayXd tau_b, ArrayXd Q_fric, \
                  ArrayXd sigma, ArrayXd dz, double dt, ArrayXd ds, double L, \
-                 double dL_dt, double t, ArrayXd w, ArrayXXd strain_2d, \
-                 DomainParams& dom, ThermodynamicsParams& thrm, DynamicsParams& dyn, BoundaryConditionsParams& bc)
+                 double dL_dt, double t, ArrayXXd w, ArrayXXd strain_2d, \
+                 DomainParams& dom, ThermodynamicsParams& thrm, DynamicsParams& dyn, \
+                 BoundaryConditionsParams& bc, ConstantsParams& cnst, CalvingParams& calv)
 {
     
-    ArrayXXd theta_now(dom.n,dom.n_z);
-    ArrayXd dx_inv(dom.n-1), dz_inv(dom.n), dz_2_inv(dom.n), Q_f_k(dom.n);
+    ArrayXXd out(dom.n,dom.n_z+1), theta_now(dom.n,dom.n_z);
+    ArrayXd dx_inv(dom.n-1), dz_inv(dom.n), dz_2_inv(dom.n), Q_f_k(dom.n), b_dot(dom.n);
+    ArrayXd b_melt = ArrayXd::Zero(dom.n);
  
     // Evenly-spaced vertical grid, though x-dependency via ice thickness.
     dz_inv   = 1.0 / dz;
@@ -31,18 +33,27 @@ ArrayXXd f_theta(ArrayXXd theta, ArrayXd ub, ArrayXd H, ArrayXd tau_b, ArrayXd Q
             // Since w < 0 we need an opposite discretization scheme in theta.
             // Vertical velocity con z-dependency.
             // Unevenly-spaced vertical grid.
+            // w(i,j) now also depends on x!
+            // Try symmetric in vertical advection (factor 0.5 since it is evenly-spaced in z direction)
             theta_now(i,j) = theta(i,j) + dt * ( thrm.kappa * dz_2_inv(i) * \
                             ( theta(i,j+1) - 2.0 * theta(i,j) + theta(i,j-1) ) + \
                             ( sigma(i) * dL_dt - ub(i) ) * \
                             ( theta(i,j) - theta(i-1,j) ) * dx_inv(i-1) + \
-                            ( theta(i,j) - theta(i,j-1) ) * ( - w(j) ) * dz_inv(i) );
+                            0.5 * ( theta(i,j+1) - theta(i,j-1) ) * ( - w(i,j) ) * dz_inv(i) );
+
         }
         
         // Boundary conditions. Geothermal heat flow at the base.
         // We add friciton heat contribution Q_f_k. w(z=0) = 0 
+        // thrm.G_k was alread transformed in readparams to [K/m].
+        /*theta_now(i,0) = theta_now(i,1) + dz(i) * ( thrm.G_k + Q_f_k(i) ) + \
+                            ( sigma(i) * dL_dt - ub(i) ) * \
+                            ( theta(i,0) - theta(i-1,0) ) * dx_inv(i-1); */
+        
         theta_now(i,0) = theta_now(i,1) + dz(i) * ( thrm.G_k + Q_f_k(i) ) + \
                             ( sigma(i) * dL_dt - ub(i) ) * \
-                            ( theta(i,0) - theta(i-1,0) ) * dx_inv(i-1); 
+                            ( theta(i,0) - theta(i-1,0) ) * dx_inv(i-1) + \
+                            ( theta(i,1) - theta(i,0) ) * ( - w(i,0) ) * dz_inv(i);
 
         // Surface.
         theta_now(i,dom.n_z-1) = bc.therm.T_air;
@@ -55,23 +66,41 @@ ArrayXXd f_theta(ArrayXXd theta, ArrayXd ub, ArrayXd H, ArrayXd tau_b, ArrayXd Q
     //theta_now(0,0)     = theta_now(0,1) + dz(0) * G_k; 
     //theta_now(0,n_z-1) = T_air;
 
+    // Boundary condition at x = L??
+    theta_now.row(dom.n-1) = theta_now.row(dom.n-2);
+
     // For the DIVA solver, consider the strain heat contribution.
     if ( dyn.vel_meth == "DIVA" || dyn.vel_meth == "Blatter-Pattyn" )
     {
         theta_now = theta_now + ( thrm.kappa / thrm.k ) * strain_2d * dt;
     }
 
-    // TRY RELAXATION TO AVOID SPURIOUS RESULTS DURING SPIN-UP.
-    double rel = 0.75;
-    theta_now = ( 1.0 - rel ) * theta_now + rel * theta;
+    // Impose relaxation to avoid crushing during spin-up.
+    if ( t < 5.0e3 )
+    {
+        double rel = 0.7; // 0.75
+        theta_now = ( 1.0 - rel ) * theta_now + rel * theta;
+    }
+
+    // Compute total basal melting. 
+    // [m/s] --> [m/yr].
+    b_dot  = cnst.sec_year * ( thrm.k / (cnst.rho * calv.sub_shelf_melt.L_i ) ) * ( thrm.G_k + Q_f_k );
+
+    // Only apply for those point that reached the pressure melting point.
+    b_melt = (theta_now.col(0) >= thrm.theta_max).select(b_dot, b_melt);
+
+    
 
     // Pressure melting point as the upper bound.
     // theta = (theta.array() > 273.15).select(273.15, theta);
-    theta_now = (theta_now.array() > thrm.theta_max).select(thrm.theta_max, theta_now);
+    theta_now = (theta_now > thrm.theta_max).select(thrm.theta_max, theta_now);
 
 
     // Test for the grounding line column.
     //theta_now.row(dom.n-1) = theta_now.row(dom.n-2);
 
-    return theta_now;
+    // Output.
+    out << theta_now, b_melt;
+
+    return out;
 }

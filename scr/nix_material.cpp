@@ -88,8 +88,13 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
             // Horizontal derivatives.
             for (int i=1; i<dom.n-1; i++)
             {
-                //u_bar_x(i) = 0.5 * ( u_bar(i+1) - u_bar(i-1) ) * dx_inv(i);
-                u_bar_x(i) = ( u_bar(i+1) - u_bar(i) ) * dx_inv(i);
+                // Try this for stability of the vertical advection.
+                u_bar_x(i) = ( u_bar(i+1) - u_bar(i-1) ) * dx_sym_inv(i);
+                
+                // Currently working.
+                //u_bar_x(i) = ( u_bar(i+1) - u_bar(i) ) * dx_inv(i);
+                
+                // Not working.
                 //u_bar_x(i) =  ( u_bar(i+1) - u_bar(i-1) ) * dx_sym_inv(i);
             }
 

@@ -34,7 +34,7 @@ int main()
 {
 
     // Specify the path to YAML file.
-    string yaml_name = "nix_params_resolution.yaml";
+    string yaml_name = "nix_params_mismip.yaml";
 
     // Assuming the path won't exceed 4096 characters.
     char buffer[4096];
@@ -164,9 +164,10 @@ int main()
     ArrayXd u_bar_old_2(n);  
     ArrayXd u2_0_vec(n);                 // Ranged sampled of u2_0 for a certain iteration.
     ArrayXd u2_dif_vec(n);               // Difference with analytical BC.
-    ArrayXd w(n);                        // Synthetic vertical velocity.
+    //ArrayXd w(n);                        // Synthetic vertical velocity.
     ArrayXd F_1(n);                      // Integral for DIVA solver (Arthern et al., 2015)
     ArrayXd F_2(n);                      // Integral for DIVA solver (Arthern et al., 2015)
+    ArrayXd b_melt(n);                    // Basal melt [m/yr]
     
     // Stochastic matrices and vectors.
     ArrayXXd noise(2, nixParams.stoch.N);                            // Matrix to allocate stochastic BC.
@@ -189,6 +190,7 @@ int main()
 
     // MATRICES.
     ArrayXXd sol(n,n_z+1);               // Matrix output. sol(2*n+1,2*n_z+1);
+    ArrayXXd sol_thrm(n,n_z+1);  
     ArrayXXd u(n,n_z);                   // Full velocity u(x,z) [m/yr].  
     ArrayXXd u_old(n,n_z);
     ArrayXXd u_z(n,n_z);                 // Full vertical vel derivative [1/yr]
@@ -253,8 +255,9 @@ int main()
     beta        = ArrayXd::Constant(n, beta_0);             // [Pa yr / m]
     tau_b       = beta * ub;
 
-    // Temperature initial conditions (-25ºC).
-    theta = ArrayXXd::Constant(n, n_z, theta_0);
+    // Thermodynamical initial conditions (-25ºC).
+    theta  = ArrayXXd::Constant(n, n_z, theta_0);
+    b_melt = ArrayXd::Zero(n);
 
     // Intialize ice thickness and SMB.
     H = ArrayXd::Constant(n, H_0); // 10.0
@@ -265,6 +268,9 @@ int main()
     dz = H / n_z;
 
     // Initialize vertical velocity (only x-dependency).
+    // USE MATRIX FROM FLOW INCOMPRESSIBILITY.
+    ArrayXXd w(n,n_z);    
+    /*
     if ( nixParams.thrmdyn.adv_w.apply == false )
     {
         w = ArrayXd::Zero(n);
@@ -280,6 +286,7 @@ int main()
         // Positive vertical direction defined downwards.
         w = - w;
     }
+    */
     /////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////
 
@@ -329,75 +336,13 @@ int main()
     }
     
     // MISMIP THERMODYNAMICS. 
-    else if ( exp == "mismip_3_therm" )
-    {
-        // Time length for each forcing step. 
-
-
-        // ICE RATE FACTOR FORCING. [Pa^-3 s^-1].
-        // Exps 1-2 hysteresis forcing.
-        /*
-        t_s << 3.0e4, 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4,
-               30.0e4, 33.0e4, 36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4;
-
-        A_s << 4.6416e-24, 2.1544e-24, 1.0e-24, 4.6416e-25, 2.1544e-25, 1.0e-25,
-                4.6416e-26, 2.1544e-26, 1.0e-26,
-                2.1544e-26, 4.6416e-26, 1.0e-25, 2.1544e-25, 4.6416e-25, 1.0e-24,
-                2.1544e-24, 4.6416e-24; 
-        
-        A_s = A_s * sec_year;   
-        */
-        
-        /*
-        // Exp 3 hysteresis forcing.
-        A_s << 3.0e-25, 2.5e-25, 2.0e-25, 1.5e-25, 1.0e-25, 5.0e-26, 2.5e-26, 5.0e-26, 1.0e-25, 
-               1.5e-25, 2.0e-25, 2.5e-25, 3.0e-25; 
-
-        // Time length for a certain A value. 
-        t_s << 3.0e4, 4.5e4, 6.0e4, 7.5e4, 9.0e4, 12.0e4, 15.0e4, 16.5e4, 18.0e4, 
-               21.0e4, 24.0e4, 27.0e4, 28.5e4;
-
-        // Unit conversion: [Pa^-3 s^-1] --> [Pa^-3 yr^-1].
-        A_s = A_s * sec_year;   
-        */
-        
-        
-        // ICE HARDNESS CONVERSION TO TEMPERATURE.
-        // Corresponding temperature amplitude is not wide enough for advance/retreate.
-        /*
-        for (int i=0; i<n_s; i++)
-        {
-            if ( A_s(i) < A_act )
-            {
-                T_air_s(i) = - Q_act(0) / ( R * log(A_s(i) / A_0(0)) );
-            }
-            else
-            {
-                T_air_s(i) = - Q_act(1) / ( R * log(A_s(i) / A_0(1)) );
-            }
-        }
-        */
-
-
-        
+    else if ( exp == "mismip_1_therm" || exp == "mismip_3_therm" )
+    {    
         // OCEAN TEMPERATURES ANOMALIES FORCING.
         // Change of sign in (T_0-T_oce) to produce advance/retreate.
         // Make sure length of positive/negative anomalies is the same
         // to retireve the initial state. Close hysteresis loop.
-        /*
-        t_s << 6.0e4, 7.5e4, 9.0e4, 10.5e4, 12.0e4, 13.5e4, 15.0e4, 16.5e4, 18.0e4, 19.5e4;
-        T_oce_s << 273.15, 273.65, 274.15, 274.65, 275.15, 275.65,
-                   274.65, 274.15, 273.65, 273.15;
-        */
-
-        /*
-        t_s << 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4, 30.0e4;
-        T_oce_s << 273.15, 274.15, 275.15, 276.15, 277.15, 276.15, 275.15, 274.15, 273.15;
-        T_air_s = ArrayXd::Constant(n_s, 203.15);
-        */
-        
-        
-        t_s << 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4, 30.0e4,
+        /*t_s << 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4, 30.0e4,
                33.0e4, 36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4, 54.0e4, 57.0e4,
                60.0e4, 63.0e4, 66.0e4, 69.0e4, 72.0e4, 75.0e4, 78.0e4, 81.0e4, 84.0e4, 
                87.0e4, 90.0e4;
@@ -407,52 +352,19 @@ int main()
                    279.65, 279.15, 278.68, 278.15, 277.65, 277.15, 
                    276.65, 276.15, 275.65, 275.15, 274.65, 274.15, 273.65, 273.15;
 
-        T_air_s = ArrayXd::Constant(n_s, 193.15); // 193.15
+        T_air_s = ArrayXd::Constant(n_s, 193.15); // 193.15*/
+
         
-
-
-        // FORCING DIRECTLY ON MELTING AND THEN TRANSFORM TO TEMPERATURE TO PLOT.
-        /*
-        t_s << 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4, 30.0e4,
-               33.0e4, 36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4, 54.0e4, 57.0e4,
-               60.0e4, 63.0e4, 66.0e4, 69.0e4, 72.0e4, 75.0e4, 78.0e4;
         
-        M_s << 0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0, 50.0, 55.0, 
-               60.0, 55.0, 50.0, 45.0, 40.0, 35.0, 30.0, 25.0, 20.0, 15.0, 10.0, 5.0, 0.0;
-        T_air_s = ArrayXd::Constant(n_s, 193.15); // 193.15
-        */
-        
+        // ONLY CONSTANT ATMOSPHERIC FORCING. No ocean anomalies.
+        t_s << 3.0e4, 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4,
+               30.0e4, 33.0e4, 36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4;
 
-        // COMBINED OCEAN + AIR FORCING.
-        // Factor of 0.25 for ocean temperatures compared to air (Golledge) (1/0.25).
-        /*
-        t_s << 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4, 30.0e4;
-        T_oce_s << 273.15, 274.15, 275.15, 276.15, 277.15, 276.15, 275.15, 274.15, 273.15;
+        T_air_s = ArrayXd::Constant(n_s, nixParams.bc.therm.T_air); // 193.15
 
-        T_air_s = 200.15 + ( 4.0 * ( T_oce_s - T_0 ) );
-        //T_air_s = 193.15 + ( 4.0 * ( T_oce_s - T_0 ) );
-        */
-        
-
-       /*
-        t_s << 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4, 30.0e4, \
-               33.0e4, 36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4, 54.0e4;
-        T_oce_s << 273.15, 273.65, 274.15, 274.65, 275.15, 275.65, 276.15, 276.65, 277.15, \
-                   276.65, 276.15, 275.65, 275.15, 274.65, 274.15, 273.65, 273.15;
-        T_air_s = 193.15 + ( 4.0 * ( T_oce_s - T_0 ) );
-        */
-        
-        /*
-        // TRY THE OCEAN FORCING WITHOUT REFREEZING. JUST POSITIVE ANOMALIES.
-        // START THE DIAGRAM FROM THE REGITH WITH VERY COLD TEMPERATURES!
-        T_oce_s << 273.15, 272.65, 272.15, 271.65, 271.15, 
-                   271.65, 272.15, 272.65, 273.15, 273.65, 274.15, 274.65, 
-                   275.15, 274.65, 274.15, 273.65, 273.15;
+        T_oce_s = ArrayXd::Zero(n_s); // 193.15
 
 
-        // Constant air temperature for the oceanic forcing.
-        T_air_s = ArrayXd::Constant(n_s, 243.15);
-        */
 
         // AIR TEMPERATURES FORCING.
         // Stable forcing.
@@ -463,14 +375,17 @@ int main()
         T_air_s << 253.15, 243.15, 233.15, 223.15, 213.15, 203.15, 198.15, 193.15, 193.15,
                    198.15, 203.15, 213.15, 223.15, 233.15, 243.15, 253.15, 253.15;
         */
+
+       // High resolution.
+        /*t_s << 6.0e4, 10.0e4, 14.0e4, 16.0e4, 20.0e4, 24.0e4, 28.0e4, 32.0e4, 36.0e4, 40.0e4,
+               44.0e4, 48.0e4, 52.0e4, 56.0e4, 60.0e4, 64.0e4, 68.0e4, 72.0e4, 76.0e4, 80.0e4,
+               84.0e4, 88.0e4, 92.0e4, 96.0e4, 100.0e4, 104.0e4;
+
+        T_air_s << 253.15, 248.15, 243.15, 238.15, 233.15, 228.15, 223.15, 218.15, 213.15, 208.15,
+                   203.15, 198.15, 193.15, 193.15, 198.15, 203.15, 208.15, 213.15, 218.15, 223.15,
+                   228.15, 233.15, 238.15, 243.15, 248.15, 253.15;
+        */
         
-
-       // Temperature initial conditions (-25ºC).
-       //theta = ArrayXXd::Constant(n, n_z, T_air_s(0));
-
-       // Convert to kelvin.
-       //cout << "\n Air temperatures = " << T_air_s;
-       //cout << "\n ocean temperatures = " << T_oce_s;
 
         // Initialization.
         T_air   = T_air_s(0);
@@ -585,7 +500,7 @@ int main()
         }
 
         // MISMIP-THERM EXPERIMENTS.
-        else if ( exp == "mismip_therm" )
+        else if ( exp == "mismip_1_therm" || exp == "mismip_3_therm" )
         {
             // Update rate factor and T_air value.
             if ( t > t_s(c_s) )
@@ -798,7 +713,7 @@ int main()
             // Save previous iteration solution (before NaN encountered).
             f_write(c, u_bar_old_1, ub, u_bar_x, H, visc_bar, S, tau_b, beta, tau_d, bed, \
                     C_bed, Q_fric, u2_dif_vec, u2_0_vec, L, t, u_x_bc, u2_dif, \
-                    error, dt, c_picard, mu, omega, theta, visc, u_z, u_x, u, A, dL_dt, \
+                    error, dt, c_picard, mu, omega, theta, visc, u_z, u_x, u, w, A, dL_dt, \
                     F_1, F_2, m_stoch, smb_stoch, A_theta, T_oce, lmbd);
 
             // Close nc file. 
@@ -841,7 +756,7 @@ int main()
             //cout << "\n Estimated error:     " << error << std::flush;
             
             //cout << "\n noise_now(0) = " << noise_now(0);
-            //cout << " theta = " << theta;
+            //cout << " b_melt = " << b_melt;
 
             // Write solution in nc.
             // Sub-shelf melting as forcing of MISMIP+thermodynamics.
@@ -849,7 +764,7 @@ int main()
 
             f_write(c, u_bar, ub, u_bar_x, H, visc_bar, S, tau_b, beta, tau_d, bed, \
                     C_bed, Q_fric, u2_dif_vec, u2_0_vec, L, t, u_x_bc, u2_dif, \
-                    error, dt, c_picard, mu, omega, theta, visc, u_z, u_x, u, A, dL_dt, \
+                    error, dt, c_picard, mu, omega, theta, visc, u_z, u_x, u, w, A, dL_dt, \
                     F_1, F_2, m_stoch, smb_stoch, A_theta, T_oce, lmbd);
 
             ++c;
@@ -876,21 +791,32 @@ int main()
         // Update vertical discretization.
         dz = H / n_z;
 
+        
 
         // THERMODYNAMICS.
         // Vertical advection is the key to obtain oscillations.
         // It provides with a feedback to cool down the ice base and balance frictional heat.
         if ( nixParams.thrmdyn.therm == false || t < nixParams.tm.t_eq )
         {
-            theta = ArrayXXd::Constant(n, n_z, 253.15);
+            theta = ArrayXXd::Constant(n, n_z, theta_0);
         }
-        
-        // Integrate Fourier heat equation.
+
+    
+        // Obtain vertical velocities and integrate Fourier heat equation.
         else if ( nixParams.thrmdyn.therm == true && t >= nixParams.tm.t_eq )
         {
-            theta = f_theta(theta, ub, H, tau_b, Q_fric, sigma, dz, \
-                            dt, ds, L, dL_dt, t, w, strain_2d, \
-                            nixParams.dom, nixParams.thrmdyn, nixParams.dyn, nixParams.bc);
+            // Vertical velocity from incompressibility of ice flow.
+            w = f_w(u_bar_x, H, dz, b_melt, nixParams.dom);
+
+            // Integrate heat equation and calculate basal melt.
+            sol_thrm = f_theta(theta, ub, H, tau_b, Q_fric, sigma, dz, \
+                                dt, ds, L, dL_dt, t, w, strain_2d, \
+                                    nixParams.dom, nixParams.thrmdyn, nixParams.dyn, \
+                                        nixParams.bc, nixParams.cnst, nixParams.calv);
+
+            // Allocate variables.
+            theta  = sol_thrm.block(0,0,n,n_z);
+            b_melt = sol_thrm.block(0,n_z,n,1);
 
         }
 

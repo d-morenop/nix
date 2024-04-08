@@ -21,11 +21,11 @@ from matplotlib.gridspec import GridSpec
 
 
 path_fig        = '/home/dmoreno/figures/nix/oscillations/S-C_thw/'
-path_now        = '/home/dmoreno/nix/oscillations/S-C_thw_hr_dt.fixed/S_0.0.10_C_thw.0.10/'
+path_now        = '/home/dmoreno/nix/basal.melt.test/n.75.00_dt_min.0.05/'
 path_stoch      = '/home/dmoreno/nix/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
-
+# '/home/dmoreno/nix/oscillations/S-C_thw_hr_dt.fixed/S_0.0.10_C_thw.0.10/'
 # '/home/dmoreno/nix/ews/M_rates/smooth/sigma.1.0_A.3.0e-26_yp.176/''
 # /home/dmoreno/flowline/mismip_bp/exp_3/n.100_nz.10/
 
@@ -33,17 +33,17 @@ file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 save_series        = 0
 save_series_comp   = 0
 save_shooting      = 0
-save_domain        = 0
+save_domain        = 1
 coloured_domain    = 0
 save_var_frames    = 0
 save_series_frames = 0
-save_theta         = 0
+save_theta         = 1
 save_visc          = 0
-save_u             = 0
+save_u             = 1
 save_u_der         = 0
 time_series_gif    = 0
 save_L             = 0
-save_series_2D     = 1
+save_series_2D     = 0
 heat_map_fourier   = 0
 save_fig           = False
 read_stoch_nc      = False
@@ -74,14 +74,14 @@ nix_name = ['u_bar', 'ub', 'u_bar_x', 'u_z', 'u', 'H', 'visc_bar', 'tau_b', 'tau
 				 'BC_error', 'u2_0_vec', 'u2_dif_vec', 'picard_error', \
 				 'c_picard', 'dt', 'mu', 'omega', 'A', 'theta', 'S', \
 				 'm_stoch', 'smb_stoch', 'Q_fric', 'beta', 'visc', 'u_x', 'F_1', 'F_2', \
-				 'A_theta', 'T_oce', 'lmbd']
+				 'A_theta', 'T_oce', 'lmbd', 'w']
 
 var_name 	  = ['u_bar', 'ub', 'u_bar_x', 'u_z', 'u', 'H', 'visc_bar', 'tau_b', 'tau_d', \
 				 'L', 'dL_dt', 't', 'b', 'C_bed', 'u_x_bc', \
 				 'dif', 'u2_0_vec', 'u2_dif_vec', 'picard_error', \
 				 'c_picard', 'dt', 'mu', 'omega_picard', 'A_s', 'theta', 'S', \
 				 'm_stoch', 'smb_stoch', 'Q_fric', 'beta', 'visc', 'u_x', 'F_1', 'F_2', \
-				 'A_theta', 'T_oce', 'lmbd']
+				 'A_theta', 'T_oce', 'lmbd', 'w']
 
 
 # Dimension.
@@ -211,7 +211,7 @@ def f_bed(x, exp, n):
 
 # Account for unevenly-spaced horizontal grid.
 sigma = np.linspace(0, 1.0, s[2])
-sigma_plot = sigma**(0.5) # 0.5 (uneven), 1.0 (even)
+sigma_plot = sigma**(1.0) # 0.5 (uneven), 1.0 (even)
 
 
 
@@ -882,7 +882,7 @@ if save_domain == 1:
 
 if save_var_frames == 1:
 	
-	for i in range(int(0.8*l), l, 50): # (0, l, 10), (l-1, l, 1)
+	for i in range(0, l, 1): # (0, l, 10), (l-1, l, 1)
 		
 		#L_plot  = np.linspace(0, L[i], s[2])
 		L_plot = sigma_plot * L[i]
@@ -921,7 +921,10 @@ if save_var_frames == 1:
 	  	 		linewidth=2.0, alpha=1.0, label=r'$\partial H/\partial x$') 
 		#ax4.plot(L_plot, beta[i,:], linestyle='-', color='brown', marker='None', \
 	  	# 		linewidth=2.0, alpha=1.0, label=r'$S(x) $') 
-		ax4.plot(L_plot, b[i,:], linestyle='-', color='brown', marker='None', \
+		
+		#ax4.plot(L_plot, b[i,:], linestyle='-', color='brown', marker='None', \
+	  	# 		linewidth=2.0, alpha=1.0, label=r'$S(x) $') 
+		ax4.plot(L_plot, u_bar_x[i,:], linestyle='-', color='brown', marker='None', \
 	  	 		linewidth=2.0, alpha=1.0, label=r'$S(x) $') 
 		ax2.plot(L_plot, H[i,:], linestyle='-', color='black', marker='None', \
 	   			linewidth=2.0, alpha=1.0, label=r'$H(x)$')  
@@ -935,7 +938,7 @@ if save_var_frames == 1:
 	
 		ax.set_ylabel(r'$ \bar{u} (x) \ (\mathrm{m/yr})$',fontsize=16)
 		ax3.set_ylabel(r'$\bar{\eta} (x)\ (\mathrm{Pa \cdot s})$',fontsize=16)
-		ax4.set_ylabel(r'$ b(x) \ (km)$',fontsize=16)
+		ax4.set_ylabel(r'$ \bar{u}_x (x) \ (\mathrm{1/yr})$',fontsize=16)
 		#ax4.set_ylabel(r'$ \beta(x) \ (\mathrm{kPa \ yr/m})$',fontsize=16)
 		#ax5.set_ylabel(r'$\partial \bar{u}_{b}/\partial x $',fontsize=16)
 		ax5.set_ylabel(r'$ \bar{\theta}_{b} \ (^{\circ} \mathrm{C}) $',fontsize=16)
@@ -1034,12 +1037,12 @@ if save_theta == 1:
 	y_labels = np.linspace(0, n_z, z_ticks, dtype=int)
 
 	# Theta limits.
-	theta_min = np.round(np.min(theta), 1)
+	theta_min = -30.0
 	theta_max = 0.0
 
 	cb_ticks = np.round(np.linspace(theta_min, theta_max, 6),1)
 	
-	for i in range(20, l, 10):
+	for i in range(0, l, 10):
 
 		# Update x_labels as domain extension changes in each iteration.
 		x_labels  = np.linspace(0, L[i], n_ticks, dtype=int)
@@ -1187,7 +1190,7 @@ if save_u == 1:
 	# Number of x ticks.
 	n_ticks = 5
 	x_ticks = np.linspace(0, n, n_ticks)
-	n_z     = np.shape(visc)[1]
+	n_z     = np.shape(w)[1]
 	z_ticks = int(0.2 * n_z + 1)
 
 	# n_z-0.5 to avoid half of grid cell in black when plotting.
@@ -1202,15 +1205,18 @@ if save_u == 1:
 
 	#u_x_min = np.nanmin(u_x[s[0]-1])
 	#u_x_max = np.nanmax(u_x[s[0]-1])
-	u_min = 1.0
-	u_max = 1.0e3
+	"""u_min = 1.0
+	u_max = 1.0e3"""
+
+	w_min = -5.0
+	w_max = 0.0
 
 	#cb_ticks_u   = np.linspace(u_min, u_max, 6)
 	#cb_ticks_u_z = np.round(np.linspace(u_z_min, u_z_max, 6), 4)
 
 	ind_plot = np.array([0, int(0.5*s[0]), s[0]-1])
 	
-	for i in range(l-1, l, 1): # (l-1, l, 1), ind_plot
+	for i in range(0, l, 10): # (l-1, l, 1), ind_plot
 
 		# Update x_labels as domain extension changes in each iteration.
 		x_labels  = np.linspace(0, L[i], n_ticks, dtype=int)
@@ -1222,10 +1228,14 @@ if save_u == 1:
 		ax  = fig.add_subplot(111)
 
 		# Flip theta matrix so that the plot is not upside down.
-		#im = ax.imshow(np.flip(u[i,:,:],axis=0), cmap='plasma', \
-		#				vmin=u_min, vmax=u_max, aspect='auto')
-		im = ax.imshow(np.flip(np.abs(u[i,:,:]),axis=0), vmin=u_min, vmax=u_max,\
-		 				 norm='log', cmap='viridis', aspect='auto')
+		#im = ax.imshow(np.flip(np.abs(w[i,:,:]),axis=0), vmin=w_min, vmax=w_max,\
+		# 				 norm='log', cmap='viridis', aspect='auto')
+  
+		cmap = plt.get_cmap("viridis") #RdYlBu, Spectral, rainbow, jet, turbo
+		reversed_cmap = cmap.reversed()
+
+		im = ax.imshow(np.flip((w[i,:,:]),axis=0), vmin=w_min, vmax=w_max,\
+		 				cmap=reversed_cmap, aspect='auto')
 	
 	
 		ax.set_ylabel(r'$ \mathbf{n}_{z} $', fontsize=20)
@@ -1238,7 +1248,7 @@ if save_u == 1:
 		#cb.set_ticks(cb_ticks_u)
 		#cb.set_ticklabels(list(cb_ticks_u), fontsize=14)
 
-		cb.set_label(r'$ u (x,z) \ ( \mathrm{m / yr})$', \
+		cb.set_label(r'$ w (x,z) \ ( \mathrm{m / yr})$', \
 					 rotation=90, labelpad=6, fontsize=20)
 
 		"""

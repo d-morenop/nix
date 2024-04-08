@@ -456,3 +456,50 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_sym, Array
     
     return out;
 }
+
+// Vertical velocity calculation.
+ArrayXXd f_w(ArrayXd u_bar_x, ArrayXd H, ArrayXd dz, ArrayXd b_melt, DomainParams& dom)
+{
+    ArrayXXd w(dom.n, dom.n_z);
+    
+    // NEEDS TO BE OPTIMISED.
+    // CHECK THIS!!!!!!!!!!!!!!!!!!!!!!!!
+    // For now, we use u_bar(x), but formally we should use the full u(x,z). 
+    
+    /*for (int i=0; i<dom.n; i++)
+    {
+        // Start in zero as we currently assume zero vertical velocity at the base.
+        double sum = 0.0;
+
+        for (int j=0; j<dom.n_z; j++)
+        { 
+            sum += u_bar_x(i) * dz(i);
+            w(i,j) = sum;
+        }
+
+        // Basal boundary condition.
+        w(i,0) = 0.0; 
+    }*/
+
+    // For the SSA and DIVA. H(i) = n_z * dz(i) --> w.col(j) = u_bar_x * H_norm * ( j / dom.n_z )
+    // Add contribution from basal melt in [m / yr].
+    ArrayXd H_norm = H / dom.n_z;
+    for (int j=0; j<dom.n_z; j++)
+    { 
+        // Include basal melting b_melt.
+        w.col(j) = u_bar_x * H_norm * j + b_melt;
+    }
+
+    
+
+    // For now, test in (n-1) and (n-2) with the same vertical velocity profile??
+    // To avoid instabilities at the grounding line?
+    //w.row(dom.n-1) = w.row(dom.n-2);
+
+    // Ensure negative values to be consisten with vertical adv discretisation.
+    w = - abs(w);
+    // Currently assume an evenly-spaced vertical coordinate dz(x).
+    //w.row(i) = w.row(i) * H(i);
+
+    return w;
+}
