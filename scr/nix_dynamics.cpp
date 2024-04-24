@@ -323,8 +323,8 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_sym, Array
         // Replace potential negative values with given value. (result.array() < 0).select(0, result);
         // Sometimes, u_bar(1) < 0 so that u_bar(0) > 0 after the BC and the model crashes.
         // Necessary for SSA solver, not DIVA.
-        //u_bar = (u_bar < 0.0).select(0.0, u_bar);
-        u_bar = (u_bar < 0.0).select(0.25 * u_bar(2), u_bar);
+        u_bar = (u_bar < 0.0).select(0.0, u_bar);
+        //u_bar = (u_bar < 0.0).select(0.25 * u_bar(2), u_bar);
 
         // This works but yields extremely thick ice at the divde.
         //u_bar = (u_bar < 0.0).select(0.0, u_bar);
@@ -488,6 +488,10 @@ ArrayXXd f_w(ArrayXd u_bar_x, ArrayXd H, ArrayXd dz, ArrayXd b_melt, DomainParam
     { 
         // Include basal melting b_melt.
         w.col(j) = u_bar_x * H_norm * j + b_melt;
+
+        // Test for old vertical velocity.
+        //ArrayXd a = ArrayXd::Constant(dom.n, 1.0);
+        //w.col(j) = pow(j/dom.n_z,0.33333) * 0.3 * a;
     }
 
     

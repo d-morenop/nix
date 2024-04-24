@@ -21,25 +21,26 @@ from matplotlib.gridspec import GridSpec
 
 
 path_fig        = '/home/dmoreno/figures/nix/oscillations/S-C_thw/'
-path_now        = '/home/dmoreno/nix/basal.melt.test/n.75.00_dt_min.0.05/'
+path_now        = '/home/dmoreno/nix/mismip_therm/T_oce_f_q/steps/A_const/gamma_T_quad/gamma_sensitivity_even/n.100_n_z.20_A_cnst.5e-25/'
 path_stoch      = '/home/dmoreno/nix/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
+# /home/dmoreno/nix/mismip_therm/T_oce_f_q/steps/A_const/gamma_T_quad/gamma_sensitivity_even/
 # '/home/dmoreno/nix/oscillations/S-C_thw_hr_dt.fixed/S_0.0.10_C_thw.0.10/'
 # '/home/dmoreno/nix/ews/M_rates/smooth/sigma.1.0_A.3.0e-26_yp.176/''
 # /home/dmoreno/flowline/mismip_bp/exp_3/n.100_nz.10/
 
 # Select plots to be saved (boolean integer).
-save_series        = 0
+save_series        = 1
 save_series_comp   = 0
 save_shooting      = 0
 save_domain        = 1
 coloured_domain    = 0
 save_var_frames    = 0
 save_series_frames = 0
-save_theta         = 1
+save_theta         = 0
 save_visc          = 0
-save_u             = 1
+save_u             = 0
 save_u_der         = 0
 time_series_gif    = 0
 save_L             = 0
@@ -55,7 +56,7 @@ smth_series        = 0
 # MISMIP bedrock experiments.
 # exp = 1: inclined bed; exp = 3: overdeepening bed.
 exp_name = ['mismip_1', 'mismip_3', 'glacier_ews']
-idx = 0
+idx = 1
 exp = exp_name[idx]
 
 # Create figures directory if it does not exist.
@@ -74,14 +75,14 @@ nix_name = ['u_bar', 'ub', 'u_bar_x', 'u_z', 'u', 'H', 'visc_bar', 'tau_b', 'tau
 				 'BC_error', 'u2_0_vec', 'u2_dif_vec', 'picard_error', \
 				 'c_picard', 'dt', 'mu', 'omega', 'A', 'theta', 'S', \
 				 'm_stoch', 'smb_stoch', 'Q_fric', 'beta', 'visc', 'u_x', 'F_1', 'F_2', \
-				 'A_theta', 'T_oce', 'lmbd', 'w']
+				 'A_theta', 'T_oce', 'lmbd']
 
 var_name 	  = ['u_bar', 'ub', 'u_bar_x', 'u_z', 'u', 'H', 'visc_bar', 'tau_b', 'tau_d', \
 				 'L', 'dL_dt', 't', 'b', 'C_bed', 'u_x_bc', \
 				 'dif', 'u2_0_vec', 'u2_dif_vec', 'picard_error', \
 				 'c_picard', 'dt', 'mu', 'omega_picard', 'A_s', 'theta', 'S', \
 				 'm_stoch', 'smb_stoch', 'Q_fric', 'beta', 'visc', 'u_x', 'F_1', 'F_2', \
-				 'A_theta', 'T_oce', 'lmbd', 'w']
+				 'A_theta', 'T_oce', 'lmbd']
 
 
 # Dimension.
@@ -211,7 +212,7 @@ def f_bed(x, exp, n):
 
 # Account for unevenly-spaced horizontal grid.
 sigma = np.linspace(0, 1.0, s[2])
-sigma_plot = sigma**(1.0) # 0.5 (uneven), 1.0 (even)
+sigma_plot = sigma**(0.5) # 0.5 (uneven), 1.0 (even)
 
 
 
@@ -290,7 +291,7 @@ if save_series == 1:
 	t_plot = 1.0e-3 * t
 
 	# Ice flux.
-	q = u_bar * 1.0e3 * H
+	q = u_bar * 1.0e-3 * H
 
 	# Plot bed peak position.
 	y_p = np.full(len(t_plot), 350)
@@ -339,8 +340,10 @@ if save_series == 1:
 			 markersize=3.0, linewidth=2.0, alpha=1.0, label=r'$u_{b}(x)$') 
 	
 	# Basal temperature at the grounding line.
-	ax4.plot(t_plot, theta[:,0,s[2]-1], linestyle='-', color='brown', marker='None', \
-					 markersize=3.0, linewidth=1.5, alpha=1.0, label=r'$u_{b}(x)$')
+	#ax4.plot(t_plot, theta[:,0,s[2]-1], linestyle='-', color='brown', marker='None', \
+	#				 markersize=3.0, linewidth=1.5, alpha=1.0, label=r'$u_{b}(x)$')
+	ax4.plot(t_plot, q[:,s[2]-1], linestyle='-', color='brown', marker='None', \
+					 markersize=3.0, linewidth=2.0, alpha=1.0, label=r'$u_{b}(x)$')
 	
 
 	# Smooth.
@@ -350,13 +353,13 @@ if save_series == 1:
 							8) # order of fitted polynomial							
 
 	
-	#ax3.plot(t_plot, T_air, linestyle='-', color='purple', marker='None', \
-	#		 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+	ax3.plot(t_plot, T_air, linestyle='-', color='darkgreen', marker='None', \
+			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 	#ax3.plot(t_plot, T_oce, linestyle='-', color='purple', marker='None', \
 	#			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 
-	#ax3.plot(t_plot, b[:,s[2]-1], linestyle='-', color='purple', marker='None', \
-#			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+	ax5.plot(t_plot, visc_bar_mean, linestyle='-', color='purple', marker='None', \
+			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 
 	
 	
@@ -398,23 +401,24 @@ if save_series == 1:
 	#ax2.set_xlim(0, t_plot[s[0]-1])
 	#ax3.set_xlim(0, t_plot[s[0]-1])
 
-	ax.set_xlim(t_plot[int(0.15*s[0])], t_plot[s[0]-1])
-	ax2.set_xlim(t_plot[int(0.15*s[0])], t_plot[s[0]-1])
-	ax3.set_xlim(t_plot[int(0.15*s[0])], t_plot[s[0]-1]) #0.5
+	ax.set_xlim(t_plot[int(0.01*s[0])], t_plot[s[0]-1])
+	ax2.set_xlim(t_plot[int(0.01*s[0])], t_plot[s[0]-1])
+	ax3.set_xlim(t_plot[int(0.01*s[0])], t_plot[s[0]-1]) #0.5
 	
 	ax.set_ylabel(r'$L \ (\mathrm{km})$', fontsize=18)
 	ax2.set_ylabel(r'$H_{gl} \ (\mathrm{km})$', fontsize=18)
 
 	
-	#ax3.set_ylabel(r'$ T{\mathrm{air}} \ (^{\circ} \mathrm{C})$', fontsize=18)
+	ax3.set_ylabel(r'$ T{\mathrm{air}} \ (^{\circ} \mathrm{C})$', fontsize=18)
 	#ax3.set_ylabel(r'$ \Delta T_{\mathrm{oce}} \ (^{\circ} \mathrm{C})$', fontsize=18)
-	#ax4.set_ylabel(r'$ \theta(z=0,L) $', fontsize=18)
-	
-	ax4.set_ylabel(r'$  \theta(0,L) \ (^{\circ} \mathrm{C})$', fontsize=17)
+
+ 
+	ax4.set_ylabel(r'$ q(L) \ ( \mathrm{km^2/yr}) $', fontsize=18)
+	#ax4.set_ylabel(r'$  \theta(0,L) \ (^{\circ} \mathrm{C})$', fontsize=17)
 	#ax4.set_ylabel(r'$ A \ (\mathrm{Pa}^{-3} \mathrm{yr}^{-1})$', fontsize=17)
 	#ax5.set_ylabel(r'$ \dot{m} \ (\mathrm{m/yr})$', fontsize=17)
 	
-	#ax5.set_ylabel(r'$ \bar{\eta} \ (\mathrm{Pa \cdot s}) $', fontsize=18)
+	ax5.set_ylabel(r'$ \bar{\eta} \ (\mathrm{Pa \cdot s}) $', fontsize=18)
 	ax6.set_ylabel(r'$ \bar{u}(L) \ (\mathrm{m/yr})$', fontsize=18)
 	#ax3.set_xlabel(r'$\mathrm{Time} \ (\mathrm{kyr})$', fontsize=18)
 	ax3.set_xlabel(r'$\mathrm{Time} \ (\mathrm{kyr})$', fontsize=18)
@@ -622,7 +626,7 @@ if save_shooting == 1:
 
 if save_domain == 1:
 	
-	for i in range(l-1, l, 1): # range(0, l, 2), (l-1, l, 20)
+	for i in range(0, l, 1): # range(0, l, 2), (l-1, l, 20)
 		
 		# Horizontal dimension [km].
 		#L_plot  = np.linspace(0, L[i], s[2])
@@ -778,9 +782,17 @@ if save_domain == 1:
 				colors = np.array(colors)
 				#colors = 1.0 - np.array(colors)
 
+				c = 0
+				dx = X[1]-X[0]
 				# Create the patch objects.
-				for (color,x,y1,y2) in zip(colors,X,Y1,Y2):
+				for (color, x, y1, y2) in zip(colors, X, Y1, Y2):
+					# For streched coordinate system, there is a varying dx.
+					if c > 0 and c < N-1:
+						dx = X[c+1]-X[c]
+					#print('i = ', c)
 					rect(ax,x,y1,y2,dx,y1-y2,color,**kwargs)
+					c += 1
+					
 
 
 			# Data    
@@ -804,13 +816,13 @@ if save_domain == 1:
 					 				cax=cbar_ax, extend='neither')
 
 			# Set the modified ticks and tick labels
-			"""
+			
 			ticks = np.linspace(0, 1, 5)
 			ticks_lab = np.round(np.linspace(-theta_max, -theta_min, 5), 0)
 			cb.set_ticks(ticks)
 			cb.set_ticklabels([r'$-80$', r'$-60$', r'$-40$', r'$-20$', r'$0$',], \
 								fontsize=13)
-			"""
+			
 			cb.set_label(r'$ \theta (x,z) \ (^{\circ} \mathrm{C}) $', \
 							rotation=90, labelpad=8, fontsize=22)
 
@@ -882,7 +894,7 @@ if save_domain == 1:
 
 if save_var_frames == 1:
 	
-	for i in range(0, l, 1): # (0, l, 10), (l-1, l, 1)
+	for i in range(0, l, 10): # (0, l, 10), (l-1, l, 1)
 		
 		#L_plot  = np.linspace(0, L[i], s[2])
 		L_plot = sigma_plot * L[i]
@@ -894,7 +906,7 @@ if save_var_frames == 1:
 
 		# Vertically averaged du/dx.
 		u_x_bar   = np.mean(u_x[i,:,:], axis=0)
-		theta_bar = np.mean(theta[i,:,:], axis=0)
+		theta_b = theta[i,0,:]
 			
 		######################################
 		######################################
@@ -915,7 +927,7 @@ if save_var_frames == 1:
 	 			linewidth=2.0, alpha=1.0, label=r'$u_{b}(x)$') 
 		#ax5.plot(L_plot, u_x_bar, linestyle='-', color='darkgreen', marker='None', \
 	 	#		linewidth=2.0, alpha=1.0, label=r'$\partial u_{b}/\partial x$')  
-		ax5.plot(L_plot, theta_bar, linestyle='-', color='darkgreen', marker='None', \
+		ax5.plot(L_plot, theta_b, linestyle='-', color='darkgreen', marker='None', \
 	 			linewidth=2.0, alpha=1.0, label=r'$\partial u_{b}/\partial x$')  
 		ax3.plot(L_plot, visc_bar[i,:], linestyle='-', color='purple', marker='None', \
 	  	 		linewidth=2.0, alpha=1.0, label=r'$\partial H/\partial x$') 
@@ -1037,7 +1049,7 @@ if save_theta == 1:
 	y_labels = np.linspace(0, n_z, z_ticks, dtype=int)
 
 	# Theta limits.
-	theta_min = -30.0
+	theta_min = -50.0
 	theta_max = 0.0
 
 	cb_ticks = np.round(np.linspace(theta_min, theta_max, 6),1)
@@ -1129,7 +1141,7 @@ if save_visc == 1:
 
 	cb_ticks = np.linspace(var_min, var_max, 6)
 	
-	for i in range(l-1, l, 1):
+	for i in range(0, l, 10):
 
 		# Update x_labels as domain extension changes in each iteration.
 		x_labels  = np.linspace(0, L[i], n_ticks, dtype=int)
@@ -1139,7 +1151,9 @@ if save_visc == 1:
 		ax  = fig.add_subplot(111)
 
 		# Flip theta matrix so that the plot is not upside down.
-		im = ax.imshow(np.flip(visc[i,:,:],axis=0), cmap='plasma', norm="log", \
+		#im = ax.imshow(np.flip(visc[i,:,:],axis=0), cmap='plasma', norm="log", \
+		#				vmin=var_min, vmax=var_max, aspect='auto')
+		im = ax.imshow(np.flip(visc[i,:,:],axis=0), cmap='plasma', \
 						vmin=var_min, vmax=var_max, aspect='auto')
 		#im = ax.imshow(np.flip(visc[i,:,:],axis=0), cmap='plasma', aspect='auto')
 	
@@ -1208,7 +1222,7 @@ if save_u == 1:
 	"""u_min = 1.0
 	u_max = 1.0e3"""
 
-	w_min = -5.0
+	w_min = -1.0
 	w_max = 0.0
 
 	#cb_ticks_u   = np.linspace(u_min, u_max, 6)
@@ -1227,12 +1241,14 @@ if save_u == 1:
 		plt.rcParams['text.usetex'] = True
 		ax  = fig.add_subplot(111)
 
-		# Flip theta matrix so that the plot is not upside down.
-		#im = ax.imshow(np.flip(np.abs(w[i,:,:]),axis=0), vmin=w_min, vmax=w_max,\
-		# 				 norm='log', cmap='viridis', aspect='auto')
-  
 		cmap = plt.get_cmap("viridis") #RdYlBu, Spectral, rainbow, jet, turbo
 		reversed_cmap = cmap.reversed()
+
+		# Flip theta matrix so that the plot is not upside down.
+		#im = ax.imshow(np.flip(np.log10(np.abs(w[i,:,:])),axis=0), \
+		# 				 cmap='viridis', aspect='auto')
+  
+		
 
 		im = ax.imshow(np.flip((w[i,:,:]),axis=0), vmin=w_min, vmax=w_max,\
 		 				cmap=reversed_cmap, aspect='auto')

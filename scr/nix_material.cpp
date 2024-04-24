@@ -42,7 +42,7 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
         // We calculate B from A(T,p).
         if ( vis.therm == false )
         {
-            // We assume a constant ice rate factor during equilibration.
+            // We assume a constant ice rate factor if thermodynamics is off.
             A_theta = ArrayXXd::Constant(dom.n, dom.n_z, A);
         }
         
@@ -51,7 +51,7 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
             // Calculate temperature-dependent rate factor if thermodynamics is switched on.
             // Arrhenius law A(T,p) equivalent to A(T').
             // Eq. 4.15 and 6.54 (Greve and Blatter, 2009).
-            for (int i=0; i<dom.n; i++)
+            /*for (int i=0; i<dom.n; i++)
             {
                 for (int j=0; j<dom.n_z; j++)
                 {
@@ -65,11 +65,11 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
                         A_theta(i,j) = vis.A_0_2 * exp(- vis.Q_act_2 / (vis.R * theta(i,j)) );
                     }
                 }
-            }
+            }*/
 
             // Avoid unnecessary loops.
-            //A_theta = (theta < thrm.theta_act).select(A_0(0) * exp(- Q_act(0) / (R * theta) ), A_theta);
-            //A_theta = (theta >= thrm.theta_act).select(A_0(1) * exp(- Q_act(1) / (R * theta) ), A_theta);
+            A_theta = (theta < thrm.theta_act).select(vis.A_0_1 * exp(- vis.Q_act_1 / (vis.R * theta) ), A_theta);
+            A_theta = (theta >= thrm.theta_act).select(vis.A_0_2 * exp(- vis.Q_act_2 / (vis.R * theta) ), A_theta);
 
         }
 
@@ -99,13 +99,13 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
             }
 
             // Boundary derivatives.
-            u_bar_x(0)   = ( u_bar(1) - u_bar(0) ) * dx_inv(0);
+            u_bar_x(0)       = ( u_bar(1) - u_bar(0) ) * dx_inv(0);
             u_bar_x(dom.n-1) = ( u_bar(dom.n-1) - u_bar(dom.n-2) ) * dx_inv(dom.n-2);
             
             // Regularization term to avoid division by 0. 
             strain_1d = pow(u_bar_x,2) + vis.eps;
 
-            // Viscosity potentially dependending on visc_term. 
+            // Viscosity potentially dependendent on visc_term. 
             visc_bar = 0.5 * B_theta_bar * pow(strain_1d, vis.n_exp);
         }
 
@@ -231,6 +231,11 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
 
         }
 
+        else
+        {
+            cout << " \n Velocity solver not defined. Please, select it: SSA, DIVA... ";
+            abort();
+        }
     }
 
     // Allocate output variables.

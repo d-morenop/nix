@@ -34,7 +34,7 @@ int main()
 {
 
     // Specify the path to YAML file.
-    string yaml_name = "nix_params_mismip.yaml";
+    string yaml_name = "nix_params_mismip_A.yaml";
 
     // Assuming the path won't exceed 4096 characters.
     char buffer[4096];
@@ -108,13 +108,24 @@ int main()
     }
     else if ( exp == "mismip_3" || exp == "mismip_3_therm" )
     {
-        n_s = 18;
+        n_s = 18; // 18, 17
         L   = 473.1e3;
     }  
+    else if ( exp == "mismip_3_A" )
+    {
+        n_s = 12;
+        L   = 473.1e3;
+    }
     else if ( exp == "ews" )
     {
         n_s = 2; // ????
         L   = 50.0e3;
+    }
+    // Abort simulation if experiment not selected.
+    else
+    {
+        cout << " \n Experiment not defined. Please, select it: mismip_1, mismip_1_therm... ";
+        abort();
     }
 
 
@@ -309,7 +320,7 @@ int main()
     }
 
     // MISMIP EXPERIMENT 3 FORCING.
-    if ( exp == "mismip_3" )
+    else if ( exp == "mismip_3" )
     {
         // Exps 3 forcing.
         // Rate factor [Pa^-3 s^-1].
@@ -334,6 +345,31 @@ int main()
         // Unit conversion: [Pa^-3 s^-1] --> [Pa^-3 yr^-1].
         A_s = A_s * nixParams.cnst.sec_year;     
     }
+
+    // MISMIP experiment 3 without thermodynamics (constant A).
+    else if ( exp == "mismip_3_A" )
+    {
+        t_s << 3.0e4, 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4, 30.0e4, 33.0e4,
+               36.0e4;
+
+        T_oce_s << 273.15, 273.65, 274.15, 274.65, 275.15, 275.65, 276.15, 276.65, 277.15, 277.65,
+                   278.15, 278.65;
+
+        // Constant value of rate factor.
+        A_s = ArrayXd::Constant(n_s, nixParams.vis.A_cnst);
+
+        // Two-step equilibration.
+        //A_s(0) = 5.0e-25;
+        //A_s(1) = 1.0e-25;
+
+        A_s = A_s * nixParams.cnst.sec_year;
+
+        // Initialization.
+        T_oce   = T_oce_s(0);
+        A       = A_s(0);
+        A_theta = ArrayXXd::Constant(n, n_z, A);
+
+    }
     
     // MISMIP THERMODYNAMICS. 
     else if ( exp == "mismip_1_therm" || exp == "mismip_3_therm" )
@@ -357,24 +393,33 @@ int main()
         
         
         // ONLY CONSTANT ATMOSPHERIC FORCING. No ocean anomalies.
-        t_s << 3.0e4, 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4,
+        /*t_s << 3.0e4, 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4,
                30.0e4, 33.0e4, 36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4;
 
         T_air_s = ArrayXd::Constant(n_s, nixParams.bc.therm.T_air); // 193.15
 
-        T_oce_s = ArrayXd::Zero(n_s); // 193.15
+        T_oce_s = ArrayXd::Zero(n_s); // 193.15*/
 
 
 
         // AIR TEMPERATURES FORCING.
         // Stable forcing.
-        /*
-        t_s << 3.0e4, 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4,
+        // Old forcing
+        /*t_s << 3.0e4, 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4,
                30.0e4, 33.0e4, 36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4;
 
-        T_air_s << 253.15, 243.15, 233.15, 223.15, 213.15, 203.15, 198.15, 193.15, 193.15,
-                   198.15, 203.15, 213.15, 223.15, 233.15, 243.15, 253.15, 253.15;
-        */
+        T_air_s << 258.15, 253.15, 253.15, 243.15, 233.15, 223.15, 213.15, 203.15,
+                   213.15, 223.15, 233.15, 243.15, 253.15, 258.15, 263.15, 268.15, 268.15;*/
+
+        // New forcing. Start from theta_0 in initialization to avoid crashing.        
+        t_s << 3.0e4, 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4,
+               30.0e4, 33.0e4, 36.0e4;
+
+        T_air_s << 253.15, 243.15, 233.15, 223.15, 223.15, 233.15, 243.15, \
+                    253.15, 258.15, 263.15, 268.15, 268.15;
+
+        T_oce_s = ArrayXd::Zero(n_s);
+        
 
        // High resolution.
         /*t_s << 6.0e4, 10.0e4, 14.0e4, 16.0e4, 20.0e4, 24.0e4, 28.0e4, 32.0e4, 36.0e4, 40.0e4,
@@ -415,9 +460,10 @@ int main()
     /////////////////////////////////////////////////////////////////////////////////
 
     // Print spatial and time dimensions.
-    cout << " \n n = " << n;
-    cout << " \n n_sigma = " << nixParams.dom.grid_exp;
-    cout << " \n tf = " << tf;
+    cout << " \n Experiment = " << exp;
+    cout << " \n n          = " << n;
+    cout << " \n n_sigma    = " << nixParams.dom.grid_exp;
+    cout << " \n tf         = " << tf;
 
     // Call nc read function.
     if ( nixParams.stoch.stoch == true )
@@ -479,6 +525,13 @@ int main()
             }
         }
         
+        // No stochastic contribution.
+        else
+        {
+            m_stoch   = 0.0;
+            smb_stoch = 0.0;
+        }
+        
 
         // MISMIP EXPERIMENTS 1, 3 and 3.
         if ( exp == "mismip_1" || exp == "mismip_3" )
@@ -500,7 +553,7 @@ int main()
         }
 
         // MISMIP-THERM EXPERIMENTS.
-        else if ( exp == "mismip_1_therm" || exp == "mismip_3_therm" )
+        else if ( exp == "mismip_1_therm" || exp == "mismip_3_therm" || exp == "mismip_3_A" )
         {
             // Update rate factor and T_air value.
             if ( t > t_s(c_s) )
@@ -516,10 +569,6 @@ int main()
 
                 // Ocean temperature as a BC.
                 T_oce = T_oce_s(c_s);
-                //cout << " \n T_oce = " << T_oce;
-
-                // Directly on frontal ablation.
-                M = M_s(c_s);
             }
 
         }
@@ -588,6 +637,7 @@ int main()
         }
     
 
+
         // Update SMB considering new domain extension and current stochastic term.
         S = f_smb(sigma, L, t, smb_stoch, \
                     nixParams.bc, nixParams.dom, nixParams.tm);
@@ -603,6 +653,9 @@ int main()
         // Picard initialization.
         error    = 1.0;
         c_picard = 0;
+
+
+        //cout << " \n A = " << A;
         
         // Implicit velocity solver. Picard iteration for non-linear viscosity and beta.
         // Loop over the vertical level for Blatter-Pattyn.
@@ -731,8 +784,9 @@ int main()
         {
             M = f_melt(T_oce, nixParams.calv.sub_shelf_melt, nixParams.cnst);
         }
+
         
-        // Ice flux calculation. Flotation thickness H_f.
+        // Ice flux calculation.
         q = f_q(u_bar, H, bed, t, m_stoch, M, nixParams.dom, \
                     nixParams.cnst, nixParams.tm, nixParams.calv);
         
@@ -785,7 +839,7 @@ int main()
     
         // Integrate ice thickness forward in time.
         H = f_H(u_bar, H, S, sigma, dt, ds, ds_inv, ds_sym, \
-                  L, D, dL_dt, bed, q, M, t, \
+                  L, D, dL_dt, bed, q, t, \
                     nixParams.dom, nixParams.tm, nixParams.adv);
         
         // Update vertical discretization.
@@ -810,7 +864,7 @@ int main()
 
             // Integrate heat equation and calculate basal melt.
             sol_thrm = f_theta(theta, ub, H, tau_b, Q_fric, sigma, dz, \
-                                dt, ds, L, dL_dt, t, w, strain_2d, \
+                                dt, ds, L, dL_dt, t, w, strain_2d, T_air, \
                                     nixParams.dom, nixParams.thrmdyn, nixParams.dyn, \
                                         nixParams.bc, nixParams.cnst, nixParams.calv);
 

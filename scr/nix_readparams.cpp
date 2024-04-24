@@ -153,6 +153,7 @@ struct ViscosityParams
     double eps;
     bool therm;
     double t_eq_A_theta;
+    double A_cnst;
     double A_act;
     double Q_act_1;
     double Q_act_2;
@@ -323,6 +324,7 @@ void readParams(const YAML::Node& node, NixParams& params)
     params.vis.eps          = node["viscosity"]["eps"].as<double>();
     params.vis.therm        = node["viscosity"]["therm"].as<bool>();
     params.vis.t_eq_A_theta = node["viscosity"]["t_eq_A_theta"].as<double>();
+    params.vis.A_cnst       = node["viscosity"]["A_cnst"].as<double>();
     params.vis.A_act        = params.cnst.sec_year * node["viscosity"]["A_act"].as<double>();
     params.vis.Q_act_1      = 1.0e3 * node["viscosity"]["Q_act_1"].as<double>();
     params.vis.Q_act_2      = 1.0e3 * node["viscosity"]["Q_act_2"].as<double>();

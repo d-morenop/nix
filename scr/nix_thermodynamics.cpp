@@ -4,7 +4,7 @@
 
 ArrayXXd f_theta(ArrayXXd theta, ArrayXd ub, ArrayXd H, ArrayXd tau_b, ArrayXd Q_fric, \
                  ArrayXd sigma, ArrayXd dz, double dt, ArrayXd ds, double L, \
-                 double dL_dt, double t, ArrayXXd w, ArrayXXd strain_2d, \
+                 double dL_dt, double t, ArrayXXd w, ArrayXXd strain_2d, double T_air, \
                  DomainParams& dom, ThermodynamicsParams& thrm, DynamicsParams& dyn, \
                  BoundaryConditionsParams& bc, ConstantsParams& cnst, CalvingParams& calv)
 {
@@ -45,18 +45,19 @@ ArrayXXd f_theta(ArrayXXd theta, ArrayXd ub, ArrayXd H, ArrayXd tau_b, ArrayXd Q
         
         // Boundary conditions. Geothermal heat flow at the base.
         // We add friciton heat contribution Q_f_k. w(z=0) = 0 
-        // thrm.G_k was alread transformed in readparams to [K/m].
-        /*theta_now(i,0) = theta_now(i,1) + dz(i) * ( thrm.G_k + Q_f_k(i) ) + \
+        // thrm.G_k was already transformed in readparams to [K/m].
+        //theta_now(i,0) = theta_now(i,1) + dz(i) * ( thrm.G_k + Q_f_k(i) ) + \
                             ( sigma(i) * dL_dt - ub(i) ) * \
-                            ( theta(i,0) - theta(i-1,0) ) * dx_inv(i-1); */
+                            ( theta(i,0) - theta(i-1,0) ) * dx_inv(i-1); 
         
+        // Include non-zero vertical velocity at the base due to basal melt.
         theta_now(i,0) = theta_now(i,1) + dz(i) * ( thrm.G_k + Q_f_k(i) ) + \
                             ( sigma(i) * dL_dt - ub(i) ) * \
                             ( theta(i,0) - theta(i-1,0) ) * dx_inv(i-1) + \
                             ( theta(i,1) - theta(i,0) ) * ( - w(i,0) ) * dz_inv(i);
 
         // Surface.
-        theta_now(i,dom.n_z-1) = bc.therm.T_air;
+        theta_now(i,dom.n_z-1) = T_air;
     }
 
     // Due to symmetry theta_now(0,j) = theta_now(2,j). Ice divide.
@@ -66,7 +67,8 @@ ArrayXXd f_theta(ArrayXXd theta, ArrayXd ub, ArrayXd H, ArrayXd tau_b, ArrayXd Q
     //theta_now(0,0)     = theta_now(0,1) + dz(0) * G_k; 
     //theta_now(0,n_z-1) = T_air;
 
-    // Boundary condition at x = L??
+    // Boundary condition at x = L. No heat exchange along the horizontal dimension.
+    // Necessary to avoid numerical instabilities at the grounding line.
     theta_now.row(dom.n-1) = theta_now.row(dom.n-2);
 
     // For the DIVA solver, consider the strain heat contribution.
@@ -82,7 +84,7 @@ ArrayXXd f_theta(ArrayXXd theta, ArrayXd ub, ArrayXd H, ArrayXd tau_b, ArrayXd Q
         theta_now = ( 1.0 - rel ) * theta_now + rel * theta;
     }
 
-    // Compute total basal melting. 
+    // Compute total basal melting. Kori manual.
     // [m/s] --> [m/yr].
     b_dot  = cnst.sec_year * ( thrm.k / (cnst.rho * calv.sub_shelf_melt.L_i ) ) * ( thrm.G_k + Q_f_k );
 

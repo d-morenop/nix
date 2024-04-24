@@ -24,7 +24,7 @@ ArrayXd f_bed(double L, ArrayXd sigma, ArrayXd ds, double t, DomainParams dom)
         x = x / 750.0e3; 
         bed = 720.0 - 778.5 * x;
     }
-    else if ( dom.exp == "mismip_3" || dom.exp == "mismip_3_therm" )
+    else if ( dom.exp == "mismip_3" || dom.exp == "mismip_3_therm" || dom.exp == "mismip_3_A" )
     {
         x = x / 750.0e3; 
         // Schoof: 2184.8. Daniel: 2148.8.
@@ -161,7 +161,7 @@ ArrayXd f_smb(ArrayXd sigma, double L, double t, double smb_stoch, \
 ArrayXd f_H(ArrayXd u_bar, ArrayXd H, ArrayXd S, ArrayXd sigma, \
             double dt, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_sym, \
             double L, double D, double dL_dt, ArrayXd bed, ArrayXd q, \
-            double M, double t, DomainParams& dom, TimeParams& tm, AdvectionParams& adv)
+            double t, DomainParams& dom, TimeParams& tm, AdvectionParams& adv)
 {
     // Local variables.
     ArrayXd H_now(dom.n), dx_inv(dom.n-1), dx_sym_inv(dom.n-1);
