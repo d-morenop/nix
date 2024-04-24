@@ -108,7 +108,8 @@ int main()
     }
     else if ( exp == "mismip_3" || exp == "mismip_3_therm" )
     {
-        n_s = 18; // 18, 17
+        //n_s = 18; // 18, 17
+        n_s = 12;
         L   = 473.1e3;
     }  
     else if ( exp == "mismip_3_A" )

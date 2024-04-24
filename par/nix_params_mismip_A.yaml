@@ -3,7 +3,7 @@
 path:
   nix: /home/dmoreno/scr/nix/                              # Nix path.
   read: /home/dmoreno/nix/data/noise_sigm_ocn.12.0.nc      # File with stochastic bc. 
-  out: /home/dmoreno/nix/mismip_therm/T_oce_f_q/steps/A_const/gamma_T_quad/gamma_sensitivity_even/                     # Output path.
+  out: /home/dmoreno/nix/mismip.therm/test.issue/                     # Output path.
 
 time:
   t0: 0.0                 # Starting time [yr].
@@ -24,7 +24,7 @@ domain:
   n: 250                  # Number of horizontal points
   n_z: 15                 # Number vertical layers
   grid: even              # Nix grid type.
-  grid_exp: 0.5           # Exponent of unevenly-spaced grid. 0.5
+  grid_exp: 1.0           # Exponent of unevenly-spaced grid. 0.5
   bedrock_ews:            # Transition indicators domain.
     smooth_bed: none      # Apply smooth on bed topography. "gauss", "runnning_mean".
     p: 3                  # Number of points at the edges of the array that are not smoothed out.

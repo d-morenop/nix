@@ -21,7 +21,7 @@ from matplotlib.gridspec import GridSpec
 
 
 path_fig        = '/home/dmoreno/figures/nix/oscillations/S-C_thw/'
-path_now        = '/home/dmoreno/nix/mismip_therm/T_oce_f_q/steps/A_const/gamma_T_quad/gamma_sensitivity_even/n.100_n_z.20_A_cnst.5e-25/'
+path_now        = '/home/dmoreno/nix/mismip.therm/test.issue/n.100_n_z.20_A_cnst.5e-25/'
 path_stoch      = '/home/dmoreno/nix/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
@@ -34,9 +34,9 @@ file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 save_series        = 1
 save_series_comp   = 0
 save_shooting      = 0
-save_domain        = 1
+save_domain        = 0
 coloured_domain    = 0
-save_var_frames    = 0
+save_var_frames    = 1
 save_series_frames = 0
 save_theta         = 0
 save_visc          = 0
@@ -212,7 +212,7 @@ def f_bed(x, exp, n):
 
 # Account for unevenly-spaced horizontal grid.
 sigma = np.linspace(0, 1.0, s[2])
-sigma_plot = sigma**(0.5) # 0.5 (uneven), 1.0 (even)
+sigma_plot = sigma**(1.0) # 0.5 (uneven), 1.0 (even)
 
 
 
@@ -894,7 +894,7 @@ if save_domain == 1:
 
 if save_var_frames == 1:
 	
-	for i in range(0, l, 10): # (0, l, 10), (l-1, l, 1)
+	for i in range(0, l, 1): # (0, l, 10), (l-1, l, 1)
 		
 		#L_plot  = np.linspace(0, L[i], s[2])
 		L_plot = sigma_plot * L[i]

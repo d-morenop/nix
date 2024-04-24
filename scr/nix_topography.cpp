@@ -202,11 +202,11 @@ ArrayXd f_H(ArrayXd u_bar, ArrayXd H, ArrayXd S, ArrayXd sigma, \
         //H_now(n-1) = max( (rho_w/rho)*D, H_now(n-1));
 
         // Try relaxation during equilibration to avoid early crashing?
-        if ( t < tm.t_eq )
+        /*if ( t < tm.t_eq )
         {
             double rel = 0.7;
             H_now = H * rel  + ( 1.0 - rel ) * H_now;
-        }
+        }*/
     }
     
     // Implicit scheme.

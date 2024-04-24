@@ -134,7 +134,7 @@ values_1 = np.array([0.01])"""
 
 values_0 = np.array([100]) # 250
 values_1 = np.array([20])  # 25
-values_2 = np.array([1.0e-26, 5.0e-26, 5.0e-25]) #1.0e-26, 2.0e-26, 3.0e-26, 4.0e-26
+values_2 = np.array([5.0e-25]) #1.0e-26, 2.0e-26, 3.0e-26, 4.0e-26
 
 # Data type of each array.
 data_types = [int, int, float]
