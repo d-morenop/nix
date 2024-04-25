@@ -137,6 +137,12 @@ ArrayXd f_q(ArrayXd u_bar, ArrayXd H, ArrayXd bed, double t, double m_dot, doubl
         }
     }
 
+    else
+    {
+        cout << "\n Calving method not selected. Please, select: none, deterministic...";
+        abort();
+    }
+
     return q;
 }
 

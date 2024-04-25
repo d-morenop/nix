@@ -12,10 +12,11 @@ Array2d f_dt(double L, double t, double dt, double u_bar_max, \
 {
     // Local variables.
     Array2d out;
-    double dt_tilde, dt_CFL;
+    double dt_tilde, dt_CFL, dt_CFL_w;
 
     // Factor 0.5 is faster since it yields fewer Picard's iterations.
     dt_CFL = 0.5 * ds_min * L / u_bar_max;
+    //dt_CFL_w = 0.5 * 
 
 
     // Fixed time step.
@@ -37,6 +38,7 @@ Array2d f_dt(double L, double t, double dt, double u_bar_max, \
 
         // Apply relaxation.
         dt = tmstep.rel * dt + (1.0 - tmstep.rel) * dt_tilde;
+
 
         // Ensure Courant-Friedrichs-Lewis condition is met.
         dt = min(dt, dt_CFL);

@@ -21,25 +21,27 @@ from matplotlib.gridspec import GridSpec
 
 
 path_fig        = '/home/dmoreno/figures/nix/oscillations/S-C_thw/'
-path_now        = '/home/dmoreno/nix/basal.melt.test/n.75.00_dt_min.0.05/'
+path_now        = '/home/dmoreno/nix/mismip.therm/test.issue_long_T/n.250_dt_min.0.1_T_air.173.15/'
 path_stoch      = '/home/dmoreno/nix/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
+# /home/dmoreno/nix/mismip.therm/test.issue_long/n.250.00_dt_min.0.10/
 # '/home/dmoreno/nix/oscillations/S-C_thw_hr_dt.fixed/S_0.0.10_C_thw.0.10/'
 # '/home/dmoreno/nix/ews/M_rates/smooth/sigma.1.0_A.3.0e-26_yp.176/''
 # /home/dmoreno/flowline/mismip_bp/exp_3/n.100_nz.10/
+# /home/dmoreno/nix/test.w.therm/n.75.00_dt_min.0.05
 
 # Select plots to be saved (boolean integer).
-save_series        = 0
+save_series        = 1
 save_series_comp   = 0
 save_shooting      = 0
-save_domain        = 1
+save_domain        = 0
 coloured_domain    = 0
 save_var_frames    = 0
 save_series_frames = 0
 save_theta         = 1
 save_visc          = 0
-save_u             = 1
+save_u             = 0
 save_u_der         = 0
 time_series_gif    = 0
 save_L             = 0
@@ -55,7 +57,7 @@ smth_series        = 0
 # MISMIP bedrock experiments.
 # exp = 1: inclined bed; exp = 3: overdeepening bed.
 exp_name = ['mismip_1', 'mismip_3', 'glacier_ews']
-idx = 0
+idx = 1
 exp = exp_name[idx]
 
 # Create figures directory if it does not exist.
@@ -394,13 +396,13 @@ if save_series == 1:
 		ax3.set_ylim(-2.0, 0.5)
 		ax5.set_ylim(0.0, 50.0)
 	
-	#ax.set_xlim(0, t_plot[s[0]-1])
-	#ax2.set_xlim(0, t_plot[s[0]-1])
-	#ax3.set_xlim(0, t_plot[s[0]-1])
+	ax.set_xlim(0, t_plot[s[0]-1])
+	ax2.set_xlim(0, t_plot[s[0]-1])
+	ax3.set_xlim(0, t_plot[s[0]-1])
 
-	ax.set_xlim(t_plot[int(0.15*s[0])], t_plot[s[0]-1])
-	ax2.set_xlim(t_plot[int(0.15*s[0])], t_plot[s[0]-1])
-	ax3.set_xlim(t_plot[int(0.15*s[0])], t_plot[s[0]-1]) #0.5
+	#ax.set_xlim(t_plot[int(0.15*s[0])], t_plot[s[0]-1])
+	#ax2.set_xlim(t_plot[int(0.15*s[0])], t_plot[s[0]-1])
+	#ax3.set_xlim(t_plot[int(0.15*s[0])], t_plot[s[0]-1]) #0.5
 	
 	ax.set_ylabel(r'$L \ (\mathrm{km})$', fontsize=18)
 	ax2.set_ylabel(r'$H_{gl} \ (\mathrm{km})$', fontsize=18)
@@ -622,7 +624,7 @@ if save_shooting == 1:
 
 if save_domain == 1:
 	
-	for i in range(l-1, l, 1): # range(0, l, 2), (l-1, l, 20)
+	for i in range(0, l, 1): # range(0, l, 2), (l-1, l, 20)
 		
 		# Horizontal dimension [km].
 		#L_plot  = np.linspace(0, L[i], s[2])
@@ -1037,12 +1039,12 @@ if save_theta == 1:
 	y_labels = np.linspace(0, n_z, z_ticks, dtype=int)
 
 	# Theta limits.
-	theta_min = -30.0
+	theta_min = -50.0
 	theta_max = 0.0
 
 	cb_ticks = np.round(np.linspace(theta_min, theta_max, 6),1)
 	
-	for i in range(0, l, 10):
+	for i in range(15, l, 1):
 
 		# Update x_labels as domain extension changes in each iteration.
 		x_labels  = np.linspace(0, L[i], n_ticks, dtype=int)

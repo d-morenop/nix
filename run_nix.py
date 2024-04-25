@@ -109,8 +109,8 @@ def modify_yaml(file_path, path_modified, yaml_file_name, var_names, data_types,
 
 
 # Specify the path to your YAML file
-yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_mismip.yaml"
-yaml_file_name = "nix_params_mismip.yaml"
+yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_mismip_therm.yaml"
+yaml_file_name = "nix_params_mismip_therm.yaml"
 
 
 # Modify yaml file to run large ensembles of simulations.
@@ -126,17 +126,18 @@ values_0 = np.array([0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55,
 values_1 = np.array([0.01, 0.02, 0.03, 0.04])"""
 
 # Resolution study.
-var_names = ['n', 'dt_min']
+var_names = ['n', 'dt_min', 'T_air']
 
 #values_0 = np.array([2**4, 2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11])
 """values_0 = np.array([2**12])
 values_1 = np.array([0.01])"""
 
-values_0 = np.array([75])
-values_1 = np.array([0.05])
+values_0 = np.array([250])
+values_1 = np.array([0.1])
+values_2 = np.array([173.15, 183.15, 193.15])
 
 # Data type of each array.
-data_types = [int, float]
+data_types = [int, float, float]
 
 """values_0 = np.array([0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60])
 values_1 = np.array([0.05, 0.10, 0.15, 0.20, 0.25, 0.30])
@@ -150,14 +151,18 @@ values_1 = np.array([0.05, 0.10, 0.15, 0.20, 0.25, 0.30])
 # FIX THIS!!
 values_0_str = len(values_0) * [None]
 values_1_str = len(values_1) * [None]
-values_0_str = ['{:.2f}'.format(value, len(str(value).split('.')[0])) for value in values_0]
-values_1_str = ['{:.2f}'.format(value, len(str(value).split('.')[0])) for value in values_1]
+"""values_0_str = ['{:.2f}'.format(value, len(str(value).split('.')[0])) for value in values_0]
+values_1_str = ['{:.2f}'.format(value, len(str(value).split('.')[0])) for value in values_1]"""
+
+values_0_str = [str(value) for value in values_0]
+values_1_str = [str(value) for value in values_1]
+values_2_str = [str(value) for value in values_2]
 
 # Create a string with all input values.
-str_all = [values_0_str, values_1_str]
+str_all = [values_0_str, values_1_str, values_2_str]
 
 l_names = len(var_names)
-values_all = [values_0, values_1]
+values_all = [values_0, values_1, values_2]
 
 # Include variable names in each value for folder naming.
 for i in range(l_names):
@@ -166,7 +171,7 @@ for i in range(l_names):
 
 
 # Create a dictionary to store variable names and their corresponding values.
-variables = {var_names[0]: values_0, var_names[1]: values_1}
+variables = {var_names[0]: values_0, var_names[1]: values_1, var_names[2]: values_2}
 
 
 
@@ -185,17 +190,17 @@ N    = permut_dict(variables)
 name = N * [None]
 
 
-# Folder names with all permutations.
+# Folder name given from each permutations.
 # itertools.product() give the Cartesian product of input lists.
 c = 0
-for r in itertools.product(values_all[0], values_all[1]): 
-    name[c] = r[0]+'_'+r[1]
+for r in itertools.product(values_all[0], values_all[1], values_all[2]): 
+    name[c] = r[0]+'_'+r[1]+'_'+r[2]
     c += 1
 
 
 
 # Future update: compact all values arrays?
-perm = all_permutations(values_0, values_1)
+perm = all_permutations(values_0, values_1, values_2)
 
 # Loop over all permutations.
 for i in range(N):
