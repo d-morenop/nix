@@ -7,8 +7,8 @@ path:
 
 time:
   t0: 0.0                 # Starting time [yr].
-  tf: 1.0e4              # End time [yr]. 57.0e3, 54.0, 32.0e4, MISMIP-therm: 3.0e4, 90.0e4, Ending time [yr]. EWR: 5.0e3
-  t_eq: 1.5e3             # Equilibration time [yr].
+  tf: 1.0e4              # End time [yr]. 44.0e4, 57.0e3, 54.0e4, 32.0e4, MISMIP-therm: 3.0e4, 90.0e4, Ending time [yr]. EWR: 5.0e3
+  t_eq: 1.0e3             # Equilibration time [yr]. 1.5e3
   output:
     t_n: 100              # Number of output frames
     out_hr: false         # Allow high resolution output.
@@ -20,21 +20,22 @@ constants:
   sec_year: 3.154e7       # Seconds in a year.
 
 domain:
-  experiment: mismip_3    # Domain definition.
-  n: 100                  # Number of horizontal points
-  n_z: 10                 # Number vertical layers
+  bed_exp: exp_1          # Domain def, i.e., bedrock geometry applied: exp_1 (MISMIP exp_1) and so on.
+  experiment: mismip_1    # Forcing type. As defined in MISMIP: mismip_1, mismip_3_therm...
+  n: 50                   # Number of horizontal points
+  n_z: 15                 # Number vertical layers
   grid: even              # Nix grid type.
-  grid_exp: 1.0           # Exponent of horizontal grid points distibution. 
+  grid_exp: 0.5           # Exponent of unevenly-spaced grid. 0.5
   bedrock_ews:            # Transition indicators domain.
     smooth_bed: none      # Apply smooth on bed topography. "gauss", "runnning_mean".
     p: 3                  # Number of points at the edges of the array that are not smoothed out.
     sigma_gauss: 10.0     # Sigma gaussian filter. 
-    t0_gauss: 1.5e4       # Init time to apply gaussian filter.
+    t0_smth: 1.5e4        # Init time to apply gaussian filter.
     x_1: 346.0e3          # Peak beginning [m].
     x_2: 350.0e3          # Peak end [m]. 88.0
     y_p: 88.0             # Peak height [m]. 44.0, 88.0, 176.0  
     y_0: 70.0             # Initial bedrock elevation (x=0) [m].
-    
+
 
 dynamics:
   vel_meth: SSA           # Velocity solver: const, SSA, DIVA, Blatter-Pattyn.
@@ -65,19 +66,19 @@ boundary_conditions:
     x_varsca: 8.0e4       # Length scale of area where SMB varaibility changing. [m]
     var_mult: 0.25        # Factor by which inland variability is less than max.
   therm:
-    T_air: 253.15         # Prescribed air temperature. 
+    T_air: 243.15         # Prescribed air temperature. 253.15
     w_min: -0.3           # Prescribed surface vertical advection in theta.
     w_max: 0.0            # Prescribed basal vertical advection in theta.
   rate_factor:
     A_rate: false         # Boolean to apply forcing.
     t0: 2.0e4             # Start time to apply increase in ice rate factor. 3.0e4 [yr]
     tf: 3.0e4
-  frontal_ablation:
-    M_rate: true
-    t0: 2.0e4             # Start time to apply increase in calving rate. 3.0e4 [yr]
-    tf: 3.0e4
-    M_f: 0.8              # Increased factor from original frontal ablation. (80% as in Christian et al., 2022).
-
+  trend:
+    type: none     # None, rate_factor, ablation.
+    t0: 3.0e4             # Start time to apply trend. 3.0e4 [yr]
+    tf: 3.1e4
+    M_0: 30.0             # Original mean frontal ablation [m/yr].
+    M_f: 0.8              # Ablation: increased factor from original frontal ablation (80% as in Christian et al., 2022).0.8
 
 
 thermodynamics:
@@ -89,9 +90,9 @@ thermodynamics:
   theta_act: 263.15       # Threshold temperature for the two regimes in activation energy [K] 
   adv_w: 
     apply: true           # Vertical advection in therm.
-    w_0: 0.3              # Vertical velocity at the ice surface (usually equals to accumulation) [m/yr]
-    w_exp: 0.33333        # Exponent of the vertical velocity profile. []
-  
+    w_0: 0.3              # Vertical velocity at the ice surface (usually equals to accumulation) 0.3 [m/yr]
+    w_exp: 0.33333        # Exponent of the vertical velocity profile. 1/3 []
+
 
 friction:
   m: 0.33333
@@ -99,15 +100,17 @@ friction:
   therm: none            # Temperature-dependent friction. none, two-valued, N_eff
   theta_thw: 273.15      # Basal temperature considered to be fully thawed. 268.15, 273.15
   theta_frz: 253.15      # Basal temperature considered to be fully frozen. 253.15, 233.15.
-  C_ref: 7.624e6         # Reference firction value.
+  C_ref: 7.624e6         # Reference friction value.
   C_frz: 7.624e6         # Frozen friction coeff. 7.624e6 [Pa m^-1/3 yr^1/3]
-  C_thw: 0.4             # Thawed reduction in friction coeff. []
+  C_ews: 7.0e6           # Friction coeff. for early warning signals [Pa m^-1/3 yr^1/3]
+  C_thw: 0.1             # Thawed reduction in friction coeff. []
 
 viscosity:
   n_gln: 3.0             # Glen flow law exponent
   eps: 1.0e-8            # Viscosity regularisation term. 
   therm: false           # Temperature-dependent viscosity.
   t_eq_A_theta: 1.5e3    # Eq. time to start applying Arrhenius dependency.
+  A_cnst: 1.0e-26        # Rate factor value in MISMIP_A (constant rate factor) .
   A_act: 4.9e-25         # Threshold rate factor for the two regimes in activation energy [Pa^-3 s^-1] 
   Q_act_1: 60.0          # Activation energies [kJ/mol]. (below theta_act)
   Q_act_2: 139.0         # Activation energies [kJ/mol]. (above theta_act)
@@ -129,10 +132,10 @@ calving:
     c_po: 3974.0         # Specific heat [J / (kg K)]
     L_i: 3.34e5          # Latent heat [J / kg ]
     gamma_T: 2.2e-5      # Heat exchange velocity. Linear: 2.0e-5, Quad: 36.23e-5. [m/s] --> [m/yr] 
-    T_0: 273.15          # Reference ocean temperature.
+    T_0: 273.15          # Reference ocean temperature [K].
 
 picard:
-  n: 10                  # Max number iter. Good results: 10.
+  n_picard: 10           # Max number iter. Good results: 10.
   tol: 1.0e-4            # Convergence tolerance within Picard iteration. 1.0e-4
   omega_1: 0.125         # Angle predictor. De Smedt et al. (2010) Eq. 10.
   omega_2: 0.95

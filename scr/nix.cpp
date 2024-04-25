@@ -34,7 +34,7 @@ int main()
 {
 
     // Specify the path to YAML file.
-    string yaml_name = "nix_params_mismip.yaml";
+    string yaml_name = "nix_params_mismip_therm.yaml";
 
     // Assuming the path won't exceed 4096 characters.
     char buffer[4096];
@@ -79,11 +79,11 @@ int main()
     readParams(config, nixParams);
 
     // USE PARAM CLASS TO ACCESS SOME PARAMETERS IN YAML.
-    auto [exp, n, n_z, grid, grid_exp, bedrock_ews] = nixParams.dom;
-    auto [t0, tf, t_eq, output]                     = nixParams.tm;
-    auto [t_n, out_hr]                              = nixParams.tm.output;
-    auto [n_picard, picard_tol, omega_1 , omega_2]  = nixParams.pcrd;
-    auto [H_0, S_0, u_0, visc_0, theta_0, beta_0]   = nixParams.init;
+    auto [bed_exp, exp, n, n_z, grid, grid_exp, bedrock_ews] = nixParams.dom;
+    auto [t0, tf, t_eq, output]                              = nixParams.tm;
+    auto [t_n, out_hr]                                       = nixParams.tm.output;
+    auto [n_picard, picard_tol, omega_1 , omega_2]           = nixParams.pcrd;
+    auto [H_0, S_0, u_0, visc_0, theta_0, beta_0]            = nixParams.init;
 
 
     /////////////////////////////////////////////////////////////////////////////////
@@ -106,15 +106,25 @@ int main()
         n_s = 17;
         L   = 694.5e3;
     }
+    else if ( exp == "mismip_3_A" )
+    {
+        n_s = 23; // 44, 10;
+        L   = 473.1e3;
+    }  
     else if ( exp == "mismip_3" || exp == "mismip_3_therm" )
     {
-        n_s = 18;
+        n_s = 23; //17; 18;
         L   = 473.1e3;
     }  
     else if ( exp == "ews" )
     {
-        n_s = 2; // ????
+        n_s = 2; 
         L   = 50.0e3;
+    }
+    else
+    {
+        cout << "\n Experiment forcing not recognised. Please, select: mismip_1... ";
+        abort();
     }
 
 
@@ -309,7 +319,7 @@ int main()
     }
 
     // MISMIP EXPERIMENT 3 FORCING.
-    if ( exp == "mismip_3" )
+    else if ( exp == "mismip_3" )
     {
         // Exps 3 forcing.
         // Rate factor [Pa^-3 s^-1].
@@ -334,6 +344,67 @@ int main()
         // Unit conversion: [Pa^-3 s^-1] --> [Pa^-3 yr^-1].
         A_s = A_s * nixParams.cnst.sec_year;     
     }
+
+    // MISMIP EXPERIMENT 3 WITH OCEANIC FORCING AND NO THERMODYNAMICS.
+    else if ( exp == "mismip_3_A" )
+    {
+        // Full simulation. 44
+        /*t_s << 4.0e4, 6.0e4, 9.0e4, 
+               12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4, 30.0e4, 33.0e4, 36.0e4,
+               39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4, 54.0e4, 57.0e4, 60.0e4, 63.0e4,
+               66.0e4, 69.0e4, 72.0e4, 75.0e4, 78.0e4, 81.0e4, 84.0e4, 87.0e4, 90.0e4, 
+               93.0e4, 96.0e4, 99.0e4, 102.0e4, 105.0e4, 108.0e4, 111.0e4, 114.0e4, 117.0e4, 
+               120.0e4, 123.0e4, 126.0e4, 129.0e4, 132.0e4;
+        
+        T_oce_s << 273.15, 273.15, 273.15, 
+                   273.65, 274.15, 274.65, 275.15, 275.65, 276.15, 276.65, 277.15, 277.65,
+                   278.15, 278.65, 279.15, 279.65, 280.15, 280.65, 281.15, 281.65, 282.15, 
+                   282.65, 283.15, 283.15, 282.65, 282.15, 281.65, 281.15, 280.65, 280.15, 
+                   279.65, 279.15, 278.68, 278.15, 277.65, 277.15, 276.65, 276.15, 275.65, 
+                   275.15, 274.65, 274.15, 273.65, 273.15;*/
+
+        // Short simulation. 23
+        t_s << 4.0e4, 6.0e4, 9.0e4, 
+               12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4, 30.0e4, 33.0e4, 36.0e4,
+               39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4, 54.0e4, 57.0e4, 60.0e4, 63.0e4,
+               66.0e4, 69.0e4;
+        
+        T_oce_s << 273.15, 273.15, 273.15, 
+                   274.15, 275.15, 276.15, 277.15, 278.15, 279.15, 280.15, 281.15, 282.15, 
+                   283.15, 282.15, 281.15, 280.15, 279.15, 278.15, 277.15, 276.15, 275.15, 
+                   274.15, 273.15;
+
+        // Short test.
+        /*t_s     << 4.0e4, 6.0e4, 8.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4, 30.0e4;
+        T_oce_s << 273.15, 273.65, 274.15, 274.65, 275.15, 275.65, 276.15, 276.65, 277.15, 277.65;*/
+
+
+        // Unit conversion: [Pa^-3 s^-1] --> [Pa^-3 yr^-1].
+        A_s = ArrayXd::Constant(n_s, 6.0e-25); // 0.9e-25
+        
+        // First intialize to fully advance and then slightly retreat.
+        A_s(0) = 0.8e-26; // Ensure the advance of the ice sheet. 0.7e-26
+        A_s(1) = 2.5e-25; // Slight retreat to start on the same point as the therm sims. 5.0e-26
+        A_s(2) = 6.0e-25; // Slight retreat to start on the same point as the therm sims. 5.0e-26
+
+        A_s = A_s * nixParams.cnst.sec_year; 
+
+        
+        // Unirt conversion performed in readparam file [Pa^-3 s^-1] --> [Pa^-3 yr^-1].
+        // FOR SOME UNKOWN REASON 
+        //A = nixParams.vis.A_cnst;
+        //A_s = ArrayXd::Constant(n_s, A);
+
+        // This should not be necessary as thermodynamics is off.
+        T_air_s = ArrayXd::Constant(n_s, 188.15); // 193.15
+
+        // Initialization.
+        T_air   = T_air_s(0);
+        T_oce   = T_oce_s(0);
+        A       = A_s(0);
+        A_theta = ArrayXXd::Constant(n, n_z, A);
+    }
+    
     
     // MISMIP THERMODYNAMICS. 
     else if ( exp == "mismip_1_therm" || exp == "mismip_3_therm" )
@@ -347,22 +418,37 @@ int main()
                60.0e4, 63.0e4, 66.0e4, 69.0e4, 72.0e4, 75.0e4, 78.0e4, 81.0e4, 84.0e4, 
                87.0e4, 90.0e4;
         
-        T_oce_s << 273.15, 273.65, 274.15, 274.65, 275.15, 275.65, 276.15, 276.65, 277.15, \
+        T_oce_s << 273.15, 273.65, 274.15, 274.65, 275.15, 275.65, 276.15, 276.65, 277.15, 
                    277.65, 278.15, 278.65, 279.15, 279.65, 280.15,
                    279.65, 279.15, 278.68, 278.15, 277.65, 277.15, 
-                   276.65, 276.15, 275.65, 275.15, 274.65, 274.15, 273.65, 273.15;
-
-        T_air_s = ArrayXd::Constant(n_s, 193.15); // 193.15*/
+                   276.65, 276.15, 275.65, 275.15, 274.65, 274.15, 273.65, 273.15;*/
+        
+        
+        // Short simulation. 23
+        t_s << 4.0e4, 6.0e4, 9.0e4, 
+               12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4, 30.0e4, 33.0e4, 36.0e4,
+               39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4, 54.0e4, 57.0e4, 60.0e4, 63.0e4,
+               66.0e4, 69.0e4;
+        
+        T_oce_s << 273.15, 273.15, 273.15, 
+                   274.15, 275.15, 276.15, 277.15, 278.15, 279.15, 280.15, 281.15, 282.15, 
+                   283.15, 282.15, 281.15, 280.15, 279.15, 278.15, 277.15, 276.15, 275.15, 
+                   274.15, 273.15;
+        
+        // Constant value given in the param file but smooth transition to the cold value.
+        T_air_s = ArrayXd::Constant(n_s, nixParams.bc.therm.T_air); // 193.15
+        T_air_s(0) = 233.15; // Equilibration with a medium value.
+        T_air_s(1) = 213.15;
 
         
         
         // ONLY CONSTANT ATMOSPHERIC FORCING. No ocean anomalies.
-        t_s << 3.0e4, 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4,
+        /*t_s << 3.0e4, 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4,
                30.0e4, 33.0e4, 36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4;
 
         T_air_s = ArrayXd::Constant(n_s, nixParams.bc.therm.T_air); // 193.15
 
-        T_oce_s = ArrayXd::Zero(n_s); // 193.15
+        T_oce_s = ArrayXd::Zero(n_s); // 193.15*/
 
 
 
@@ -410,7 +496,14 @@ int main()
         // FORCING CAN BE IMPOSED DIRECTLY ON A_s (i.e., an increase in temperature) or
         // on the calving at the front as a consequence of ocean warming.
     }
-    
+
+    // EXPERIMENT NOT DEFINED.
+    else
+    {
+        cout << "\n Experiment not defined. Please, do so: mismip_1...";
+        abort();
+    }
+
     /////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////
 
@@ -500,7 +593,7 @@ int main()
         }
 
         // MISMIP-THERM EXPERIMENTS.
-        else if ( exp == "mismip_1_therm" || exp == "mismip_3_therm" )
+        else if ( exp == "mismip_1_therm" || exp == "mismip_3_therm" || exp == "mismip_3_A"  )
         {
             // Update rate factor and T_air value.
             if ( t > t_s(c_s) )
@@ -810,7 +903,7 @@ int main()
 
             // Integrate heat equation and calculate basal melt.
             sol_thrm = f_theta(theta, ub, H, tau_b, Q_fric, sigma, dz, \
-                                dt, ds, L, dL_dt, t, w, strain_2d, \
+                                dt, ds, L, T_air, dL_dt, t, w, strain_2d, \
                                     nixParams.dom, nixParams.thrmdyn, nixParams.dyn, \
                                         nixParams.bc, nixParams.cnst, nixParams.calv);
 

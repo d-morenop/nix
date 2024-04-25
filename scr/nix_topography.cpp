@@ -14,17 +14,19 @@ ArrayXd f_bed(double L, ArrayXd sigma, ArrayXd ds, double t, DomainParams dom)
     ArrayXd x = sigma * L; 
 
     // Number of points at the edges of the array that are not smoothed out.
-    int p = 3;
+    //int p = 3;
 
     // MISMIP experiments bedrock.
     // Same bedrock as Schoof (2007).
     // Inverse sign to get a decreasing bedrock elevation.
-    if ( dom.exp == "mismip_1" || dom.exp == "mismip_1_therm" )
+    //if ( dom.bed_exp == "mismip_1" || dom.bed_exp == "mismip_1_therm" )
+
+    if ( dom.bed_exp == "mismip_1" )
     {
         x = x / 750.0e3; 
         bed = 720.0 - 778.5 * x;
     }
-    else if ( dom.exp == "mismip_3" || dom.exp == "mismip_3_therm" )
+    else if ( dom.bed_exp == "mismip_3" )
     {
         x = x / 750.0e3; 
         // Schoof: 2184.8. Daniel: 2148.8.
@@ -32,7 +34,7 @@ ArrayXd f_bed(double L, ArrayXd sigma, ArrayXd ds, double t, DomainParams dom)
                     + 1031.72 * pow(x, 4) + \
                     - 151.72 * pow(x, 6);
     }
-    else if ( dom.exp == "ews" )
+    else if ( dom.bed_exp == "ews" )
     {
         // Variables.
         int c_x1 = 0;
@@ -77,6 +79,11 @@ ArrayXd f_bed(double L, ArrayXd sigma, ArrayXd ds, double t, DomainParams dom)
                 bed(i) = y_2 - 5.0e-3 * ( x(i) - dom.ews.x_2 );
             } 
         }
+    }
+    else
+    {
+        cout << "\n Bed geometry not recognised. Please, select: mismip_1... ";
+        abort();
     }
 
     // Potential smooth bed.

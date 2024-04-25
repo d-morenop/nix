@@ -47,6 +47,7 @@ struct BedrockEwsParams
 
 struct DomainParams 
 {
+    string bed_exp;
     string exp;
     int n;
     int n_z;
@@ -153,6 +154,7 @@ struct ViscosityParams
     double eps;
     bool therm;
     double t_eq_A_theta;
+    //double A_cnst;
     double A_act;
     double Q_act_1;
     double Q_act_2;
@@ -246,6 +248,7 @@ void readParams(const YAML::Node& node, NixParams& params)
     params.cnst.sec_year = node["constants"]["sec_year"].as<double>();
 
     // DOMAIN.
+    params.dom.bed_exp         = node["domain"]["bed_exp"].as<std::string>();
     params.dom.exp             = node["domain"]["experiment"].as<std::string>();
     params.dom.n               = node["domain"]["n"].as<int>();
     params.dom.n_z             = node["domain"]["n_z"].as<int>();
@@ -254,7 +257,7 @@ void readParams(const YAML::Node& node, NixParams& params)
     params.dom.ews.smooth      = node["domain"]["bedrock_ews"]["smooth_bed"].as<string>();
     params.dom.ews.p           = node["domain"]["bedrock_ews"]["p"].as<int>();
     params.dom.ews.sigma_gauss = node["domain"]["bedrock_ews"]["sigma_gauss"].as<double>();
-    params.dom.ews.t0_smth    = node["domain"]["bedrock_ews"]["t0_smth"].as<double>();
+    params.dom.ews.t0_smth     = node["domain"]["bedrock_ews"]["t0_smth"].as<double>();
     params.dom.ews.x_1         = node["domain"]["bedrock_ews"]["x_1"].as<double>();
     params.dom.ews.x_2         = node["domain"]["bedrock_ews"]["x_2"].as<double>();
     params.dom.ews.y_p         = node["domain"]["bedrock_ews"]["y_p"].as<double>();
@@ -323,6 +326,7 @@ void readParams(const YAML::Node& node, NixParams& params)
     params.vis.eps          = node["viscosity"]["eps"].as<double>();
     params.vis.therm        = node["viscosity"]["therm"].as<bool>();
     params.vis.t_eq_A_theta = node["viscosity"]["t_eq_A_theta"].as<double>();
+    //params.vis.A_cnst       = params.cnst.sec_year * node["viscosity"]["A_cnst"].as<double>();
     params.vis.A_act        = params.cnst.sec_year * node["viscosity"]["A_act"].as<double>();
     params.vis.Q_act_1      = 1.0e3 * node["viscosity"]["Q_act_1"].as<double>();
     params.vis.Q_act_2      = 1.0e3 * node["viscosity"]["Q_act_2"].as<double>();

@@ -3,7 +3,7 @@
 // NIX THERMODYNAMICS MODULE.
 
 ArrayXXd f_theta(ArrayXXd theta, ArrayXd ub, ArrayXd H, ArrayXd tau_b, ArrayXd Q_fric, \
-                 ArrayXd sigma, ArrayXd dz, double dt, ArrayXd ds, double L, \
+                 ArrayXd sigma, ArrayXd dz, double dt, ArrayXd ds, double L, double T_air, \
                  double dL_dt, double t, ArrayXXd w, ArrayXXd strain_2d, \
                  DomainParams& dom, ThermodynamicsParams& thrm, DynamicsParams& dyn, \
                  BoundaryConditionsParams& bc, ConstantsParams& cnst, CalvingParams& calv)
@@ -56,7 +56,8 @@ ArrayXXd f_theta(ArrayXXd theta, ArrayXd ub, ArrayXd H, ArrayXd tau_b, ArrayXd Q
                             ( theta(i,1) - theta(i,0) ) * ( - w(i,0) ) * dz_inv(i);
 
         // Surface.
-        theta_now(i,dom.n_z-1) = bc.therm.T_air;
+        //theta_now(i,dom.n_z-1) = bc.therm.T_air;
+        theta_now(i,dom.n_z-1) = T_air;
     }
 
     // Due to symmetry theta_now(0,j) = theta_now(2,j). Ice divide.
