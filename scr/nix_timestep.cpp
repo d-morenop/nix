@@ -2,21 +2,17 @@
 
 // NIX TIMESTEP MODULE.
 
-/*Array2d f_dt(double error, double picard_tol, string dt_meth, \
-            double t, double dt, double t_eq, double dt_min, \
-            double dt_max, double dt_CFL, double rel)*/
-
 Array2d f_dt(double L, double t, double dt, double u_bar_max, \
-            double ds_min, double error, TimestepParams& tmstep, \
+            double ds_min,double error, TimestepParams& tmstep, \
             TimeParams& tm, PicardParams& picard)
 {
     // Local variables.
     Array2d out;
-    double dt_tilde, dt_CFL, dt_CFL_w;
+    double dt_tilde, dt_CFL;
 
     // Factor 0.5 is faster since it yields fewer Picard's iterations.
-    dt_CFL = 0.5 * ds_min * L / u_bar_max;
-    //dt_CFL_w = 0.5 * 
+    dt_CFL   = 0.5 * ds_min * L / u_bar_max;
+    //dt_CFL_w = 0.5 * dz_min / abs(w_max);
 
 
     // Fixed time step.
@@ -39,8 +35,18 @@ Array2d f_dt(double L, double t, double dt, double u_bar_max, \
         // Apply relaxation.
         dt = tmstep.rel * dt + (1.0 - tmstep.rel) * dt_tilde;
 
-
-        // Ensure Courant-Friedrichs-Lewis condition is met.
+        // If thermodynamic solver is applied, consider stability in explicit temperature solution.
+        /*if ( thrm.therm == true )
+        {
+            dt_CFL_min = min(dt_CFL, dt_CFL_w);
+        }
+        else
+        {
+            dt_CFL_min = dt_CFL;
+        }*/
+        
+        // Ensure Courant-Friedrichs-Lewis condition is met (in both directions if necessary).
+        //dt = min(dt, dt_CFL_min);
         dt = min(dt, dt_CFL);
     }
 
