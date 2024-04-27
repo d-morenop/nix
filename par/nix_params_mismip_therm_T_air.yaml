@@ -7,7 +7,7 @@ path:
 
 time:
   t0: 0.0                 # Starting time [yr].
-  tf: 69.0e4              # End time [yr]. 6.0e4, 57.0e3, 54.0e4, 32.0e4, MISMIP-therm: 3.0e4, 90.0e4, Ending time [yr]. EWR: 5.0e3
+  tf: 54.0e4              # End time [yr]. 6.0e4, 57.0e3, 54.0e4, 32.0e4, MISMIP-therm: 3.0e4, 90.0e4, Ending time [yr]. EWR: 5.0e3
   t_eq: 1.0e3             # Equilibration time [yr]. 1.5e3
   output:
     t_n: 100              # Number of output frames
@@ -21,9 +21,9 @@ constants:
 
 domain:
   bed_exp: mismip_3       # Domain def, i.e., bedrock geometry applied: exp_1 (MISMIP exp_1) and so on.
-  experiment: therm_T_oce  # Forcing type. As defined in MISMIP: mismip_1, mismip_3_therm...
-  n: 50                   # Number of horizontal points
-  n_z: 15                 # Number vertical layers
+  experiment: therm_T_air  # Forcing type. As defined in MISMIP: mismip_1, mismip_3_therm...
+  n: 250                   # Number of horizontal points
+  n_z: 25                 # Number vertical layers
   grid: even              # Nix grid type.
   grid_exp: 1.0           # Exponent of unevenly-spaced grid. 0.5
   bedrock_ews:            # Transition indicators domain.
@@ -122,10 +122,10 @@ advection:
   meth: explicit         # Solver scheme. "implicit", "explicit"
 
 calving:
-  meth: deterministic             # 0, no calving; 1, Christian et al. (2022), 2: deterministic Favier et al. (2019)
+  meth: none             # 0, no calving; 1, Christian et al. (2022), 2: deterministic Favier et al. (2019)
   m_dot: 30.0            # Mean frontal ablation [m/yr]. 30.0
   sub_shelf_melt:
-    shelf_melt: true
+    shelf_melt: none
     meth: quadratic      # Melt parametrization. linear; quadratic.
     t0_oce: 2.5e4        # Start time of ocean warming.
     tf_oce: 27.5e4       # End time of applied ocean forcing.

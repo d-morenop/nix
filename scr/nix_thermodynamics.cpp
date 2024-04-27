@@ -77,17 +77,20 @@ ArrayXXd f_theta(ArrayXXd theta, ArrayXd ub, ArrayXd H, ArrayXd tau_b, ArrayXd Q
     }
 
     // Impose relaxation to avoid crushing during spin-up.
-    if ( t < 5.0e3 )
+    /*if ( t < 5.0e3 )
     {
         double rel = 0.7; // 0.75
         theta_now = ( 1.0 - rel ) * theta_now + rel * theta;
-    }
+    }*/
 
-    // Compute total basal melting. 
-    // [m/s] --> [m/yr].
+    double rel = 0.7; // 0.75
+    theta_now = ( 1.0 - rel ) * theta_now + rel * theta;
+
+    
+    // Compute total basal melting. [m/s] --> [m/yr].
     b_dot  = cnst.sec_year * ( thrm.k / (cnst.rho * calv.sub_shelf_melt.L_i ) ) * ( thrm.G_k + Q_f_k );
 
-    // Only apply for those point that reached the pressure melting point.
+    // Only apply for those points that reach the pressure melting point.
     b_melt = (theta_now.col(0) >= thrm.theta_max).select(b_dot, b_melt);
 
     

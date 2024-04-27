@@ -21,11 +21,11 @@ from matplotlib.gridspec import GridSpec
 
 
 path_fig        = '/home/dmoreno/figures/nix/oscillations/S-C_thw/'
-path_now        = '/home/dmoreno/nix/mismip.therm/test.issue_long_T/n.250_dt_min.0.1_T_air.173.15/'
+path_now        = '/home/dmoreno/nix/mismip.therm/test.issue_long_T/n.250_n_z.25_T_air.218.15/'
 path_stoch      = '/home/dmoreno/nix/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
-# /home/dmoreno/nix/mismip.therm/test.issue_long/n.250.00_dt_min.0.10/
+# /home/dmoreno/nix/mismip.therm/test.issue_long_T/n.250_n_z.25_T_air.218.15/
 # '/home/dmoreno/nix/oscillations/S-C_thw_hr_dt.fixed/S_0.0.10_C_thw.0.10/'
 # '/home/dmoreno/nix/ews/M_rates/smooth/sigma.1.0_A.3.0e-26_yp.176/''
 # /home/dmoreno/flowline/mismip_bp/exp_3/n.100_nz.10/
@@ -35,11 +35,11 @@ file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 save_series        = 1
 save_series_comp   = 0
 save_shooting      = 0
-save_domain        = 0
-coloured_domain    = 0
+save_domain        = 1
+coloured_domain    = 1
 save_var_frames    = 0
 save_series_frames = 0
-save_theta         = 1
+save_theta         = 0
 save_visc          = 0
 save_u             = 0
 save_u_der         = 0
@@ -624,7 +624,7 @@ if save_shooting == 1:
 
 if save_domain == 1:
 	
-	for i in range(0, l, 1): # range(0, l, 2), (l-1, l, 20)
+	for i in range(l-1, l, 1): # range(0, l, 2), (l-1, l, 20)
 		
 		# Horizontal dimension [km].
 		#L_plot  = np.linspace(0, L[i], s[2])
@@ -806,13 +806,14 @@ if save_domain == 1:
 					 				cax=cbar_ax, extend='neither')
 
 			# Set the modified ticks and tick labels
-			"""
-			ticks = np.linspace(0, 1, 5)
-			ticks_lab = np.round(np.linspace(-theta_max, -theta_min, 5), 0)
+			n_ticks = 5
+			ticks = np.linspace(0, 1, n_ticks)
+			ticks_lab = np.round(np.linspace(-theta_max, -theta_min, n_ticks), 0)
 			cb.set_ticks(ticks)
-			cb.set_ticklabels([r'$-80$', r'$-60$', r'$-40$', r'$-20$', r'$0$',], \
-								fontsize=13)
-			"""
+			#cb.set_ticklabels([r'$-80$', r'$-60$', r'$-40$', r'$-20$', r'$0$',], \
+			#					fontsize=13)
+			cb.set_ticklabels(ticks_lab, fontsize=13)
+
 			cb.set_label(r'$ \theta (x,z) \ (^{\circ} \mathrm{C}) $', \
 							rotation=90, labelpad=8, fontsize=22)
 
@@ -1039,12 +1040,12 @@ if save_theta == 1:
 	y_labels = np.linspace(0, n_z, z_ticks, dtype=int)
 
 	# Theta limits.
-	theta_min = -50.0
+	theta_min = np.min(theta) #-50.0
 	theta_max = 0.0
 
 	cb_ticks = np.round(np.linspace(theta_min, theta_max, 6),1)
 	
-	for i in range(15, l, 1):
+	for i in range(5, l, 10):
 
 		# Update x_labels as domain extension changes in each iteration.
 		x_labels  = np.linspace(0, L[i], n_ticks, dtype=int)

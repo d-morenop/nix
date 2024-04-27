@@ -111,9 +111,9 @@ int main()
         n_s = 23; // 44, 10;
         L   = 473.1e3;
     }  
-    else if ( exp == "mismip_3" || exp == "mismip_3_therm" )
+    else if ( exp == "mismip_3" || exp == "therm_T_air" || exp == "therm_T_oce" )
     {
-        n_s = 23; //17; 18;
+        n_s = 22; //17; 18;
         L   = 473.1e3;
     }  
     else if ( exp == "ews" )
@@ -405,62 +405,16 @@ int main()
         A_theta = ArrayXXd::Constant(n, n_z, A);
     }
     
-    
-    // MISMIP THERMODYNAMICS. 
-    else if ( exp == "mismip_1_therm" || exp == "mismip_3_therm" )
-    {    
-        // OCEAN TEMPERATURES ANOMALIES FORCING.
-        // Change of sign in (T_0-T_oce) to produce advance/retreate.
-        // Make sure length of positive/negative anomalies is the same
-        // to retireve the initial state. Close hysteresis loop.
-        /*t_s << 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4, 30.0e4,
-               33.0e4, 36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4, 54.0e4, 57.0e4,
-               60.0e4, 63.0e4, 66.0e4, 69.0e4, 72.0e4, 75.0e4, 78.0e4, 81.0e4, 84.0e4, 
-               87.0e4, 90.0e4;
-        
-        T_oce_s << 273.15, 273.65, 274.15, 274.65, 275.15, 275.65, 276.15, 276.65, 277.15, 
-                   277.65, 278.15, 278.65, 279.15, 279.65, 280.15,
-                   279.65, 279.15, 278.68, 278.15, 277.65, 277.15, 
-                   276.65, 276.15, 275.65, 275.15, 274.65, 274.15, 273.65, 273.15;*/
-        
-        
-        // Short simulation. 23
-        t_s << 4.0e4, 6.0e4, 9.0e4, 
-               12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4, 30.0e4, 33.0e4, 36.0e4,
-               39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4, 54.0e4, 57.0e4, 60.0e4, 63.0e4,
-               66.0e4, 69.0e4;
-        
-        T_oce_s << 273.15, 273.15, 273.15, 
-                   274.15, 275.15, 276.15, 277.15, 278.15, 279.15, 280.15, 281.15, 282.15, 
-                   283.15, 282.15, 281.15, 280.15, 279.15, 278.15, 277.15, 276.15, 275.15, 
-                   274.15, 273.15;
-        
-        // Constant value given in the param file but smooth transition to the cold value.
-        T_air_s = ArrayXd::Constant(n_s, nixParams.bc.therm.T_air); // 193.15
-        T_air_s(0) = 233.15; // Equilibration with a medium value.
-        T_air_s(1) = 213.15;
-
-        
-        
-        // ONLY CONSTANT ATMOSPHERIC FORCING. No ocean anomalies.
-        /*t_s << 3.0e4, 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4,
-               30.0e4, 33.0e4, 36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4;
-
-        T_air_s = ArrayXd::Constant(n_s, nixParams.bc.therm.T_air); // 193.15
-
-        T_oce_s = ArrayXd::Zero(n_s); // 193.15*/
-
-
-
+    // MISMIP THERMODYNAMICS. AIR TEMPERATURES FORCING
+    else if ( exp == "therm_T_air" )
+    {
         // AIR TEMPERATURES FORCING.
         // Stable forcing.
-        /*
         t_s << 3.0e4, 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4,
                30.0e4, 33.0e4, 36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4;
 
         T_air_s << 253.15, 243.15, 233.15, 223.15, 213.15, 203.15, 198.15, 193.15, 193.15,
                    198.15, 203.15, 213.15, 223.15, 233.15, 243.15, 253.15, 253.15;
-        */
 
        // High resolution.
         /*t_s << 6.0e4, 10.0e4, 14.0e4, 16.0e4, 20.0e4, 24.0e4, 28.0e4, 32.0e4, 36.0e4, 40.0e4,
@@ -479,8 +433,88 @@ int main()
         A       = A_s(0);
         A_theta = ArrayXXd::Constant(n, n_z, A);
 
-    }   
+    }
 
+    // MISMIP THERMODYNAMICS. OCEAN TEMPERATURES FORCING.
+    else if ( exp == "therm_T_oce" )
+    {
+        // OCEAN TEMPERATURES ANOMALIES FORCING.
+        // Change of sign in (T_0-T_oce) to produce advance/retreate.
+        // Make sure length of positive/negative anomalies is the same
+        // to retireve the initial state. Close hysteresis loop.
+        /*t_s <<  6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4, 30.0e4, 33.0e4,
+               36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4, 54.0e4, 57.0e4, 60.0e4, 63.0e4,
+               66.0e4, 69.0e4, 72.0e4, 75.0e4, 78.0e4, 81.0e4, 84.0e4, 87.0e4, 90.0e4, 93.0e4,
+               96.0e4, 99.0e4, 102.0e4, 105.0e4, 108.0e4, 111.0e4, 114.0e4, 117.0e4, 120.0e4, 123.0e4, 
+               126.0e4, 132.0e4;
+        
+        T_oce_s << 273.15, 273.65, 274.15, 274.65, 275.15, 275.65, 276.15, 276.65, 277.15, 277.65,
+                   278.15, 278.65, 279.15, 279.65, 280.15, 280.65, 281.15, 281.65, 282.15, 282.65,
+                   283.15, 283.15, 282.65, 282.15, 281.65, 281.15, 280.65, 280.15, 279.65, 279.15, 278.68,
+                   278.15, 277.65, 277.15, 276.65, 276.15, 275.65, 275.15, 274.65, 274.15, 273.65, 
+                   273.15;*/
+        
+        
+        // Short simulation. 23
+        t_s << 4.0e4, 6.0e4, 
+               9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4, 30.0e4, 33.0e4, 
+               36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4, 54.0e4, 57.0e4, 60.0e4, 
+               63.0e4, 66.0e4;
+        
+        T_oce_s << 273.15, 273.15, 
+                   274.15, 275.15, 276.15, 277.15, 278.15, 279.15, 280.15, 281.15, 282.15, 
+                   283.15, 282.15, 281.15, 280.15, 279.15, 278.15, 277.15, 276.15, 275.15, 
+                   274.15, 273.15;
+        
+        // Constant value given in the param file but smooth transition to the cold value.
+        // CHECK IF THIS VALUE OF T_AIR IS ENOUGH TO ADVANCE AS MUCH AS THE NON-THERMAL SIM.
+        T_air_s    = ArrayXd::Constant(n_s, nixParams.bc.therm.T_air); // 193.15
+        T_air_s(0) = 233.15; // Equilibration with a medium value.
+
+        // Initialization.
+        T_air   = T_air_s(0);
+        T_oce   = T_oce_s(0);
+        A       = A_s(0);
+        A_theta = ArrayXXd::Constant(n, n_z, A);
+    }
+    
+    // MISMIP THERMODYNAMICS. 
+    /*
+    else if ( exp == "mismip_1_therm" || exp == "mismip_3_therm" )
+    {    
+        // OCEAN TEMPERATURES ANOMALIES FORCING.
+        // Change of sign in (T_0-T_oce) to produce advance/retreate.
+        // Make sure length of positive/negative anomalies is the same
+        // to retireve the initial state. Close hysteresis loop.
+
+        
+        // Short simulation. 23
+        t_s << 4.0e4, 6.0e4, 9.0e4, 
+               12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4, 30.0e4, 33.0e4, 36.0e4,
+               39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4, 54.0e4, 57.0e4, 60.0e4, 63.0e4,
+               66.0e4, 69.0e4;
+        
+        T_oce_s << 273.15, 273.15, 273.15, 
+                   274.15, 275.15, 276.15, 277.15, 278.15, 279.15, 280.15, 281.15, 282.15, 
+                   283.15, 282.15, 281.15, 280.15, 279.15, 278.15, 277.15, 276.15, 275.15, 
+                   274.15, 273.15;
+        
+        // Constant value given in the param file but smooth transition to the cold value.
+        // CHECK IF THIS VALUE OF T_AIR IS ENOUGH TO ADVANCE AS MUCH AS THE NON-THERMAL SIM.
+        T_air_s = ArrayXd::Constant(n_s, nixParams.bc.therm.T_air); // 193.15
+        T_air_s(0) = 233.15; // Equilibration with a medium value.
+        //T_air_s(1) = 233.15;
+
+
+        // Initialization.
+        T_air   = T_air_s(0);
+        T_oce   = T_oce_s(0);
+        A       = A_s(0);
+        A_theta = ArrayXXd::Constant(n, n_z, A);
+
+    }   
+    */
+    
     // TRANSITION INDICATORS EXPERIMENTS.
     else if ( exp == "ews" )
     {
@@ -593,7 +627,7 @@ int main()
         }
 
         // MISMIP-THERM EXPERIMENTS.
-        else if ( exp == "mismip_1_therm" || exp == "mismip_3_therm" || exp == "mismip_3_A"  )
+        else if ( exp == "mismip_3_A" || exp == "therm_T_air" || exp == "therm_T_oce" )
         {
             // Update rate factor and T_air value.
             if ( t > t_s(c_s) )
@@ -899,7 +933,7 @@ int main()
         else if ( nixParams.thrmdyn.therm == true && t >= nixParams.tm.t_eq )
         {
             // Vertical velocity from incompressibility of ice flow.
-            w = f_w(u_bar_x, H, dz, b_melt, nixParams.dom);
+            w = f_w(u_bar_x, H, dz, b_melt, u_bar, bed, ds, L, nixParams.dom);
 
             // Integrate heat equation and calculate basal melt.
             sol_thrm = f_theta(theta, ub, H, tau_b, Q_fric, sigma, dz, \

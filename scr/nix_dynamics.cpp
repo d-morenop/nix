@@ -458,7 +458,8 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_sym, Array
 }
 
 // Vertical velocity calculation.
-ArrayXXd f_w(ArrayXd u_bar_x, ArrayXd H, ArrayXd dz, ArrayXd b_melt, DomainParams& dom)
+ArrayXXd f_w(ArrayXd u_bar_x, ArrayXd H, ArrayXd dz, ArrayXd b_melt, ArrayXd u_bar, \
+             ArrayXd bed, ArrayXd ds, double L, DomainParams& dom)
 {
     ArrayXXd w(dom.n, dom.n_z);
     
@@ -481,23 +482,42 @@ ArrayXXd f_w(ArrayXd u_bar_x, ArrayXd H, ArrayXd dz, ArrayXd b_melt, DomainParam
         w(i,0) = 0.0; 
     }*/
 
+    ArrayXd dx_inv = 1.0 / ( ds * L );
+
+    // Evaluate bedrock geometry gradient.
+    ArrayXd bed_x(dom.n), w_b(dom.n);
+    for (int i=0; i<dom.n-1; i++)
+    { 
+        // Forward derivative (just to be consistent with surface gradient in vel solver).
+        bed_x(i) = dx_inv(i) * ( bed(i+1) - bed(i) );
+    }
+
+    // Boundary: grounding line.
+    bed_x(dom.n-1) = ( bed(dom.n-1) - bed(dom.n-2) ) * dx_inv(dom.n-2);
+
+    // Vertical velocity at the base is basal melt plus sliding term (u_bar if SSA or DIVA; u in BP).
+    // Eq. 5 in In-Woo Park et al. (2024): https://tc.copernicus.org/articles/18/1139/2024/tc-18-1139-2024.html
+    w_b = u_bar * bed_x - b_melt;
+
     // For the SSA and DIVA. H(i) = n_z * dz(i) --> w.col(j) = u_bar_x * H_norm * ( j / dom.n_z )
     // Add contribution from basal melt in [m / yr].
     ArrayXd H_norm = H / dom.n_z;
     for (int j=0; j<dom.n_z; j++)
     { 
-        // Include basal melting b_melt.
-        w.col(j) = u_bar_x * H_norm * j + b_melt;
+        // Include basal melting b_melt. Eq. 4, In-Woo Park et al. (2024).
+        w.col(j) = w_b - u_bar_x * H_norm * j;
     }
 
-    
 
     // For now, test in (n-1) and (n-2) with the same vertical velocity profile??
     // To avoid instabilities at the grounding line?
     //w.row(dom.n-1) = w.row(dom.n-2);
 
     // Ensure negative values to be consisten with vertical adv discretisation.
-    w = - abs(w);
+    //w = - abs(w);
+    w = (w > 0.0).select(0.0, w);
+    
+    
     // Currently assume an evenly-spaced vertical coordinate dz(x).
     //w.row(i) = w.row(i) * H(i);
 
