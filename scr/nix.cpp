@@ -34,7 +34,7 @@ int main()
 {
 
     // Specify the path to YAML file.
-    string yaml_name = "nix_params_mismip_therm.yaml";
+    string yaml_name = "nix_params_mismip_therm_T_oce.yaml";
 
     // Assuming the path won't exceed 4096 characters.
     char buffer[4096];
@@ -101,21 +101,39 @@ int main()
     int n_s;
     double L;
 
+    // Initial position ice sheet depending on bed geometry.
+    if ( bed_exp == "mismip_1" )
+    {
+        L = 694.5e3;
+    }
+    else if ( bed_exp == "mismip_3" )
+    {
+        L = 473.1e3;
+    }
+
+    
+    // Prepare variables for forcing.
+    // BETTER TO USE AN EVEN NUMBER FOR n_s!!
     if ( exp == "mismip_1" || exp == "mismip_1_therm" )
     {
         n_s = 17;
-        L   = 694.5e3;
     }
     else if ( exp == "mismip_3_A" )
     {
-        n_s = 23; // 44, 10;
-        L   = 473.1e3;
+        n_s = 42; // 23, 42
     }  
-    else if ( exp == "mismip_3" || exp == "therm_T_air" || exp == "therm_T_oce" )
+    else if ( exp == "mismip_3" )
     {
         n_s = 22; //17; 18;
-        L   = 473.1e3;
     }  
+    else if ( exp == "therm_T_air" )
+    {
+        n_s = 24; // 5, 8, 13
+    }
+    else if ( exp == "therm_T_oce" )
+    {
+        n_s = 46; // 42 
+    }
     else if ( exp == "ews" )
     {
         n_s = 2; 
@@ -316,6 +334,10 @@ int main()
     
         // Unit conversion: [Pa^-3 s^-1] --> [Pa^-3 yr^-1].
         A_s = A_s * nixParams.cnst.sec_year;     
+
+        // Initialization.
+        A       = A_s(0);
+        A_theta = ArrayXXd::Constant(n, n_z, A);
     }
 
     // MISMIP EXPERIMENT 3 FORCING.
@@ -343,28 +365,49 @@ int main()
     
         // Unit conversion: [Pa^-3 s^-1] --> [Pa^-3 yr^-1].
         A_s = A_s * nixParams.cnst.sec_year;     
+
+        // Initialization.
+        A       = A_s(0);
+        A_theta = ArrayXXd::Constant(n, n_z, A);
     }
 
     // MISMIP EXPERIMENT 3 WITH OCEANIC FORCING AND NO THERMODYNAMICS.
     else if ( exp == "mismip_3_A" )
     {
         // Full simulation. 44
-        /*t_s << 4.0e4, 6.0e4, 9.0e4, 
-               12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4, 30.0e4, 33.0e4, 36.0e4,
-               39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4, 54.0e4, 57.0e4, 60.0e4, 63.0e4,
-               66.0e4, 69.0e4, 72.0e4, 75.0e4, 78.0e4, 81.0e4, 84.0e4, 87.0e4, 90.0e4, 
-               93.0e4, 96.0e4, 99.0e4, 102.0e4, 105.0e4, 108.0e4, 111.0e4, 114.0e4, 117.0e4, 
-               120.0e4, 123.0e4, 126.0e4, 129.0e4, 132.0e4;
-        
-        T_oce_s << 273.15, 273.15, 273.15, 
-                   273.65, 274.15, 274.65, 275.15, 275.65, 276.15, 276.65, 277.15, 277.65,
-                   278.15, 278.65, 279.15, 279.65, 280.15, 280.65, 281.15, 281.65, 282.15, 
-                   282.65, 283.15, 283.15, 282.65, 282.15, 281.65, 281.15, 280.65, 280.15, 
-                   279.65, 279.15, 278.68, 278.15, 277.65, 277.15, 276.65, 276.15, 275.65, 
-                   275.15, 274.65, 274.15, 273.65, 273.15;*/
+        /*t_s <<  6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4, 30.0e4, 33.0e4,
+               36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4, 54.0e4, 57.0e4, 60.0e4, 63.0e4,
+               66.0e4, 69.0e4, 72.0e4, 75.0e4, 78.0e4, 81.0e4, 84.0e4, 87.0e4, 90.0e4, 93.0e4,
+               96.0e4, 99.0e4, 102.0e4, 105.0e4, 108.0e4, 111.0e4, 114.0e4, 117.0e4, 120.0e4, 123.0e4, 
+               126.0e4, 129.0e4;
 
+        T_oce_s << 273.15, 273.65, 274.15, 274.65, 275.15, 275.65, 276.15, 276.65, 277.15, 277.65,
+                   278.15, 278.65, 279.15, 279.65, 280.15, 280.65, 281.15, 281.65, 282.15, 282.65,
+                   283.15, 283.15, 282.65, 282.15, 281.65, 281.15, 280.65, 280.15, 279.65, 279.15, 278.68,
+                   278.15, 277.65, 277.15, 276.65, 276.15, 275.65, 275.15, 274.65, 274.15, 273.65, 
+                   273.15;
+                   */
+
+        // Initial and step length of forcing.
+        double dt_forcing = 4.0e4;
+        double t_forc_0   = 10.0e4;
+
+        t_s = ArrayXd::LinSpaced(n_s, t_forc_0, t_forc_0 + double(dt_forcing*n_s));
+
+        cout << "\n t_s = " << t_s;
+
+        // Oceanic forcing.
+        double T_oce_min = 273.15;
+        double T_oce_max = 283.15;
+
+        int n_s_hlf = int(0.5*n_s);
+
+        T_oce_s.block(0,0,n_s_hlf,1)       = ArrayXd::LinSpaced(n_s_hlf, T_oce_min, T_oce_max);
+        T_oce_s.block(n_s_hlf,0,n_s_hlf,1) = ArrayXd::LinSpaced(n_s_hlf, T_oce_max, T_oce_min);
+        
+        
         // Short simulation. 23
-        t_s << 4.0e4, 6.0e4, 9.0e4, 
+        /*t_s << 4.0e4, 6.0e4, 9.0e4, 
                12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4, 30.0e4, 33.0e4, 36.0e4,
                39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4, 54.0e4, 57.0e4, 60.0e4, 63.0e4,
                66.0e4, 69.0e4;
@@ -372,7 +415,7 @@ int main()
         T_oce_s << 273.15, 273.15, 273.15, 
                    274.15, 275.15, 276.15, 277.15, 278.15, 279.15, 280.15, 281.15, 282.15, 
                    283.15, 282.15, 281.15, 280.15, 279.15, 278.15, 277.15, 276.15, 275.15, 
-                   274.15, 273.15;
+                   274.15, 273.15;*/
 
         // Short test.
         /*t_s     << 4.0e4, 6.0e4, 8.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4, 30.0e4;
@@ -380,20 +423,9 @@ int main()
 
 
         // Unit conversion: [Pa^-3 s^-1] --> [Pa^-3 yr^-1].
-        A_s = ArrayXd::Constant(n_s, 6.0e-25); // 0.9e-25
-        
-        // First intialize to fully advance and then slightly retreat.
-        A_s(0) = 0.8e-26; // Ensure the advance of the ice sheet. 0.7e-26
-        A_s(1) = 2.5e-25; // Slight retreat to start on the same point as the therm sims. 5.0e-26
-        A_s(2) = 6.0e-25; // Slight retreat to start on the same point as the therm sims. 5.0e-26
-
+        A_s = ArrayXd::Constant(n_s, 0.8e-26); // 1.0e-26
         A_s = A_s * nixParams.cnst.sec_year; 
 
-        
-        // Unirt conversion performed in readparam file [Pa^-3 s^-1] --> [Pa^-3 yr^-1].
-        // FOR SOME UNKOWN REASON 
-        //A = nixParams.vis.A_cnst;
-        //A_s = ArrayXd::Constant(n_s, A);
 
         // This should not be necessary as thermodynamics is off.
         T_air_s = ArrayXd::Constant(n_s, 188.15); // 193.15
@@ -410,26 +442,57 @@ int main()
     {
         // AIR TEMPERATURES FORCING.
         // Stable forcing.
-        t_s << 3.0e4, 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4,
-               30.0e4, 33.0e4, 36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4;
+        //t_s << 3.0e4, 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4,
+        //       30.0e4, 33.0e4, 36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4;
 
-        T_air_s << 253.15, 243.15, 233.15, 223.15, 213.15, 203.15, 198.15, 193.15, 193.15,
-                   198.15, 203.15, 213.15, 223.15, 233.15, 243.15, 253.15, 253.15;
+        //T_air_s << 253.15, 243.15, 233.15, 223.15, 213.15, 203.15, 198.15, 193.15, 193.15,
+        //           198.15, 203.15, 213.15, 223.15, 233.15, 243.15, 253.15, 253.15;
 
-       // High resolution.
+        
+        /*t_s << 6.0e4, 10.0e4, 14.0e4, 18.0e4, 22.0e4, 26.0e4, 30.0e4, 34.0e4;
+        T_air_s << 263.15, 253.15, 243.15, 233.15, 243.15, 253.15, 263.15, 273.15;*/
+
+
+        // Short.
+        /*t_s << 6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 
+                27.0e4, 30.0e4, 33.0e4, 36.0e4, 39.0e4, 42.0e4;
+        
+        T_air_s << 273.15, 268.15, 263.15, 258.15, 253.15, 248.15, 243.15, 
+                    248.15, 253.15, 258.15, 263.15, 268.15, 273.15;*/
+
+        
+        
+        // High resolution.
         /*t_s << 6.0e4, 10.0e4, 14.0e4, 16.0e4, 20.0e4, 24.0e4, 28.0e4, 32.0e4, 36.0e4, 40.0e4,
                44.0e4, 48.0e4, 52.0e4, 56.0e4, 60.0e4, 64.0e4, 68.0e4, 72.0e4, 76.0e4, 80.0e4,
-               84.0e4, 88.0e4, 92.0e4, 96.0e4, 100.0e4, 104.0e4;
+               84.0e4, 88.0e4, 92.0e4, 96.0e4, 100.0e4, 104.0e4;*/
 
-        T_air_s << 253.15, 248.15, 243.15, 238.15, 233.15, 228.15, 223.15, 218.15, 213.15, 208.15,
+        
+        double dt_forcing = 4.0e4;
+        double t_forc_0   = 10.0e4;
+
+        double T_air_min = 243.15;
+        double T_air_max = 273.15;
+
+        t_s = ArrayXd::LinSpaced(n_s, t_forc_0, t_forc_0 + double(dt_forcing*n_s));
+
+        int n_s_hlf = int(0.5*n_s);
+        
+        T_air_s.block(0,0,n_s_hlf,1)       = ArrayXd::LinSpaced(n_s_hlf, T_air_max, T_air_min);
+        T_air_s.block(n_s_hlf,0,n_s_hlf,1) = ArrayXd::LinSpaced(n_s_hlf, T_air_min, T_air_max);
+        
+        
+        /*T_air_s << 273.15, 268.15, 263.15, 258.15, 253.15, 248.15, 243.15, 
+                    248.15, 253.15, 258.15, 263.15, 268.15, 273.15;*/
+        
+        /*T_air_s << 253.15, 248.15, 243.15, 238.15, 233.15, 228.15, 223.15, 218.15, 213.15, 208.15,
                    203.15, 198.15, 193.15, 193.15, 198.15, 203.15, 208.15, 213.15, 218.15, 223.15,
-                   228.15, 233.15, 238.15, 243.15, 248.15, 253.15;
-        */
+                   228.15, 233.15, 238.15, 243.15, 248.15, 253.15;*/
+        
         
 
         // Initialization.
         T_air   = T_air_s(0);
-        T_oce   = T_oce_s(0);
         A       = A_s(0);
         A_theta = ArrayXXd::Constant(n, n_z, A);
 
@@ -446,17 +509,42 @@ int main()
                36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4, 54.0e4, 57.0e4, 60.0e4, 63.0e4,
                66.0e4, 69.0e4, 72.0e4, 75.0e4, 78.0e4, 81.0e4, 84.0e4, 87.0e4, 90.0e4, 93.0e4,
                96.0e4, 99.0e4, 102.0e4, 105.0e4, 108.0e4, 111.0e4, 114.0e4, 117.0e4, 120.0e4, 123.0e4, 
-               126.0e4, 132.0e4;
+               126.0e4, 129.0e4;
         
         T_oce_s << 273.15, 273.65, 274.15, 274.65, 275.15, 275.65, 276.15, 276.65, 277.15, 277.65,
                    278.15, 278.65, 279.15, 279.65, 280.15, 280.65, 281.15, 281.65, 282.15, 282.65,
                    283.15, 283.15, 282.65, 282.15, 281.65, 281.15, 280.65, 280.15, 279.65, 279.15, 278.68,
                    278.15, 277.65, 277.15, 276.65, 276.15, 275.65, 275.15, 274.65, 274.15, 273.65, 
                    273.15;*/
+
+
+        double dt_forcing = 4.0e4;
+        double t_forc_0   = 10.0e4;
+
+        double T_oce_min = 273.15;
+        double T_oce_max = 283.15;
+
+        //t_s = ArrayXd::LinSpaced(n_s, 6.0e4, double(dt_forcing*n_s));
+        //t_s.block(4,0,n_s-4,1) = ArrayXd::LinSpaced(n_s-4, 10.0e4, double(dt_forcing*n_s));
+        t_s.block(4,0,n_s-4,1) = ArrayXd::LinSpaced(n_s-4, t_forc_0, t_forc_0 + double(dt_forcing*(n_s-4)));
+
+        t_s(0) = 3.0e4;
+        t_s(1) = 4.0e4;
+        t_s(2) = 5.0e4;
+        t_s(3) = 6.0e4;
+
+        int n_s_hlf = int(0.5*(n_s-4));
+        
+        T_oce_s.block(4,0,n_s_hlf,1)         = ArrayXd::LinSpaced(n_s_hlf, T_oce_min, T_oce_max);
+        T_oce_s.block(4+n_s_hlf,0,n_s_hlf,1) = ArrayXd::LinSpaced(n_s_hlf, T_oce_max, T_oce_min);
+        T_oce_s(0) = 273.15;
+        T_oce_s(1) = 273.15;
+        T_oce_s(2) = 273.15;
+        T_oce_s(3) = 273.15;
         
         
         // Short simulation. 23
-        t_s << 4.0e4, 6.0e4, 
+        /*t_s << 4.0e4, 6.0e4, 
                9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4, 30.0e4, 33.0e4, 
                36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4, 54.0e4, 57.0e4, 60.0e4, 
                63.0e4, 66.0e4;
@@ -464,12 +552,15 @@ int main()
         T_oce_s << 273.15, 273.15, 
                    274.15, 275.15, 276.15, 277.15, 278.15, 279.15, 280.15, 281.15, 282.15, 
                    283.15, 282.15, 281.15, 280.15, 279.15, 278.15, 277.15, 276.15, 275.15, 
-                   274.15, 273.15;
+                   274.15, 273.15;*/
         
         // Constant value given in the param file but smooth transition to the cold value.
         // CHECK IF THIS VALUE OF T_AIR IS ENOUGH TO ADVANCE AS MUCH AS THE NON-THERMAL SIM.
         T_air_s    = ArrayXd::Constant(n_s, nixParams.bc.therm.T_air); // 193.15
-        T_air_s(0) = 233.15; // Equilibration with a medium value.
+        T_air_s(0) = 253.15; // Equilibration with a medium value!!
+        T_air_s(1) = 258.15; 
+        T_air_s(2) = 253.15; 
+        T_air_s(3) = 243.15; 
 
         // Initialization.
         T_air   = T_air_s(0);
@@ -477,43 +568,6 @@ int main()
         A       = A_s(0);
         A_theta = ArrayXXd::Constant(n, n_z, A);
     }
-    
-    // MISMIP THERMODYNAMICS. 
-    /*
-    else if ( exp == "mismip_1_therm" || exp == "mismip_3_therm" )
-    {    
-        // OCEAN TEMPERATURES ANOMALIES FORCING.
-        // Change of sign in (T_0-T_oce) to produce advance/retreate.
-        // Make sure length of positive/negative anomalies is the same
-        // to retireve the initial state. Close hysteresis loop.
-
-        
-        // Short simulation. 23
-        t_s << 4.0e4, 6.0e4, 9.0e4, 
-               12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4, 30.0e4, 33.0e4, 36.0e4,
-               39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4, 54.0e4, 57.0e4, 60.0e4, 63.0e4,
-               66.0e4, 69.0e4;
-        
-        T_oce_s << 273.15, 273.15, 273.15, 
-                   274.15, 275.15, 276.15, 277.15, 278.15, 279.15, 280.15, 281.15, 282.15, 
-                   283.15, 282.15, 281.15, 280.15, 279.15, 278.15, 277.15, 276.15, 275.15, 
-                   274.15, 273.15;
-        
-        // Constant value given in the param file but smooth transition to the cold value.
-        // CHECK IF THIS VALUE OF T_AIR IS ENOUGH TO ADVANCE AS MUCH AS THE NON-THERMAL SIM.
-        T_air_s = ArrayXd::Constant(n_s, nixParams.bc.therm.T_air); // 193.15
-        T_air_s(0) = 233.15; // Equilibration with a medium value.
-        //T_air_s(1) = 233.15;
-
-
-        // Initialization.
-        T_air   = T_air_s(0);
-        T_oce   = T_oce_s(0);
-        A       = A_s(0);
-        A_theta = ArrayXXd::Constant(n, n_z, A);
-
-    }   
-    */
     
     // TRANSITION INDICATORS EXPERIMENTS.
     else if ( exp == "ews" )
@@ -841,7 +895,7 @@ int main()
             f_write(c, u_bar_old_1, ub, u_bar_x, H, visc_bar, S, tau_b, beta, tau_d, bed, \
                     C_bed, Q_fric, u2_dif_vec, u2_0_vec, L, t, u_x_bc, u2_dif, \
                     error, dt, c_picard, mu, omega, theta, visc, u_z, u_x, u, w, A, dL_dt, \
-                    F_1, F_2, m_stoch, smb_stoch, A_theta, T_oce, lmbd);
+                    F_1, F_2, m_stoch, smb_stoch, A_theta, T_oce, T_air, lmbd);
 
             // Close nc file. 
             if ((retval = nc_close(ncid)))
@@ -892,7 +946,7 @@ int main()
             f_write(c, u_bar, ub, u_bar_x, H, visc_bar, S, tau_b, beta, tau_d, bed, \
                     C_bed, Q_fric, u2_dif_vec, u2_0_vec, L, t, u_x_bc, u2_dif, \
                     error, dt, c_picard, mu, omega, theta, visc, u_z, u_x, u, w, A, dL_dt, \
-                    F_1, F_2, m_stoch, smb_stoch, A_theta, T_oce, lmbd);
+                    F_1, F_2, m_stoch, smb_stoch, A_theta, T_oce, T_air, lmbd);
 
             ++c;
         }  
@@ -936,7 +990,7 @@ int main()
             w = f_w(u_bar_x, H, dz, b_melt, u_bar, bed, ds, L, nixParams.dom);
 
             // Integrate heat equation and calculate basal melt.
-            sol_thrm = f_theta(theta, ub, H, tau_b, Q_fric, sigma, dz, \
+            sol_thrm = f_theta(theta, ub, H, tau_b, Q_fric, bed, sigma, dz, \
                                 dt, ds, L, T_air, dL_dt, t, w, strain_2d, \
                                     nixParams.dom, nixParams.thrmdyn, nixParams.dyn, \
                                         nixParams.bc, nixParams.cnst, nixParams.calv);

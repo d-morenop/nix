@@ -21,7 +21,7 @@ from matplotlib.gridspec import GridSpec
 
 
 path_fig        = '/home/dmoreno/figures/nix/oscillations/S-C_thw/'
-path_now        = '/home/dmoreno/nix/mismip.therm/test.issue_long_T/n.250_n_z.25_T_air.218.15/'
+path_now        = '/home/dmoreno/nix/mismip.therm/exp-1_T_air_forcing_lapse.rate_long_cold_hr_2/n.250_n_z.35/'
 path_stoch      = '/home/dmoreno/nix/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
@@ -29,15 +29,19 @@ file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 # '/home/dmoreno/nix/oscillations/S-C_thw_hr_dt.fixed/S_0.0.10_C_thw.0.10/'
 # '/home/dmoreno/nix/ews/M_rates/smooth/sigma.1.0_A.3.0e-26_yp.176/''
 # /home/dmoreno/flowline/mismip_bp/exp_3/n.100_nz.10/
-# /home/dmoreno/nix/test.w.therm/n.75.00_dt_min.0.05
+
+
+# /home/dmoreno/nix/mismip.therm/exp-1_T_air_forcing_lapse.rate_long_cold/n.250_n_z.35/
+# /home/dmoreno/nix/mismip.therm/T_air_forcing_lapse.rate_long_cold/n.250_n_z.35/
+# /home/dmoreno/nix/mismip.therm/test.issue_long_T_oce_forcing/n.250_n_z.25_T_air.223.15_gamma_T.0.001/
 
 # Select plots to be saved (boolean integer).
 save_series        = 1
 save_series_comp   = 0
 save_shooting      = 0
-save_domain        = 1
-coloured_domain    = 1
-save_var_frames    = 0
+save_domain        = 0
+coloured_domain    = 0
+save_var_frames    = 1
 save_series_frames = 0
 save_theta         = 0
 save_visc          = 0
@@ -57,7 +61,7 @@ smth_series        = 0
 # MISMIP bedrock experiments.
 # exp = 1: inclined bed; exp = 3: overdeepening bed.
 exp_name = ['mismip_1', 'mismip_3', 'glacier_ews']
-idx = 1
+idx = 0
 exp = exp_name[idx]
 
 # Create figures directory if it does not exist.
@@ -76,14 +80,14 @@ nix_name = ['u_bar', 'ub', 'u_bar_x', 'u_z', 'u', 'H', 'visc_bar', 'tau_b', 'tau
 				 'BC_error', 'u2_0_vec', 'u2_dif_vec', 'picard_error', \
 				 'c_picard', 'dt', 'mu', 'omega', 'A', 'theta', 'S', \
 				 'm_stoch', 'smb_stoch', 'Q_fric', 'beta', 'visc', 'u_x', 'F_1', 'F_2', \
-				 'A_theta', 'T_oce', 'lmbd', 'w']
+				 'A_theta', 'T_oce', 'lmbd', 'w', 'T_air']
 
 var_name 	  = ['u_bar', 'ub', 'u_bar_x', 'u_z', 'u', 'H', 'visc_bar', 'tau_b', 'tau_d', \
 				 'L', 'dL_dt', 't', 'b', 'C_bed', 'u_x_bc', \
 				 'dif', 'u2_0_vec', 'u2_dif_vec', 'picard_error', \
 				 'c_picard', 'dt', 'mu', 'omega_picard', 'A_s', 'theta', 'S', \
 				 'm_stoch', 'smb_stoch', 'Q_fric', 'beta', 'visc', 'u_x', 'F_1', 'F_2', \
-				 'A_theta', 'T_oce', 'lmbd', 'w']
+				 'A_theta', 'T_oce', 'lmbd', 'w', 'T_air']
 
 
 # Dimension.
@@ -292,7 +296,7 @@ if save_series == 1:
 	t_plot = 1.0e-3 * t
 
 	# Ice flux.
-	q = u_bar * 1.0e3 * H
+	q = u_bar * 1.0e-6 * H
 
 	# Plot bed peak position.
 	y_p = np.full(len(t_plot), 350)
@@ -302,7 +306,7 @@ if save_series == 1:
 	visc_bar_mean = np.mean(visc_bar, axis=1)
 
 	# T_air
-	T_air = theta[:,s[1]-1,0]
+	#T_air = theta[:,s[1]-1,s[2]-1]
 
 	T_oce = T_oce - 273.15
 	
@@ -340,9 +344,12 @@ if save_series == 1:
 	ax2.plot(t_plot, H[:,s[2]-1], linestyle='-', color='black', marker='None', \
 			 markersize=3.0, linewidth=2.0, alpha=1.0, label=r'$u_{b}(x)$') 
 	
-	# Basal temperature at the grounding line.
-	ax4.plot(t_plot, theta[:,0,s[2]-1], linestyle='-', color='brown', marker='None', \
-					 markersize=3.0, linewidth=1.5, alpha=1.0, label=r'$u_{b}(x)$')
+	# Basal temperature at the centre of the ice sheet.
+	#ax4.plot(t_plot, theta[:,int(0.5*s[1]),int(0.5*s[2])], linestyle='-', color='brown', marker='None', \
+	#				 markersize=3.0, linewidth=1.5, alpha=1.0, label=r'$u_{b}(x)$')
+	
+	ax4.plot(t_plot, q[:,s[2]-1], linestyle='-', color='brown', marker='None', \
+					 markersize=3.0, linewidth=2.0, alpha=1.0, label=r'$u_{b}(x)$')
 	
 
 	# Smooth.
@@ -352,8 +359,8 @@ if save_series == 1:
 							8) # order of fitted polynomial							
 
 	
-	#ax3.plot(t_plot, T_air, linestyle='-', color='purple', marker='None', \
-	#		 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+	ax3.plot(t_plot, T_air, linestyle='-', color='purple', marker='None', \
+			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 	#ax3.plot(t_plot, T_oce, linestyle='-', color='purple', marker='None', \
 	#			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 
@@ -408,18 +415,19 @@ if save_series == 1:
 	ax2.set_ylabel(r'$H_{gl} \ (\mathrm{km})$', fontsize=18)
 
 	
-	#ax3.set_ylabel(r'$ T{\mathrm{air}} \ (^{\circ} \mathrm{C})$', fontsize=18)
+	ax3.set_ylabel(r'$ T{\mathrm{air}} \ (^{\circ} \mathrm{C})$', fontsize=18)
 	#ax3.set_ylabel(r'$ \Delta T_{\mathrm{oce}} \ (^{\circ} \mathrm{C})$', fontsize=18)
 	#ax4.set_ylabel(r'$ \theta(z=0,L) $', fontsize=18)
 	
-	ax4.set_ylabel(r'$  \theta(0,L) \ (^{\circ} \mathrm{C})$', fontsize=17)
+	ax4.set_ylabel(r'$  q(L) \ (\mathrm{km^2/yr})$', fontsize=17)
+	#ax4.set_ylabel(r'$  \theta(0,L) \ (^{\circ} \mathrm{C})$', fontsize=17)
 	#ax4.set_ylabel(r'$ A \ (\mathrm{Pa}^{-3} \mathrm{yr}^{-1})$', fontsize=17)
 	#ax5.set_ylabel(r'$ \dot{m} \ (\mathrm{m/yr})$', fontsize=17)
 	
 	#ax5.set_ylabel(r'$ \bar{\eta} \ (\mathrm{Pa \cdot s}) $', fontsize=18)
 	ax6.set_ylabel(r'$ \bar{u}(L) \ (\mathrm{m/yr})$', fontsize=18)
 	#ax3.set_xlabel(r'$\mathrm{Time} \ (\mathrm{kyr})$', fontsize=18)
-	ax3.set_xlabel(r'$\mathrm{Time} \ (\mathrm{kyr})$', fontsize=18)
+	#ax3.set_xlabel(r'$\mathrm{Time} \ (\mathrm{kyr})$', fontsize=18)
 
 	#ax.set_xticks([0, 10, 20, 30, 40])
 	#ax.set_xticklabels(['', '', '', '', ''], fontsize=15)
@@ -427,8 +435,8 @@ if save_series == 1:
 		
 	ax.yaxis.label.set_color('red')
 	ax2.yaxis.label.set_color('black')
-	ax3.yaxis.label.set_color('darkgreen')
-	ax5.yaxis.label.set_color('purple')
+	ax3.yaxis.label.set_color('purple')
+	ax5.yaxis.label.set_color('darkgreen')
 	ax4.yaxis.label.set_color('brown')
 	ax6.yaxis.label.set_color('blue')
 	
@@ -439,9 +447,9 @@ if save_series == 1:
 	ax.tick_params(axis='y', which='major', length=4, colors='red', labelsize=16)
 	ax2.tick_params(axis='y', which='major', length=4, colors='black', labelsize=16)
 	ax2.tick_params(axis='x', which='major', length=4, colors='black', labelsize=16)
-	ax5.tick_params(axis='y', which='major', length=4, colors='purple', labelsize=16)
+	ax5.tick_params(axis='y', which='major', length=4, colors='darkgreen', labelsize=16)
 	ax3.tick_params(axis='x', which='major', length=4, colors='black', labelsize=16)
-	ax3.tick_params(axis='y', which='major', length=4, colors='darkgreen', labelsize=16)
+	ax3.tick_params(axis='y', which='major', length=4, colors='purple', labelsize=16)
 	ax4.tick_params(axis='y', which='major', length=4, colors='brown', labelsize=16)
 	#ax4.tick_params(axis='y', which='major', length=4, colors='brown', labelsize=16)
 	ax6.tick_params(axis='y', which='major', length=4, colors='blue', labelsize=16)
@@ -624,15 +632,14 @@ if save_shooting == 1:
 
 if save_domain == 1:
 	
-	for i in range(l-1, l, 1): # range(0, l, 2), (l-1, l, 20)
+	for i in range(0, l, 10): # range(0, l, 2), (l-1, l, 20)
 		
 		# Horizontal dimension [km].
 		#L_plot  = np.linspace(0, L[i], s[2])
 		L_plot_sigma = sigma_plot * L[i]
 		
 		# Ice surface elevation [km].
-		#H[i,1] = H[i,2]
-		#H[i,0] = H[i,2]
+		b[i,0] = b[i,2] # Impose symmetric BC on bedrock, which it doesn't a priori.
 		z_s = H[i,:] + b[i,:]
 		
 		# Gaussian smooth for resolution jiggling.
@@ -693,6 +700,9 @@ if save_domain == 1:
 		elif coloured_domain == 1:
 			theta_min = np.min(-theta)
 			theta_max = np.max(-theta)
+
+			"""theta_min = 0.0
+			theta_max = -80.0"""
 			
 			#theta_min = np.min(u)
 			#theta_max = np.max(u)
@@ -810,8 +820,8 @@ if save_domain == 1:
 			ticks = np.linspace(0, 1, n_ticks)
 			ticks_lab = np.round(np.linspace(-theta_max, -theta_min, n_ticks), 0)
 			cb.set_ticks(ticks)
-			#cb.set_ticklabels([r'$-80$', r'$-60$', r'$-40$', r'$-20$', r'$0$',], \
-			#					fontsize=13)
+			"""cb.set_ticklabels([r'$-80$', r'$-60$', r'$-40$', r'$-20$', r'$0$'], \
+								fontsize=13)"""
 			cb.set_ticklabels(ticks_lab, fontsize=13)
 
 			cb.set_label(r'$ \theta (x,z) \ (^{\circ} \mathrm{C}) $', \
@@ -1045,7 +1055,7 @@ if save_theta == 1:
 
 	cb_ticks = np.round(np.linspace(theta_min, theta_max, 6),1)
 	
-	for i in range(5, l, 10):
+	for i in range(0, l, 10):
 
 		# Update x_labels as domain extension changes in each iteration.
 		x_labels  = np.linspace(0, L[i], n_ticks, dtype=int)

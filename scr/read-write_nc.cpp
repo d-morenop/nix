@@ -52,6 +52,7 @@
 #define PICARD_ERROR_NAME "picard_error"
 #define THETA_NAME "theta"
 #define T_OCE_NAME "T_oce"
+#define T_AIR_NAME "T_air"
 #define C_BED_NAME "C_bed"
 #define Q_FRIC_NAME "Q_fric"
 #define U2_DIF_VEC_NAME "u2_dif_vec"
@@ -96,6 +97,7 @@
 #define PICARD_ERROR_UNITS "1/yr"
 #define THETA_UNITS "K"
 #define T_OCE_UNITS "K"
+#define T_AIR_UNITS "K"
 #define C_BED_UNITS "Pa m^-1/3 yr^1/3"
 #define Q_FRIC_UNITS "W/m^2"
 #define U2_DIF_VEC_UNITS "1/yr"
@@ -121,7 +123,7 @@ int x_varid, z_varid, u_bar_varid, ub_varid, u_bar_x_varid, u_x_varid, u_z_varid
     H_varid, visc_varid, visc_bar_varid, a_varid, a_theta_varid, s_varid, \
     tau_varid, beta_varid, lmbd_varid, taud_varid, b_varid, L_varid, dL_dt_varid, dt_varid, \
     c_pic_varid, t_varid, mu_varid, omega_varid, u2_bc_varid, u2_dif_varid, \
-    picard_error_varid, u2_0_vec_varid, u2_dif_vec_varid, theta_varid, T_oce_varid, C_bed_varid, Q_fric_varid, \
+    picard_error_varid, u2_0_vec_varid, u2_dif_vec_varid, theta_varid, T_oce_varid, T_air_varid, C_bed_varid, Q_fric_varid, \
     F_1_varid, F_2_varid, m_stoch_varid, smb_stoch_varid;
 
 int dimids[NDIMS];
@@ -329,6 +331,10 @@ int f_nc(int N, int N_Z, string path)
     if ((retval = nc_def_var(ncid, T_OCE_NAME, NC_DOUBLE, NDIMS_0,
                     dimids_0, &T_oce_varid)))
         ERR(retval);
+    if ((retval = nc_def_var(ncid, T_AIR_NAME, NC_DOUBLE, NDIMS_0,
+                    dimids_0, &T_air_varid)))
+        ERR(retval);
+    
 
     if ((retval = nc_def_var(ncid, THETA_NAME, NC_DOUBLE, NDIMS_Z,
                     dimids_z, &theta_varid)))
@@ -450,6 +456,9 @@ int f_nc(int N, int N_Z, string path)
         ERR(retval);
     if ((retval = nc_put_att_text(ncid, T_oce_varid, UNITS,
                     strlen(T_OCE_UNITS), T_OCE_UNITS)))
+        ERR(retval);
+    if ((retval = nc_put_att_text(ncid, T_air_varid, UNITS,
+                    strlen(T_AIR_UNITS), T_AIR_UNITS)))
         ERR(retval);
 
     if ((retval = nc_put_att_text(ncid, theta_varid, UNITS,
@@ -704,7 +713,7 @@ int f_write(int c, ArrayXd u_bar, ArrayXd ub, ArrayXd u_bar_x, ArrayXd H, ArrayX
             double dt, int c_picard, double mu, double omega, ArrayXXd theta, \
             ArrayXXd visc, ArrayXXd u_z, ArrayXXd u_x, ArrayXXd u, ArrayXXd w, double A, double dL_dt, \
             ArrayXd F_1, ArrayXd F_2, double m_stoch, double smb_stoch, ArrayXXd A_theta, double T_oce, \
-            ArrayXXd lmbd)
+            double T_air, ArrayXXd lmbd)
 {
     start[0]   = c;
     start_0[0] = c;
@@ -773,6 +782,8 @@ int f_write(int c, ArrayXd u_bar, ArrayXd ub, ArrayXd u_bar_x, ArrayXd H, ArrayX
     if ((retval = nc_put_vara_double(ncid, smb_stoch_varid, start_0, cnt_0, &smb_stoch)))
     ERR(retval);
     if ((retval = nc_put_vara_double(ncid, T_oce_varid, start_0, cnt_0, &T_oce)))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid, T_air_varid, start_0, cnt_0, &T_air)))
     ERR(retval);
 
     // 3D variables.

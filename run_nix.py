@@ -24,18 +24,6 @@ import itertools
 from itertools import product
 
 
-# Total number of items in a dictionary.
-"""def permut_dict(d):
-    dim = np.empty(len(d))
-    c = 0
-    for x in d:
-        dim[c] = len(d[x])
-        c += 1
-    
-    # np.pro() multiplies all elements in an array.
-    n = int(np.prod(dim))
-    return n"""
-
 # Create lists with all permutation from input arrays.
 def all_permutations(*arrays):
     # Use itertools.product to generate all permutations
@@ -110,8 +98,8 @@ def modify_yaml(file_path, path_modified, yaml_file_name, var_names, data_types,
 
 
 # Specify the path to your YAML file
-yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_mismip_therm.yaml"
-yaml_file_name = "nix_params_mismip_therm.yaml"
+yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_mismip_therm_T_air.yaml"
+yaml_file_name = "nix_params_mismip_therm_T_air.yaml"
 
 
 # Modify yaml file to run large ensembles of simulations.
@@ -120,84 +108,111 @@ yaml_file_name = "nix_params_mismip_therm.yaml"
 #######################################################################
 # Define variable names and their corresponding values.
 
-# OSCILLATIONS STUDY.
-"""var_names = ['S_0', 'C_thw']
+# Define default experiments for reproducibility.
+exp = 'T_oce_therm_sensitivity'
 
-values_0 = np.array([0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60])
-values_1 = np.array([0.01, 0.02, 0.03, 0.04])"""
+# OSCILLATIONS STUDY.
+if exp == 'oscillations':
+    var_names = ['S_0', 'C_thw']
+
+    values_0 = np.array([0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60])
+    values_1 = np.array([0.01, 0.02, 0.03, 0.04])
+
 
 # RESOLUTION STUDY.
-"""var_names = ['n', 'dt_min']
+elif exp == 'resolution':
+    var_names = ['n', 'dt_min']
 
-values_0 = np.array([2**4, 2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12])
-values_1 = np.array([0.01])"""
+    values_0 = np.array([2**4, 2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12])
+    values_1 = np.array([0.01])
 
 
-# MISMIP_3 WITH CONSTANT T_AIR AND FORCING FROM SUBSHELF MELT.
-"""
-yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_mismip_therm.yaml"
-yaml_file_name = "nix_params_mismip_therm.yaml"
+# MISMIP_3 WITH ICE RATE FACTOR CONSTANT AND T_OCE FORCING.
+elif exp == 'T_oce_A':
+    yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_mismip_A.yaml"
+    yaml_file_name = "nix_params_mismip_A.yaml"
 
-var_names = ['n', 'n_z', 'T_air', 'gamma_T']
+    var_names = ['n', 'n_z']
 
-values_0 = np.array([250])
-values_1 = np.array([25])
-values_2 = np.array([203.15, 213.15, 223.15, 233.15]) # [173.15, 183.15, 193.15]
-values_3 = np.array([40.0e-5, 70.0e-5, 100.0e-5])
+    values_0 = np.array([250])
+    values_1 = np.array([25])
 
-# Data type of each array.
-data_types = [int, int, float, float]
-"""
+    # Data type of each array.
+    data_types = [int, int]
+
+    values = [values_0, values_1]
+
+
+# MISMIP_3 WITH T_OCE FORCING (CONSTANT T_AIR).
+elif exp == 'T_oce':
+    yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_mismip_therm_T_oce.yaml"
+    yaml_file_name = "nix_params_mismip_therm_T_oce.yaml"
+
+    var_names = ['n', 'n_z', 'T_air', 'gamma_T']
+
+    values_0 = np.array([250])
+    values_1 = np.array([25, 35])
+    values_2 = np.array([233.15]) # [173.15, 183.15, 193.15]
+    values_3 = np.array([40.0e-5, 60.0e-5, 80.0e-5]) # [40.0e-5, 60.0e-5, 80.0e-5, 100.0e-5]
+
+    # Data type of each array.
+    data_types = [int, int, float, float]
+
+    values = [values_0, values_1, values_2, values_3]
+
 
 # MISMIP_3 WITH T_AIR FORCING (NO SHELF MELT).
-yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_mismip_therm_T_air.yaml"
-yaml_file_name = "nix_params_mismip_therm_T_air.yaml"
+elif exp == 'T_air':
+    yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_mismip_therm_T_air.yaml"
+    yaml_file_name = "nix_params_mismip_therm_T_air.yaml"
 
-var_names = ['n', 'n_z']
+    var_names = ['n', 'n_z']
 
-values_0 = np.array([250])
-values_1 = np.array([25])
+    values_0 = np.array([250])
+    values_1 = np.array([25, 30, 35])  # 25
 
-# Data type of each array.
-data_types = [int, int]
+    # Data type of each array.
+    data_types = [int, int]
+
+    values = [values_0, values_1]
+
+
+# SENSITIVITY TESTS.
+elif exp == 'T_oce_A_sensitivity':
+    yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_mismip_A.yaml"
+    yaml_file_name = "nix_params_mismip_A.yaml"
+
+    var_names = ['n', 'n_z', 'gamma_T']
+
+    values_0 = np.array([250])
+    values_1 = np.array([25])
+    values_2 = np.array([0.5e-3, 1.0e-3, 1.5e-3, 2.0e-3])
+
+    # Data type of each array.
+    data_types = [int, int, float]
+
+    values = [values_0, values_1, values_2]
+
+elif exp == 'T_oce_therm_sensitivity':
+    yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_mismip_therm_T_oce.yaml"
+    yaml_file_name = "nix_params_mismip_therm_T_oce.yaml"
+
+    var_names = ['n', 'n_z', 'gamma_T']
+
+    values_0 = np.array([250])
+    values_1 = np.array([25])
+    values_2 = np.array([0.5e-3, 1.0e-3, 1.5e-3, 2.0e-3])
+
+    # Data type of each array.
+    data_types = [int, int, float]
+
+    values = [values_0, values_1, values_2]
+
+
 
 
 #######################################################################
 #######################################################################
-
-# Preserve the trailing zero in cases where there are trailing zeros after the decimal point. 
-# two decimals: {:.2f}.
-# FIX THIS!!
-"""values_0_str = len(values_0) * [None]
-values_1_str = len(values_1) * [None]
-values_2_str = len(values_2) * [None]
-values_3_str = len(values_3) * [None]
-
-
-values_0_str = [str(value) for value in values_0]
-values_1_str = [str(value) for value in values_1]
-values_2_str = [str(value) for value in values_2]
-values_3_str = [str(value) for value in values_3]
-
-# Create a string with all input values.
-str_all = [values_0_str, values_1_str, values_2_str, values_3_str]
-
-l_names = len(var_names)
-values_all = [values_0, values_1, values_2, values_3]
-
-# Include variable names in each value for folder naming.
-for i in range(l_names):
-    #values_all[i] = [var_names[i]+'.'+str(s) for s in values_all[i]]
-    values_all[i] = [var_names[i]+'.'+s for s in str_all[i]]
-
-
-# Create a dictionary to store variable names and their corresponding values.
-variables = {var_names[0]: values_0, var_names[1]: values_1, 
-             var_names[2]: values_2, var_names[3]: values_3}
-"""
-
-# Example input arrays
-values = [values_0, values_1, values_2, values_3]
 
 # Initialize lists to store string representations of values
 values_str = []
@@ -217,9 +232,6 @@ for i, var_name in enumerate(var_names):
     values_with_names = [f"{var_name}.{s}" for s in str_all[i]]
     values_all.append(values_with_names)
 
-# Create a dictionary to store variable names and their corresponding values.
-#variables = {var_names[i]: values[i] for i in range(len(var_names))}
-
 
 
 ########################################################################
@@ -232,19 +244,6 @@ with open(yaml_file_path, 'r') as file:
 path_nix    = yaml_data['path']['nix']
 path_output = yaml_data['path']['out']
 
-
-"""# Create empty list with lemgth equal to the number of total permutations.
-N    = permut_dict(variables)    
-name = N * [None]
-########################################################################
-
-
-# Folder name given from each permutations.
-# itertools.product() give the Cartesian product of input lists.
-c = 0
-for r in itertools.product(values_all[0], values_all[1], values_all[2], values_all[3]): 
-    name[c] = r[0]+'_'+r[1]+'_'+r[2]+'_'+r[3]
-    c += 1"""
 
 # Initialize name list
 name = []
@@ -264,6 +263,7 @@ for r in itertools.product(*values_all):
 # (such as a tuple, list, or any iterable object) into individual arguments.
 #all_values = (values_0, values_1, values_2, values_3)
 perm = all_permutations(*values)
+
 
 # Loop over all permutations.
 for i in range(len(name)):

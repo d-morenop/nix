@@ -3,11 +3,11 @@
 path:
   nix: /home/dmoreno/scr/nix/                              # Nix path.
   read: /home/dmoreno/nix/data/noise_sigm_ocn.12.0.nc      # File with stochastic bc. 
-  out: /home/dmoreno/nix/mismip.therm/test.issue_long_T/                     # Output path.
+  out: /home/dmoreno/nix/mismip.therm/exp-3_T_air_forcing_lapse.rate_long_cold_hr_2/                     # Output path.
 
 time:
   t0: 0.0                 # Starting time [yr].
-  tf: 54.0e4              # End time [yr]. 6.0e4, 57.0e3, 54.0e4, 32.0e4, MISMIP-therm: 3.0e4, 90.0e4, Ending time [yr]. EWR: 5.0e3
+  tf: 110.0e4              # End time [yr]. 6.0e4, 57.0e3, 54.0e4, 32.0e4, MISMIP-therm: 3.0e4, 90.0e4, Ending time [yr]. EWR: 5.0e3
   t_eq: 1.0e3             # Equilibration time [yr]. 1.5e3
   output:
     t_n: 100              # Number of output frames
@@ -43,7 +43,7 @@ dynamics:
 timestep:
   dt_meth: adapt          # Time-stepping method. fixed, adapt.
   dt_min: 0.1             # Minimum time step [yr]. 0.1
-  dt_max: 5.0             # Maximum time step [yr]. 2.0, 5.0
+  dt_max: 5.0             # Maximum time step [yr]. 5.0
   t_eq_dt: 2.0e3          # Eq. time until adaptative timestep is applied. 3.0e3
   rel: 0.7                # Relaxation between interations [0,1]. 0.5
 
@@ -125,7 +125,7 @@ calving:
   meth: none             # 0, no calving; 1, Christian et al. (2022), 2: deterministic Favier et al. (2019)
   m_dot: 30.0            # Mean frontal ablation [m/yr]. 30.0
   sub_shelf_melt:
-    shelf_melt: none
+    shelf_melt: false    # True, false.
     meth: quadratic      # Melt parametrization. linear; quadratic.
     t0_oce: 2.5e4        # Start time of ocean warming.
     tf_oce: 27.5e4       # End time of applied ocean forcing.
