@@ -51,9 +51,6 @@ ArrayXd f_q(ArrayXd u_bar, ArrayXd H, ArrayXd bed, double t, double m_dot, doubl
     // GL flux definition (Vieli and Payne, 2005).
     if ( calv.meth == "none" )
     {
-        //q(n-1) = u_bar(n-1) * H(n-1);
-
-        // We impose sythetic reduction potentially cause by ocean cooling/warming.
         q(dom.n-1) = u_bar(dom.n-1) * H(dom.n-1);
     } 
     
@@ -121,6 +118,7 @@ ArrayXd f_q(ArrayXd u_bar, ArrayXd H, ArrayXd bed, double t, double m_dot, doubl
     }
 
     // Deterministic calving from sub-shelf melting (e.g., Favier et al., 2019).
+    // We impose sythetic reduction potentially cause by ocean cooling/warming.
     else if ( calv.meth == "deterministic" )
     {
         // No calving during equilibration.
@@ -140,7 +138,6 @@ ArrayXd f_q(ArrayXd u_bar, ArrayXd H, ArrayXd bed, double t, double m_dot, doubl
     else
     {
         cout << "\n Calving method not selected. Please, select: none, deterministic...";
-        abort();
     }
 
     return q;

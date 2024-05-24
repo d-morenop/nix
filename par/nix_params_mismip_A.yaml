@@ -3,11 +3,11 @@
 path:
   nix: /home/dmoreno/scr/nix/                              # Nix path.
   read: /home/dmoreno/nix/data/noise_sigm_ocn.12.0.nc      # File with stochastic bc. 
-  out: /home/dmoreno/nix/mismip.therm/test.issue_long_T/                     # Output path.
+  out: /home/dmoreno/nix/mismip.therm/sensitivity/T_oce_A_long/                     # Output path.
 
 time:
   t0: 0.0                 # Starting time [yr].
-  tf: 1.0e4              # End time [yr]. 44.0e4, 57.0e3, 54.0e4, 32.0e4, MISMIP-therm: 3.0e4, 90.0e4, Ending time [yr]. EWR: 5.0e3
+  tf: 182.0e4              # End time [yr]. 44.0e4, 57.0e3, 54.0e4, 32.0e4, MISMIP-therm: 3.0e4, 90.0e4, Ending time [yr]. EWR: 5.0e3
   t_eq: 1.0e3             # Equilibration time [yr]. 1.5e3
   output:
     t_n: 100              # Number of output frames
@@ -131,7 +131,7 @@ calving:
     tf_oce: 27.5e4       # End time of applied ocean forcing.
     c_po: 3974.0         # Specific heat [J / (kg K)]
     L_i: 3.34e5          # Latent heat [J / kg ]
-    gamma_T: 40.0e-5      # Heat exchange velocity. Linear: 2.0e-5, Quad: 36.23e-5. 40.0e-5, [m/s] --> [m/yr] 
+    gamma_T: 100.0e-5      # Heat exchange velocity. Linear: 2.0e-5, Quad: 36.23e-5. 40.0e-5, [m/s] --> [m/yr] 
     T_0: 273.15          # Reference ocean temperature [K].
 
 picard:

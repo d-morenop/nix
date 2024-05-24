@@ -462,26 +462,6 @@ ArrayXXd f_w(ArrayXd u_bar_x, ArrayXd H, ArrayXd dz, ArrayXd b_melt, ArrayXd u_b
              ArrayXd bed, ArrayXd ds, double L, DomainParams& dom)
 {
     ArrayXXd w(dom.n, dom.n_z);
-    
-    // NEEDS TO BE OPTIMISED.
-    // CHECK THIS!!!!!!!!!!!!!!!!!!!!!!!!
-    // For now, we use u_bar(x), but formally we should use the full u(x,z). 
-    
-    /*for (int i=0; i<dom.n; i++)
-    {
-        // Start in zero as we currently assume zero vertical velocity at the base.
-        double sum = 0.0;
-
-        for (int j=0; j<dom.n_z; j++)
-        { 
-            sum += u_bar_x(i) * dz(i);
-            w(i,j) = sum;
-        }
-
-        // Basal boundary condition.
-        w(i,0) = 0.0; 
-    }*/
-
     ArrayXd dx_inv = 1.0 / ( ds * L );
 
     // Evaluate bedrock geometry gradient.
