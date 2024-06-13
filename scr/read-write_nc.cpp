@@ -152,7 +152,7 @@ size_t start_z[NDIMS_Z], cnt_z[NDIMS_Z];
 int ncid_hr, x_dimid_hr, z_dimid_hr, time_dimid_hr;
 int x_varid_hr, z_varid_hr, u_bar_varid_hr, H_varid_hr, L_varid_hr, t_varid_hr, a_varid_hr, \
     u2_bc_varid_hr, u2_dif_varid_hr, picard_error_varid_hr, dt_varid_hr, c_pic_varid_hr, mu_varid_hr, \
-    omega_varid_hr, A_varid_hr, dL_dt_varid_hr, m_stoch_varid_hr, smb_stoch_varid_hr;
+    omega_varid_hr, A_varid_hr, dL_dt_varid_hr, m_stoch_varid_hr, smb_stoch_varid_hr, T_air_varid_hr, T_oce_varid_hr;
 
 int dimids_hr[NDIMS];
 
@@ -625,6 +625,13 @@ int f_nc_hr(int N, int N_Z, string path)
     if ((retval = nc_def_var(ncid_hr, SMB_STOCH_NAME, NC_DOUBLE, NDIMS_0,
                     dimids_0_hr, &smb_stoch_varid_hr)))
         ERR(retval);
+    if ((retval = nc_def_var(ncid_hr, T_AIR_NAME, NC_DOUBLE, NDIMS_0,
+                    dimids_0_hr, &T_air_varid_hr)))
+        ERR(retval);
+    if ((retval = nc_def_var(ncid_hr, T_OCE_NAME, NC_DOUBLE, NDIMS_0,
+                    dimids_0_hr, &T_oce_varid_hr)))
+        ERR(retval);
+    
 
 
     /* Assign units attributes to the netCDF variables. */
@@ -813,7 +820,7 @@ int f_write(int c, ArrayXd u_bar, ArrayXd ub, ArrayXd u_bar_x, ArrayXd H, ArrayX
 int f_write_hr(int c, double u_bar_L, double H_L, \
                double L, double t, double u2_bc, double u2_dif, double error, \
                double dt, int c_picard, double mu, double omega, double A, double dL_dt, \
-               double m_stoch, double smb_stoch)
+               double m_stoch, double smb_stoch, double T_air, double T_oce)
 {
     start_hr[0]   = c;
     start_0_hr[0] = c;
@@ -852,6 +859,10 @@ int f_write_hr(int c, double u_bar_L, double H_L, \
     if ((retval = nc_put_vara_double(ncid_hr, m_stoch_varid_hr, start_0_hr, cnt_0_hr, &m_stoch)))
     ERR(retval);
     if ((retval = nc_put_vara_double(ncid_hr, smb_stoch_varid_hr, start_0_hr, cnt_0_hr, &smb_stoch)))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid_hr, T_air_varid_hr, start_0_hr, cnt_0_hr, &T_air)))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid_hr, T_oce_varid_hr, start_0_hr, cnt_0_hr, &T_oce)))
     ERR(retval);
 
     return c;

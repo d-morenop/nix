@@ -289,8 +289,8 @@ void readParams(const YAML::Node& node, NixParams& params)
     params.bc.smb.x_varsca = node["boundary_conditions"]["smb"]["x_varsca"].as<double>();
     params.bc.smb.var_mult = node["boundary_conditions"]["smb"]["var_mult"].as<double>();
     params.bc.trend.type   = node["boundary_conditions"]["trend"]["type"].as<std::string>();
-    params.bc.trend.t0     = node["boundary_conditions"]["trend"]["t0"].as<double>();
-    params.bc.trend.tf     = node["boundary_conditions"]["trend"]["tf"].as<double>();
+    params.bc.trend.t0     = node["boundary_conditions"]["trend"]["t0_bc"].as<double>();
+    params.bc.trend.tf     = node["boundary_conditions"]["trend"]["tf_bc"].as<double>();
     params.bc.trend.M_0    = node["boundary_conditions"]["trend"]["M_0"].as<double>();
     params.bc.trend.M_f    = node["boundary_conditions"]["trend"]["M_f"].as<double>();
     params.bc.therm.T_air  = node["boundary_conditions"]["therm"]["T_air"].as<double>();

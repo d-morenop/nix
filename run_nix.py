@@ -109,7 +109,7 @@ yaml_file_name = "nix_params_mismip_therm_T_air.yaml"
 # Define variable names and their corresponding values.
 
 # Define default experiments for reproducibility.
-exp = 'T_oce_therm_sensitivity'
+exp = 'ews_schoof_T_oce'
 
 # OSCILLATIONS STUDY.
 if exp == 'oscillations':
@@ -207,6 +207,25 @@ elif exp == 'T_oce_therm_sensitivity':
     data_types = [int, int, float]
 
     values = [values_0, values_1, values_2]
+
+
+# TRANSITION INDICATORS T_OCE FORCING (CONSTANT T_AIR).
+elif exp == 'ews_schoof_T_oce':
+    yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_ews_therm_T_oce.yaml"
+    yaml_file_name = "nix_params_ews_therm_T_oce.yaml"
+
+    var_names = ['n', 'n_z', 'T_air', 'gamma_T', 'tf_bc']
+
+    values_0 = np.array([350]) # 250, 350, For some reason in now crashing on 300??
+    values_1 = np.array([35])
+    values_2 = np.array([233.15]) # [173.15, 183.15, 193.15]
+    values_3 = np.array([80.0e-5]) # [40.0e-5, 60.0e-5, 80.0e-5, 100.0e-5]
+    values_4 = np.array([35.1e3]) # [35.1e3, 35.25e3, 35.5e3, 36.0e3]
+
+    # Data type of each array.
+    data_types = [int, int, float, float, float]
+
+    values = [values_0, values_1, values_2, values_3, values_4]
 
 
 

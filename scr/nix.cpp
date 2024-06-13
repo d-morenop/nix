@@ -34,7 +34,7 @@ int main()
 {
 
     // Specify the path to YAML file.
-    string yaml_name = "nix_params_mismip_therm_T_oce.yaml";
+    string yaml_name = "nix_params_ews_therm_T_oce.yaml";
 
     // Assuming the path won't exceed 4096 characters.
     char buffer[4096];
@@ -134,10 +134,14 @@ int main()
     {
         n_s = 46; // 42 
     }
-    else if ( exp == "ews" )
+    else if ( exp == "ews_christian" )
     {
         n_s = 2; 
         L   = 50.0e3;
+    }
+    else if ( exp == "ews_schoof" )
+    {
+        n_s = 2; 
     }
     else
     {
@@ -156,7 +160,7 @@ int main()
     int t_stoch;                         // Stochactic time index.
     double T_air;                        // Current value of atmospheric temperature forcing [K] 
     double T_oce;                        // Current value of ocean temperature anomaly forcing [K]   
-    double M;                            // Totalm calving value [m/yr].
+    double M;                      // Calving value from oceanic interaction [m/yr].
     
     // LATERAL BOUNDARY CONDITION.
     double D;                                        // Depth below the sea level [m].
@@ -291,6 +295,9 @@ int main()
     H = ArrayXd::Constant(n, H_0); // 10.0
     S = ArrayXd::Constant(n, S_0); // 0.3
 
+    // Melting for oceanic interaction is initialised to zero.
+    M = 0.0;
+
     // Initilize vertical discretization.
     ArrayXd dz(n);                                        // Vertical discretization (only x-dependecy for now).                                  
     dz = H / n_z;
@@ -298,23 +305,7 @@ int main()
     // Initialize vertical velocity (only x-dependency).
     // USE MATRIX FROM FLOW INCOMPRESSIBILITY.
     ArrayXXd w(n,n_z);    
-    /*
-    if ( nixParams.thrmdyn.adv_w.apply == false )
-    {
-        w = ArrayXd::Zero(n);
-    }
-    else if ( nixParams.thrmdyn.adv_w.apply == true )
-    {
-        //w = ArrayXd::Constant(n_z, 0.6);
-        
-        w = ArrayXd::LinSpaced(n_z, 0.0, 1.0);
-        w = nixParams.thrmdyn.adv_w.w_0 * pow(w, nixParams.thrmdyn.adv_w.w_exp);
 
-        //w = ArrayXd::LinSpaced(n_z, w_min, w_max);
-        // Positive vertical direction defined downwards.
-        w = - w;
-    }
-    */
     /////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////
 
@@ -374,7 +365,7 @@ int main()
     // MISMIP EXPERIMENT 3 WITH OCEANIC FORCING AND NO THERMODYNAMICS.
     else if ( exp == "mismip_3_A" )
     {
-        // Full simulation. 44
+        // Full simulation. 44double
         /*t_s <<  6.0e4, 9.0e4, 12.0e4, 15.0e4, 18.0e4, 21.0e4, 24.0e4, 27.0e4, 30.0e4, 33.0e4,
                36.0e4, 39.0e4, 42.0e4, 45.0e4, 48.0e4, 51.0e4, 54.0e4, 57.0e4, 60.0e4, 63.0e4,
                66.0e4, 69.0e4, 72.0e4, 75.0e4, 78.0e4, 81.0e4, 84.0e4, 87.0e4, 90.0e4, 93.0e4,
@@ -557,7 +548,7 @@ int main()
         // Constant value given in the param file but smooth transition to the cold value.
         // CHECK IF THIS VALUE OF T_AIR IS ENOUGH TO ADVANCE AS MUCH AS THE NON-THERMAL SIM.
         T_air_s    = ArrayXd::Constant(n_s, nixParams.bc.therm.T_air); // 193.15
-        T_air_s(0) = 253.15; // Equilibration with a medium value!!
+        T_air_s(0) = 253.15; // Equilibration with a medium value!! 253.15
         T_air_s(1) = 258.15; 
         T_air_s(2) = 253.15; 
         T_air_s(3) = 243.15; 
@@ -568,9 +559,29 @@ int main()
         A       = A_s(0);
         A_theta = ArrayXXd::Constant(n, n_z, A);
     }
+
+
+    // TRANSITION INDICATORS EXPERIMENTS. OCEAN TEMPERATURES FORCING (T_air const).
+    else if ( exp == "ews_schoof" )
+    {
+        // OCEAN TEMPERATURES ANOMALIES FORCING.
+        // Beggining and ending points.
+        T_oce_s << 273.15, 283.15; 
+        T_air_s << 253.15, 233.15; // 253.15, 233.15
+
+        // Test no therm.
+        //A_s = ArrayXd::Constant(n_s, 5.0e-25);
+        //A_s = A_s * nixParams.cnst.sec_year;  
+
+        // Initialization.
+        T_air   = T_air_s(0);
+        T_oce   = T_oce_s(0);
+        A       = A_s(0);
+        A_theta = ArrayXXd::Constant(n, n_z, A);
+    }
     
     // TRANSITION INDICATORS EXPERIMENTS.
-    else if ( exp == "ews" )
+    else if ( exp == "ews_christian" )
     {
         // WE NEED TO TUNE THIS NUMBER TOGEHTER WITH THE FLUX DISCRETIAZTION TO OBTAIN THE SAME EXTENT.
         //A_s << 0.5e-26, 5.0e-25; //(0.5e-26, 5.0e-25)
@@ -589,21 +600,22 @@ int main()
     else
     {
         cout << "\n Experiment not defined. Please, do so: mismip_1...";
-        abort();
     }
 
     /////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////
 
     // Print spatial and time dimensions.
-    cout << " \n n = " << n;
-    cout << " \n n_sigma = " << nixParams.dom.grid_exp;
-    cout << " \n tf = " << tf;
+    cout << " \n Nix ice-shet model v1.0";
+    cout << " \n Experiment = " << n;
+    cout << " \n n          = " << n;
+    cout << " \n n_sigma    = " << nixParams.dom.grid_exp;
+    cout << " \n tf         = " << tf;
 
     // Call nc read function.
     if ( nixParams.stoch.stoch == true )
     {
-        //cout << "\n nixParams.path.read = " << nixParams.path.read;
+        cout << "\n Stochastic data successfully read from = " << nixParams.path.read;
         noise = f_nc_read(nixParams.stoch.N, nixParams.path.read);
     }
     
@@ -706,12 +718,55 @@ int main()
         }
 
         // TRANSITION INDICATORS EXPERIMENTS.
-        else if ( exp == "ews" )
+        else if ( exp == "ews_schoof" || exp == "ews_christian" )
         {
             // Constant A throughout the sim.
             if ( nixParams.bc.trend.type == "none" )
             {
                 A = A_s(0);
+                
+                // Ensure positive values of frontal ablation as Christian et al. (2022).
+                m_stoch = max(0.0, m_stoch);
+            }
+
+            // Oceanic temperature anomalies forcing.
+            else if ( nixParams.bc.trend.type == "T_oce" )
+            {
+                // Gradually decrease T_air to advance ice sheet (no oceanic forcing).
+                if ( t < 0.5*nixParams.bc.trend.t0 )
+                {
+                    // Gradual decrease in T_air for equilibration.
+                    T_air = T_air_s(0) + ( T_air_s(1) - T_air_s(0) ) \
+                                * ( 2.0 * t / nixParams.bc.trend.t0 );
+                    
+                    T_oce = T_oce_s(0);
+                }
+
+                // Equilibration with cold T_air (no oceanic forcing).
+                else if ( t >= 0.5*nixParams.bc.trend.t0 && t < nixParams.bc.trend.t0 )
+                {
+                    // Fixed value of air temperature.
+                    T_air = T_air_s(1);
+                    T_oce = T_oce_s(0);
+                }
+                
+                // Start oceanic forcing while keeping a constant air temperature.
+                else if ( t >= nixParams.bc.trend.t0 && t <= nixParams.bc.trend.tf )
+                {
+                    // Fixed value of air temperature.
+                    T_air = T_air_s(1);
+
+                    // OCEANIC FORCING. Gradually increasing temperature anomaly.
+                    T_air = T_oce_s(0) + ( T_oce_s(1) - T_oce_s(0) ) * (t - nixParams.bc.trend.t0) \
+                                / (nixParams.bc.trend.tf - nixParams.bc.trend.t0);
+                }
+
+                else if ( t > nixParams.bc.trend.tf )
+                {
+                    // Fixed value of air temperature.
+                    T_air = T_air_s(1);
+                    T_oce = T_oce_s(1);
+                }
             }
 
             // Forcing in A.
@@ -733,9 +788,12 @@ int main()
                 {
                     A = A_s(1);
                 }
+
+                // Ensure positive values of frontal ablation as Christian et al. (2022).
+                m_stoch = max(0.0, m_stoch);
             }
 
-            // Forcing in frontal ablation.
+            // Forcing in frontal ablation m_stoch. (Christian et al., 2022)
             else if ( nixParams.bc.trend.type == "ablation" )
             {
                 // Temperature is fixed for now via a constant ice rate factor.
@@ -758,11 +816,11 @@ int main()
                 {
                     m_stoch = m_stoch + nixParams.bc.trend.M_f * nixParams.bc.trend.M_0;
                 }
-                
+
+                // Ensure positive values of frontal ablation as Christian et al. (2022).
+                m_stoch = max(0.0, m_stoch);
             }
 
-            // Ensure positive values of frontal ablation as Christian et al. (2022).
-            m_stoch = max(0.0, m_stoch);
 
             // Ice hardness.
             B = pow(A, ( -1 / nixParams.vis.n_gln ) );
@@ -918,7 +976,7 @@ int main()
                     nixParams.cnst, nixParams.tm, nixParams.calv);
         
         // Update grounding line position with new velocity field.
-        L_out = f_L(H, q, S, bed, dt, L, ds, M, nixParams.dom, nixParams.cnst);
+        L_out = f_L(H, q, S, bed, dt, L, ds, nixParams.dom, nixParams.cnst);
         L     = L_out(0);
         dL_dt = L_out(1);
         
@@ -953,11 +1011,12 @@ int main()
         
 
         // Write solution with high resolution output frequency.
-        else if ( out_hr == true && t > a_hr(c_hr) )
+        else if ( out_hr == true && t >= a_hr(c_hr) )
         {
             // Write solution in nc.
             f_write_hr(c_hr, u_bar(n-1), H(n-1), L, t, u_x_bc, u2_dif, \
-                       error, dt, c_picard, mu, omega, A, dL_dt, m_stoch, smb_stoch);
+                       error, dt, c_picard, mu, omega, A, dL_dt, m_stoch, \
+                       smb_stoch, T_air, T_oce);
 
             ++c_hr;
         }  
