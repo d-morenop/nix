@@ -20,8 +20,8 @@ from scipy.signal import argrelextrema
 from matplotlib.gridspec import GridSpec
 
 
-path_fig        = '/home/dmoreno/figures/nix/oscillations/S-C_thw/'
-path_now        = '/home/dmoreno/nix/mismip.therm/exp-1_T_air_forcing_lapse.rate_long_cold_hr_2/n.250_n_z.35/'
+path_fig        = '/home/dmoreno/figures/nix/transition_indicators/forcing_T_oce/n.350_n_z.35_T_air.233.15_gamma_T.0.0008_tf_bc.35100.0/'
+path_now        = '//home/dmoreno/nix/transition_indicators/forcing_T_oce/test/n.250_n_z.25_T_air.233.15_gamma_T.0.0008_tf_bc.35100.0/'
 path_stoch      = '/home/dmoreno/nix/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
@@ -39,9 +39,9 @@ file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 save_series        = 1
 save_series_comp   = 0
 save_shooting      = 0
-save_domain        = 0
+save_domain        = 1
 coloured_domain    = 0
-save_var_frames    = 1
+save_var_frames    = 0
 save_series_frames = 0
 save_theta         = 0
 save_visc          = 0
@@ -61,7 +61,7 @@ smth_series        = 0
 # MISMIP bedrock experiments.
 # exp = 1: inclined bed; exp = 3: overdeepening bed.
 exp_name = ['mismip_1', 'mismip_3', 'glacier_ews']
-idx = 0
+idx = 1
 exp = exp_name[idx]
 
 # Create figures directory if it does not exist.
@@ -701,6 +701,9 @@ if save_domain == 1:
 			theta_min = np.min(-theta)
 			theta_max = np.max(-theta)
 
+			theta_max = 80.0
+			theta_min = 0.0
+
 			"""theta_min = 0.0
 			theta_max = -80.0"""
 			
@@ -1055,7 +1058,7 @@ if save_theta == 1:
 
 	cb_ticks = np.round(np.linspace(theta_min, theta_max, 6),1)
 	
-	for i in range(0, l, 10):
+	for i in range(0, l, 1):
 
 		# Update x_labels as domain extension changes in each iteration.
 		x_labels  = np.linspace(0, L[i], n_ticks, dtype=int)

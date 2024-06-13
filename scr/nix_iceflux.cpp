@@ -27,7 +27,7 @@ double f_melt(double T_oce, SubShelfMeltParams& subshelf, ConstantsParams& cnst)
 }
 
 
-ArrayXd f_q(ArrayXd u_bar, ArrayXd H, ArrayXd bed, double t, double m_dot, double M, \
+ArrayXd f_q(ArrayXd u_bar, ArrayXd H, ArrayXd bed, double t, double m_stoch, double M, \
             DomainParams& dom, ConstantsParams& cnst, TimeParams& tm, CalvingParams calv)
 {
 
@@ -72,6 +72,9 @@ ArrayXd f_q(ArrayXd u_bar, ArrayXd H, ArrayXd bed, double t, double m_dot, doubl
         // Calving after equilibration.
         else
         {
+            // Include an additional stochastic term on the potential melting due to the ocean.
+            double M_tot = M + m_stoch;
+
             // Prefactor to account for thickness difference in last grid point.
             // GL is defined in the last velocity grid point.
             // H(n-1) is not precisely H_f so we need a correction factor.
@@ -89,7 +92,7 @@ ArrayXd f_q(ArrayXd u_bar, ArrayXd H, ArrayXd bed, double t, double m_dot, doubl
             // LAST ATTEMPT.
             // ALMOST GOOD, A BIT TOO RETREATED FOR N=350 POINTS.
             //q(dom.n-1) = H(dom.n-1) * 0.5 * ( u_bar(dom.n-1) + u_bar(dom.n-2) + ( H_f / H(dom.n-1) ) * m_dot );
-            q(dom.n-1) = H(dom.n-1) * ( u_bar(dom.n-1) + ( H_f / H(dom.n-1) ) * m_dot );
+            q(dom.n-1) = H(dom.n-1) * ( u_bar(dom.n-1) + ( H_f / H(dom.n-1) ) * M_tot );
 
             // Ice flux at GL computed on the ice thickness grid. Schoof (2007).
             // Mean.
@@ -146,7 +149,7 @@ ArrayXd f_q(ArrayXd u_bar, ArrayXd H, ArrayXd bed, double t, double m_dot, doubl
 
 
 Array2d f_L(ArrayXd H, ArrayXd q, ArrayXd S, ArrayXd bed, \
-            double dt, double L, ArrayXd ds, double M, DomainParams& dom, \
+            double dt, double L, ArrayXd ds, DomainParams& dom, \
             ConstantsParams& cnst)
 {
     //Local variables.

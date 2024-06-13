@@ -23,7 +23,7 @@ ArrayXXd f_theta(ArrayXXd theta, ArrayXd ub, ArrayXd H, ArrayXd tau_b, ArrayXd Q
 
     // Lapse rate test.// Adiabatic lapse rate 9.8e-3 [ºC / m]. Moist adiabatic: 5.0e-3 [ºC / m]
     // Greenland mean: 7.1e-3 [ºC/m]: Steffen and Box (2001).
-    double gamma = 9.8e-3; 
+    double gamma = 7.1e-3; // 9.8e-3
     h = H + bed;
     
     // Zero frictional heat test.
