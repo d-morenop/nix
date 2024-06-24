@@ -1,0 +1,150 @@
+# This is a YAML file example
+
+path:
+  nix: /home/dmoreno/scr/nix/                              # Nix path.
+  read: /home/dmoreno/nix/data/noise_sigma_T.2.0.nc      # File with stochastic bc. 
+  out: /home/dmoreno/nix/transition_indicators/forcing_T_oce_hr/sigma_T_oce.2.0_T_oce_max.283.15/                     # Output path.
+
+time:
+  t0: 0.0                 # Starting time [yr].
+  tf: 47.0e3              # End time [yr]. 6.0e4, 141.0e4, MISMIP-therm: 3.0e4, 90.0e4, Ending time [yr]. EWR: 5.0e3
+  t_eq: 1.0e3             # Equilibration time [yr]. 1.5e3
+  output:
+    t_n: 100              # Number of output frames. 100
+    out_hr: true          # Allow high resolution output.
+
+constants:
+  g: 9.8                  # Gravitational acceleration [m/s²].
+  rho: 917.0              # Ice density [kg/m³] 
+  rho_w: 1028.0           # Water denisity [kg/m³]
+  sec_year: 3.154e7       # Seconds in a year.
+
+domain:
+  bed_exp: mismip_3       # Domain def, i.e., bedrock geometry applied: exp_1 (MISMIP exp_1) and so on.
+  experiment: ews_schoof  # Forcing type. As defined in MISMIP: mismip_1, mismip_3_therm...
+  n: 50                   # Number of horizontal points
+  n_z: 15                 # Number vertical layers
+  grid: even              # Nix grid type.
+  grid_exp: 1.0           # Exponent of unevenly-spaced grid. 0.5
+  bedrock_ews:            # Transition indicators domain.
+    smooth_bed: none      # Apply smooth on bed topography. "gauss", "runnning_mean".
+    p: 3                  # Number of points at the edges of the array that are not smoothed out.
+    sigma_gauss: 10.0     # Sigma gaussian filter. 
+    t0_smth: 1.5e4        # Init time to apply gaussian filter.
+    x_1: 346.0e3          # Peak beginning [m].
+    x_2: 350.0e3          # Peak end [m]. 88.0
+    y_p: 88.0             # Peak height [m]. 44.0, 88.0, 176.0  
+    y_0: 70.0             # Initial bedrock elevation (x=0) [m].
+
+
+dynamics:
+  vel_meth: SSA           # Velocity solver: const, SSA, DIVA, Blatter-Pattyn.
+
+timestep:
+  dt_meth: fixed          # Time-stepping method. fixed, adapt.
+  dt_min: 0.1             # Minimum time step [yr]. 0.1
+  dt_max: 5.0             # Maximum time step [yr]. 2.0, 5.0
+  t_eq_dt: 2.0e3          # Eq. time until adaptative timestep is applied. 3.0e3
+  rel: 0.7                # Relaxation between interations [0,1]. 0.5
+
+stochastic:
+  stoch: true            # Apply stochastic boundary conditions.
+  t0: 3.0e3               # Start time to apply stochastic BC. 2.0e4 [yr]
+  N: 50000                # Number of time points in BC (input from noise.nc in glacier_ews), equivalent to time length.
+  dt_noise: 1.0           # Assumed time step in stochastic_anom.py 
+
+boundary_conditions:
+  smb:
+    stoch: false          # Apply stochastic SBM.
+    t0_stoch: 3.0e3
+    S_0: 0.3              # SMB at x = 0 (and during equilibration) [m/yr]. 0.7
+    dlta_smb: -4.0        # Difference between interior and terminus SMB [m/yr].
+    x_acc: 300.0e3        # Position at which accumulation starts decreasing [m]. 300.0, 355.0
+    x_mid: 3.5e5          # Position of middle of SMB sigmoid  [m]. 365.0, 375.0
+    x_sca: 4.0e4          # Length scale of area where SMB is changing. [m]
+    x_varmid: 2.0e5       # Position of middle of SMB variability sigmoid [m]. 
+    x_varsca: 8.0e4       # Length scale of area where SMB varaibility changing. [m]
+    var_mult: 0.25        # Factor by which inland variability is less than max.
+  therm:
+    T_air: 233.15         # Prescribed air temperature. 233.15
+    w_min: -0.3           # Prescribed surface vertical advection in theta.
+    w_max: 0.0            # Prescribed basal vertical advection in theta.
+  rate_factor:
+    A_rate: false         # Boolean to apply forcing.
+    t0: 2.0e4             # Start time to apply increase in ice rate factor. 3.0e4 [yr]
+    tf: 3.0e4
+  trend:
+    type: T_oce           # None, rate_factor, ablation, oceanic forcing T_oce.
+    t0_bc: 45.0e3         # Start time to apply trend. 3.0e4 [yr]
+    tf_bc: 45.1e3
+    M_0: 30.0             # Original mean frontal ablation [m/yr].
+    M_f: 0.8              # Ablation: increased factor from original frontal ablation (80% as in Christian et al., 2022).0.8
+
+
+thermodynamics:
+  therm: true            # Apply thermodynamic solver at each time step.
+  k: 2.0                  # Thermal conductivity of ice [W / m · ºC].
+  G: 0.05                 # Geothermal heat flow [W / m^2] = [J / s · m^2].
+  kappa: 1.4e-6           # Thermal diffusivity of ice [m^2/s] --> [m^2/yr].
+  theta_max: 273.15       # Max temperature of ice [K].
+  theta_act: 263.15       # Threshold temperature for the two regimes in activation energy [K] 
+  adv_w: 
+    apply: true           # Vertical advection in therm.
+    w_0: 0.3              # Vertical velocity at the ice surface (usually equals to accumulation) 0.3 [m/yr]
+    w_exp: 0.33333        # Exponent of the vertical velocity profile. 1/3 
+
+
+friction:
+  m: 0.33333
+  u_0: 150.0
+  therm: none            # Temperature-dependent friction. none, two-valued, N_eff
+  theta_thw: 273.15      # Basal temperature considered to be fully thawed. 268.15, 273.15
+  theta_frz: 253.15      # Basal temperature considered to be fully frozen. 253.15, 233.15.
+  C_ref: 7.624e6         # Reference friction value.
+  C_frz: 7.624e6         # Frozen friction coeff. 7.624e6 [Pa m^-1/3 yr^1/3]
+  C_ews: 7.0e6           # Friction coeff. for early warning signals [Pa m^-1/3 yr^1/3]
+  C_thw: 0.1             # Thawed reduction in friction coeff. []
+
+viscosity:
+  n_gln: 3.0             # Glen flow law exponent
+  eps: 1.0e-8            # Viscosity regularisation term. 
+  therm: true           # Temperature-dependent viscosity.
+  t_eq_A_theta: 1.5e3    # Eq. time to start applying Arrhenius dependency.
+  A_cnst: 5.0e-26        # Rate factor value in MISMIP_A (constant rate factor) .
+  A_act: 4.9e-25         # Threshold rate factor for the two regimes in activation energy [Pa^-3 s^-1] 
+  Q_act_1: 60.0          # Activation energies [kJ/mol]. (below theta_act)
+  Q_act_2: 139.0         # Activation energies [kJ/mol]. (above theta_act)
+  A_0_1: 3.985e-13       # Pre-exponential constants [Pa^-3 s^-1] (below theta_act).
+  A_0_2: 1.916e3
+  R: 8.314               # Universal gas constant [J / K mol]
+
+advection:
+  meth: explicit         # Solver scheme. "implicit", "explicit"
+
+calving:
+  meth: stochastic             # 0, no calving; 1, Christian et al. (2022), 2: deterministic Favier et al. (2019)
+  m_dot: 30.0            # Mean frontal ablation [m/yr]. 30.0
+  sub_shelf_melt:
+    shelf_melt: true
+    meth: quadratic      # Melt parametrization. linear; quadratic.
+    t0_oce: 2.5e4        # Start time of ocean warming.
+    tf_oce: 27.5e4       # End time of applied ocean forcing.
+    c_po: 3974.0         # Specific heat [J / (kg K)]
+    L_i: 3.34e5          # Latent heat [J / kg ]
+    gamma_T: 80.0e-5     # Heat exchange velocity. Linear: 2.0e-5, Quad: 36.23e-5. 40.0e-5, [m/s] --> [m/yr] 
+    T_0: 273.15          # Reference ocean temperature [K].
+
+picard:
+  n_picard: 10           # Max number iter. Good results: 10.
+  tol: 1.0e-4            # Convergence tolerance within Picard iteration. 1.0e-4
+  omega_1: 0.125         # Angle predictor. De Smedt et al. (2010) Eq. 10.
+  omega_2: 0.95
+
+initialisation:
+  H: 10.0                # Ice thickness. [m]
+  S: 0.3                 # Surface mass balance. [m/yr]
+  u: 1.0                 # Ice velocity. [m/yr]
+  visc_0: 1.0e8          # Viscosity [Pa yr].
+  theta: 253.15          # Ice temperature [K].
+  beta: 5.0e3            # Friction coefficient [Pa yr / m].
+
