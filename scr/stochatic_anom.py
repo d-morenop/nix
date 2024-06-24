@@ -31,16 +31,17 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 
 
-# Stochastic noise function.
-def stochastic_noise(t, tf, dt, sigm_ocn, sigm_smb, tau_ocn, tau_smb):
+# Defined a function that returns a normalised IFFT.
+def normalised_ifft(x, sigma):
+    noise = np.fft.ifft(x) 
+    noise = noise - np.mean(noise)
+    noise = noise / np.std(noise) # Christian et al. (2022)
+    #noise = noise / np.max(noise)  # Daniel.
+    noise = sigma * noise
+    return noise
 
-    # Defined a function that returns a normalised IFFT.
-    def normalised_ifft(x, sigm):
-        noise = np.fft.ifft(x) 
-        noise = noise - np.mean(noise)
-        noise = noise / np.std(noise)
-        noise = sigm * noise
-        return noise
+# Stochastic noise function.
+"""def stochastic_noise(dt, sigm_ocn, sigm_smb, tau_ocn, tau_smb):
 
     #t  = dt * np.linspace(0, N, N)
     df = 1.0 / ( dt * N )
@@ -55,7 +56,7 @@ def stochastic_noise(t, tf, dt, sigm_ocn, sigm_smb, tau_ocn, tau_smb):
     # Scales total variance.
     P_0 = 1.0
 
-    # Analytical power spectra given auto-correlation.
+    # Analytical power spectra from a given auto-correlation.
     P_ocn = np.sqrt( P_0 / ( 1.0 + r_ocn**2 - 2.0 * r_ocn * np.cos(2.0 * np.pi * dt * f1) ) )
     P_smb = np.sqrt( P_0 / ( 1.0 + r_smb**2 - 2.0 * r_smb * np.cos(2.0 * np.pi * dt * f1) ) )
 
@@ -78,8 +79,8 @@ def stochastic_noise(t, tf, dt, sigm_ocn, sigm_smb, tau_ocn, tau_smb):
     phase[(N-l_freq-1):(N-1)] = np.conj(np.flip(phase_half))
 
     # Concatenate power spectra with different persistence time tau.
-    P_r2_ocn = np.concatenate( [P_ocn, np.flip( P_ocn[0:int(np.floor(0.5*N))] ) ] )
-    P_r2_smb = np.concatenate( [P_smb, np.flip( P_smb[0:int(np.floor(0.5*N))] ) ] )
+    P_r2_ocn = np.concatenate( [P_ocn, np.flip(P_ocn[0:int(np.floor(0.5*N))]) ] )
+    P_r2_smb = np.concatenate( [P_smb, np.flip(P_smb[0:int(np.floor(0.5*N))]) ] )
     
     # Include identical random phase.
     # Christian et al. (2022) uses half, why?! The time series then has a minimum
@@ -95,26 +96,78 @@ def stochastic_noise(t, tf, dt, sigm_ocn, sigm_smb, tau_ocn, tau_smb):
 
     out = [noise_ocn, noise_smb]
 
-    return out
+    return out"""
+
+
+# Stochastic noise function.
+def stochastic_noise(dt, sigma, tau):
+
+    #t  = dt * np.linspace(0, N, N)
+    df = 1.0 / ( dt * N )
+    f0 = 0.5 / dt
+
+    f1 = np.arange(0, f0, df)
+
+    # Auto-correlation at a lag of dt.
+    r = 1.0 - ( dt / tau )
+
+    # Scales total variance.
+    P_0 = 1.0
+
+    # Analytical power spectra from a given auto-correlation.
+    P = np.sqrt( P_0 / ( 1.0 + r**2 - 2.0 * r * np.cos(2.0 * np.pi * dt * f1) ) )
+
+    # Half of the frequencies and length.
+    P_freq = P[1:int(np.ceil(0.5 * N))]
+    l_freq = len(P_freq)
+
+    # Seed random number generator
+    seed(1)
+
+    # Create array with random phase.
+    phase_half = 1j * 2.0 * np.pi * rand(l_freq)
+    phase_all  = 1j * 2.0 * np.pi * rand(N)
+
+    # Prepare variable.
+    phase = np.zeros(N, dtype='complex_')
+
+    # Fill phase array.
+    phase[1:(l_freq+1)]       = phase_half
+    phase[(N-l_freq-1):(N-1)] = np.conj(np.flip(phase_half))
+
+    # Concatenate power spectra with different persistence time tau.
+    P_r2 = np.concatenate([P, np.flip(P[0:int(np.floor(0.5*N))])])
+    
+    # Include identical random phase.
+    # Christian et al. (2022) uses half, why?! The time series then has a minimum
+    # halfway on its lenght.
+    #P_rand_ocn = P_r2_ocn * np.exp(phase)
+    P_rand = P_r2 * np.exp(phase_all)
+
+    # Transform back to time space to save stochastic signal.
+    noise = normalised_ifft(P_rand, sigma)
+
+    return noise
 
 
 # Options.
-read_nc   = True
-save_nc   = False
-overwrite = False
+read_nc   = False
+save_nc   = True
+overwrite = True
 
-plot_time_series = True
+plot_time_series = False
 plot_frames      = False
-save_fig         = True
+save_fig         = False
 
 # Path and file name to write solution.
 path      = '/home/dmoreno/nix/data/'
 path_fig  = '/home/dmoreno/figures/transition_indicators/'
-file_name = 'noise_sigm_ocn.12.0.nc'
+file_name = 'noise_sigma_T.0.5.nc' # 'noise_sigm_ocn.12.0.nc'
+
 
 # Definitions.
-tf = 5.0e4                            # End time as defined in flow_line.cpp [yr].
-dt = 1     # keep this at 1 for now... averaging for longer model timesteps happens in main script
+tf = 5.0e4                         # End time as defined in flow_line.cpp [yr]. 5.0e4
+dt = 1                             # keep this at 1 for now... averaging for longer model timesteps happens in main script
 N  = int(tf)
 t  = dt * np.linspace(0, N, N)
 
@@ -124,17 +177,24 @@ tau_smb = 1.5    # [yr]
 
 # Maximum variability in frontal ablation and SMB (standard deviation).
 # Flowline crashes for values above sigm_ocn > 5.0 m/yr.
-sigm_ocn = 12.0   # 12.0 [m/yr] 
-sigm_smb = 0.3   # 0.4 [m/yr]
+sigma_ocn = 12.0   # 12.0 [m/yr] 
+sigma_smb = 0.3   # 0.4 [m/yr]
 
+# TEST FOR STOCHASTIC NOISE ON ANY VARIABLE.
+# Oceanic temperatures.
+sigma_T = 0.5     # 1.0 [K]
+tau_T   = 10.0    # 10.0 [yr]
 
 # Save noise in a nc file.
 if save_nc == True:
 
     # Calculate stochastic noise from accumulation and frontal ablation.
-    noise     = stochastic_noise(t, N, dt, sigm_ocn, sigm_smb, tau_ocn, tau_smb)
-    noise_ocn = noise[0]
-    noise_smb = noise[1]
+    #noise     = stochastic_noise(t, N, dt, sigm_ocn, sigm_smb, tau_ocn, tau_smb)
+    #noise_ocn = noise[0]
+    #noise_smb = noise[1]
+    noise_ocn = stochastic_noise(dt, sigma_ocn, tau_ocn)
+    noise_smb = stochastic_noise(dt, sigma_smb, tau_smb)
+    noise_T   = stochastic_noise(dt, sigma_T, tau_T)
 
     # Boolean to check if file exists.
     isfile = os.path.isfile(path+file_name)
@@ -174,15 +234,17 @@ if save_nc == True:
     time = f.createVariable('Time', np.float64, ('time'))
     noise_ocn_nc = f.createVariable('Noise_ocn', np.float64, ('time'))
     noise_smb_nc = f.createVariable('Noise_smb', np.float64, ('time'))
+    noise_T_nc   = f.createVariable('Noise_T_oce', np.float64, ('time'))
 
     # Pass data into variables. Just real part of complex noise values.
     time[:] = t
     noise_ocn_nc[:] = np.real(noise_ocn)
     noise_smb_nc[:] = np.real(noise_smb)
+    noise_T_nc[:]   = np.real(noise_T)
 
     # Attributes.
     # Add global attributes.
-    f.description = "Dataset containing frontal ablation and SMB time series with varying degrees"+\
+    f.description = "Dataset containing frontal ablation, SMB and temperature time series with varying degrees"+\
                     "and types of persistence. Based on Christian et al. (2022)."
     
     today     = datetime.today()
@@ -192,8 +254,10 @@ if save_nc == True:
     time.units = 'Years'
     noise_ocn_nc.units = 'm/yr'
     noise_smb_nc.units = 'm/yr'
+    noise_T_nc.units   = 'K'
     noise_ocn_nc.warning = 'Assumed that dt = 1 year.'
     noise_smb_nc.warning = 'Assumed that dt = 1 year.'
+    noise_T_nc.warning   = 'Assumed that dt = 1 year.'
 
     # Close dataset.
     f.close()
@@ -210,6 +274,7 @@ if read_nc == True:
     # Read variables.
     noise_ocn = g.variables["Noise_ocn"][:]
     noise_smb = g.variables["Noise_smb"][:]
+    noise_T   = g.variables["Noise_T_oce"][:]
 
 
 
@@ -271,6 +336,56 @@ if plot_time_series == True:
     ax2.set_xlim(0, tf)
     ax1.set_ylim(-45, 30)
     ax2.set_ylim(-1.0, 4)
+
+    #plt.tight_layout()
+
+    if save_fig == True:
+        plt.savefig(path_fig+'stoch_bc_poster.png', bbox_inches='tight')
+
+    plt.show()
+    plt.close(fig)
+
+
+
+
+    fig = plt.figure(dpi=400, figsize=(10,4))
+    ax1 = fig.add_subplot(111)
+
+
+    plt.rcParams['text.usetex'] = True
+
+    ax1.bar(t, noise_T, width=2.5, bottom=None, align='center', data=None, color='blue')
+
+
+    ax1.set_ylabel(r'$ T \ (\mathrm{K}) $', fontsize=20)
+    ax1.set_xlabel(r'$\mathrm{Time} \ (\mathrm{kyr}) $', fontsize=20)
+
+
+    """ax1.set_xticks([0, 10e3, 20e3, 30e3, 40e3, 50e3])
+    ax1.set_xticklabels(['$0$', '$10$', '$20$', \
+                            '$30$', '$40$', '$50$'], fontsize=17)
+
+    ax2.set_yticks([-1.0, 0.0, 1.0, 2.0, 3.0, 4.0])
+    ax2.set_yticklabels(['$-1$', '$0$', '$1$', \
+                            '$2$', '$3$','$4$'], fontsize=17)
+
+    ax1.set_yticks([-45, -30, -15, 0, 15, 30])
+    ax1.set_yticklabels(['$-45.0$', '$-30.0$', '$-15.0$', '$0.0$', \
+                            '$15.0$', '$30.0$'], fontsize=17)"""
+    
+
+
+    ax1.yaxis.label.set_color('blue')
+    ax2.yaxis.label.set_color('red')
+
+    ax1.tick_params(axis='y', which='major', length=4, colors='blue')
+    ax2.tick_params(axis='y', which='major', length=4, colors='red')
+
+
+    """ax1.set_xlim(0, tf)
+    ax2.set_xlim(0, tf)
+    ax1.set_ylim(-45, 30)
+    ax1.set_ylim(-1.0, 1.0)"""
 
     #plt.tight_layout()
 

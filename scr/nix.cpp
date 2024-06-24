@@ -35,6 +35,7 @@ int main()
 
     // Specify the path to YAML file.
     string yaml_name = "nix_params_ews_therm_T_oce.yaml";
+    //string yaml_name = "nix_params_mismip_therm_T_oce.yaml";
 
     // Assuming the path won't exceed 4096 characters.
     char buffer[4096];
@@ -110,6 +111,10 @@ int main()
     {
         L = 473.1e3;
     }
+    else
+    {
+        cout << "\n Bed geometry not recognised. Please, select: mismip_1... ";
+    }
 
     
     // Prepare variables for forcing.
@@ -146,7 +151,6 @@ int main()
     else
     {
         cout << "\n Experiment forcing not recognised. Please, select: mismip_1... ";
-        abort();
     }
 
 
@@ -155,7 +159,9 @@ int main()
     double dt;                           // Time step [yr].
     double dL_dt;                        // GL migration rate [m/yr]. 
     double m_stoch;                      // Stochatic contribution to calving [m/yr].     
-    double smb_stoch;                    // Stochatic contribution to smb [m/yr].ç
+    double smb_stoch;                    // Stochatic contribution to smb [m/yr].
+    double T_oce_det;                    // Deterministic contribution to ocean temperature anomalies [K].
+    double T_oce_stoch;                  // Stochatic contribution to ocean temperature anomalies [K].
     double alpha;                        // Fraction time to apply forcing trends [0,1].
     int t_stoch;                         // Stochactic time index.
     double T_air;                        // Current value of atmospheric temperature forcing [K] 
@@ -202,8 +208,9 @@ int main()
     ArrayXd b_melt(n);                    // Basal melt [m/yr]
     
     // Stochastic matrices and vectors.
-    ArrayXXd noise(2, nixParams.stoch.N);                            // Matrix to allocate stochastic BC.
-    Array2d noise_now;                              // Two-entry vector with current stochastic noise.
+    int n_stoch = 3;                                           // Number of stochastic variables forcing.
+    ArrayXXd noise(n_stoch, nixParams.stoch.N);               // Matrix to allocate stochastic BC.
+    Array3d noise_now;                                        // Three-entry vector with current stochastic noise.
     ArrayXd t_vec = ArrayXd::LinSpaced(nixParams.stoch.N, 0.0, nixParams.stoch.N);  // Time vector with dt_noise time step.
     
     // Vectors to compute norm.
@@ -566,8 +573,9 @@ int main()
     {
         // OCEAN TEMPERATURES ANOMALIES FORCING.
         // Beggining and ending points.
-        T_oce_s << 273.15, 283.15; 
+        T_oce_s << 273.15, 283.15;  // 283.15 is probably too high for the transition indicators (overshooting).
         T_air_s << 253.15, 233.15; // 253.15, 233.15
+
 
         // Test no therm.
         //A_s = ArrayXd::Constant(n_s, 5.0e-25);
@@ -650,8 +658,9 @@ int main()
         {
             if ( t < nixParams.stoch.t0 )
             {
-                m_stoch   = 0.0;
-                smb_stoch = 0.0;
+                m_stoch     = 0.0;
+                smb_stoch   = 0.0;
+                T_oce_stoch = 0.0;
             }
             else
             {
@@ -663,8 +672,9 @@ int main()
                 noise_now = noise.col(t_stoch);
 
                 //m_stoch   = max(0.0, noise_now(0)); 
-                m_stoch   = noise_now(0); 
-                smb_stoch = noise_now(1);
+                m_stoch     = noise_now(0); 
+                smb_stoch   = noise_now(1);
+                T_oce_stoch = noise_now(2);
 
                 // Update SMB considering new domain extension and current stochastic term.
                 //S = f_smb(sigma, L, t, smb_stoch, nixParams.bc, \
@@ -739,15 +749,15 @@ int main()
                     T_air = T_air_s(0) + ( T_air_s(1) - T_air_s(0) ) \
                                 * ( 2.0 * t / nixParams.bc.trend.t0 );
                     
-                    T_oce = T_oce_s(0);
+                    T_oce_det = T_oce_s(0);
                 }
 
                 // Equilibration with cold T_air (no oceanic forcing).
                 else if ( t >= 0.5*nixParams.bc.trend.t0 && t < nixParams.bc.trend.t0 )
                 {
                     // Fixed value of air temperature.
-                    T_air = T_air_s(1);
-                    T_oce = T_oce_s(0);
+                    T_air     = T_air_s(1);
+                    T_oce_det = T_oce_s(0);
                 }
                 
                 // Start oceanic forcing while keeping a constant air temperature.
@@ -757,16 +767,20 @@ int main()
                     T_air = T_air_s(1);
 
                     // OCEANIC FORCING. Gradually increasing temperature anomaly.
-                    T_air = T_oce_s(0) + ( T_oce_s(1) - T_oce_s(0) ) * (t - nixParams.bc.trend.t0) \
+                    T_oce_det = T_oce_s(0) + ( T_oce_s(1) - T_oce_s(0) ) * (t - nixParams.bc.trend.t0) \
                                 / (nixParams.bc.trend.tf - nixParams.bc.trend.t0);
                 }
 
                 else if ( t > nixParams.bc.trend.tf )
                 {
                     // Fixed value of air temperature.
-                    T_air = T_air_s(1);
-                    T_oce = T_oce_s(1);
+                    T_air     = T_air_s(1);
+                    T_oce_det = T_oce_s(1);
                 }
+
+                // Total T_oce is the deterministic forcing plus the stochastic contribution.
+                T_oce = T_oce_det + T_oce_stoch;
+                T_oce = max(0.0, T_oce);
             }
 
             // Forcing in A.
@@ -844,7 +858,7 @@ int main()
         c_picard = 0;
         
         // Implicit velocity solver. Picard iteration for non-linear viscosity and beta.
-        // Loop over the vertical level for Blatter-Pattyn.
+        // Loop over the vertical level for Blatter-Pattyn.retval
         // We solve one tridiagonal solver for each vertical level.
         while ( error > nixParams.pcrd.tol && c_picard < nixParams.pcrd.n_picard )
         {
@@ -953,7 +967,7 @@ int main()
             f_write(c, u_bar_old_1, ub, u_bar_x, H, visc_bar, S, tau_b, beta, tau_d, bed, \
                     C_bed, Q_fric, u2_dif_vec, u2_0_vec, L, t, u_x_bc, u2_dif, \
                     error, dt, c_picard, mu, omega, theta, visc, u_z, u_x, u, w, A, dL_dt, \
-                    F_1, F_2, m_stoch, smb_stoch, A_theta, T_oce, T_air, lmbd);
+                    F_1, F_2, m_stoch, smb_stoch, A_theta, T_oce_det, T_oce_stoch, T_air, lmbd);
 
             // Close nc file. 
             if ((retval = nc_close(ncid)))
@@ -1004,19 +1018,20 @@ int main()
             f_write(c, u_bar, ub, u_bar_x, H, visc_bar, S, tau_b, beta, tau_d, bed, \
                     C_bed, Q_fric, u2_dif_vec, u2_0_vec, L, t, u_x_bc, u2_dif, \
                     error, dt, c_picard, mu, omega, theta, visc, u_z, u_x, u, w, A, dL_dt, \
-                    F_1, F_2, m_stoch, smb_stoch, A_theta, T_oce, T_air, lmbd);
+                    F_1, F_2, m_stoch, smb_stoch, A_theta, T_oce_det, T_oce_stoch, T_air, lmbd);
 
             ++c;
         }  
         
 
         // Write solution with high resolution output frequency.
-        else if ( out_hr == true && t >= a_hr(c_hr) )
+        if ( out_hr == true && t > a_hr(c_hr) )
         {
+            //cout << "\n t_hr = " << t;
             // Write solution in nc.
             f_write_hr(c_hr, u_bar(n-1), H(n-1), L, t, u_x_bc, u2_dif, \
                        error, dt, c_picard, mu, omega, A, dL_dt, m_stoch, \
-                       smb_stoch, T_air, T_oce);
+                       smb_stoch, T_air, T_oce_det, T_oce_stoch);
 
             ++c_hr;
         }  

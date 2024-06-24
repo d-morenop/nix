@@ -98,8 +98,8 @@ def modify_yaml(file_path, path_modified, yaml_file_name, var_names, data_types,
 
 
 # Specify the path to your YAML file
-yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_mismip_therm_T_air.yaml"
-yaml_file_name = "nix_params_mismip_therm_T_air.yaml"
+#yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_mismip_therm_T_air.yaml"
+#yaml_file_name = "nix_params_mismip_therm_T_air.yaml"
 
 
 # Modify yaml file to run large ensembles of simulations.
@@ -151,9 +151,9 @@ elif exp == 'T_oce':
     var_names = ['n', 'n_z', 'T_air', 'gamma_T']
 
     values_0 = np.array([250])
-    values_1 = np.array([25, 35])
+    values_1 = np.array([35]) # 35
     values_2 = np.array([233.15]) # [173.15, 183.15, 193.15]
-    values_3 = np.array([40.0e-5, 60.0e-5, 80.0e-5]) # [40.0e-5, 60.0e-5, 80.0e-5, 100.0e-5]
+    values_3 = np.array([40.0e-5, 70.0e-5, 100.0e-5]) # [40.0e-5, 60.0e-5, 80.0e-5, 100.0e-5]
 
     # Data type of each array.
     data_types = [int, int, float, float]
@@ -216,11 +216,11 @@ elif exp == 'ews_schoof_T_oce':
 
     var_names = ['n', 'n_z', 'T_air', 'gamma_T', 'tf_bc']
 
-    values_0 = np.array([350]) # 250, 350, For some reason in now crashing on 300??
+    values_0 = np.array([200, 400]) # 200, 400, For some reason in now crashing on 300??
     values_1 = np.array([35])
     values_2 = np.array([233.15]) # [173.15, 183.15, 193.15]
     values_3 = np.array([80.0e-5]) # [40.0e-5, 60.0e-5, 80.0e-5, 100.0e-5]
-    values_4 = np.array([35.1e3]) # [35.1e3, 35.25e3, 35.5e3, 36.0e3]
+    values_4 = np.array([45.1e3, 45.25e3, 45.5e3, 46.0e3]) # [35.1e3, 35.25e3, 35.5e3, 36.0e3]
 
     # Data type of each array.
     data_types = [int, int, float, float, float]
@@ -250,7 +250,6 @@ values_all = []
 for i, var_name in enumerate(var_names):
     values_with_names = [f"{var_name}.{s}" for s in str_all[i]]
     values_all.append(values_with_names)
-
 
 
 ########################################################################

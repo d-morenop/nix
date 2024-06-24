@@ -51,7 +51,8 @@
 #define U2_DIF_NAME "BC_error"
 #define PICARD_ERROR_NAME "picard_error"
 #define THETA_NAME "theta"
-#define T_OCE_NAME "T_oce"
+#define T_OCE_DET_NAME "T_oce_det"
+#define T_OCE_STOCH_NAME "T_oce_stoch"
 #define T_AIR_NAME "T_air"
 #define C_BED_NAME "C_bed"
 #define Q_FRIC_NAME "Q_fric"
@@ -123,8 +124,8 @@ int x_varid, z_varid, u_bar_varid, ub_varid, u_bar_x_varid, u_x_varid, u_z_varid
     H_varid, visc_varid, visc_bar_varid, a_varid, a_theta_varid, s_varid, \
     tau_varid, beta_varid, lmbd_varid, taud_varid, b_varid, L_varid, dL_dt_varid, dt_varid, \
     c_pic_varid, t_varid, mu_varid, omega_varid, u2_bc_varid, u2_dif_varid, \
-    picard_error_varid, u2_0_vec_varid, u2_dif_vec_varid, theta_varid, T_oce_varid, T_air_varid, C_bed_varid, Q_fric_varid, \
-    F_1_varid, F_2_varid, m_stoch_varid, smb_stoch_varid;
+    picard_error_varid, u2_0_vec_varid, u2_dif_vec_varid, theta_varid, T_oce_det_varid, T_oce_stoch_varid, \
+    T_air_varid, C_bed_varid, Q_fric_varid, F_1_varid, F_2_varid, m_stoch_varid, smb_stoch_varid;
 
 int dimids[NDIMS];
 
@@ -152,7 +153,8 @@ size_t start_z[NDIMS_Z], cnt_z[NDIMS_Z];
 int ncid_hr, x_dimid_hr, z_dimid_hr, time_dimid_hr;
 int x_varid_hr, z_varid_hr, u_bar_varid_hr, H_varid_hr, L_varid_hr, t_varid_hr, a_varid_hr, \
     u2_bc_varid_hr, u2_dif_varid_hr, picard_error_varid_hr, dt_varid_hr, c_pic_varid_hr, mu_varid_hr, \
-    omega_varid_hr, A_varid_hr, dL_dt_varid_hr, m_stoch_varid_hr, smb_stoch_varid_hr, T_air_varid_hr, T_oce_varid_hr;
+    omega_varid_hr, A_varid_hr, dL_dt_varid_hr, m_stoch_varid_hr, smb_stoch_varid_hr, T_air_varid_hr, \
+    T_oce_det_varid_hr, T_oce_stoch_varid_hr;
 
 int dimids_hr[NDIMS];
 
@@ -328,8 +330,11 @@ int f_nc(int N, int N_Z, string path)
     if ((retval = nc_def_var(ncid, SMB_STOCH_NAME, NC_DOUBLE, NDIMS_0,
                     dimids_0, &smb_stoch_varid)))
         ERR(retval);
-    if ((retval = nc_def_var(ncid, T_OCE_NAME, NC_DOUBLE, NDIMS_0,
-                    dimids_0, &T_oce_varid)))
+    if ((retval = nc_def_var(ncid, T_OCE_DET_NAME, NC_DOUBLE, NDIMS_0,
+                    dimids_0, &T_oce_det_varid)))
+        ERR(retval);
+    if ((retval = nc_def_var(ncid, T_OCE_STOCH_NAME, NC_DOUBLE, NDIMS_0,
+                    dimids_0, &T_oce_stoch_varid)))
         ERR(retval);
     if ((retval = nc_def_var(ncid, T_AIR_NAME, NC_DOUBLE, NDIMS_0,
                     dimids_0, &T_air_varid)))
@@ -454,7 +459,10 @@ int f_nc(int N, int N_Z, string path)
     if ((retval = nc_put_att_text(ncid, smb_stoch_varid, UNITS,
                     strlen(SMB_STOCH_UNITS), SMB_STOCH_UNITS)))
         ERR(retval);
-    if ((retval = nc_put_att_text(ncid, T_oce_varid, UNITS,
+    if ((retval = nc_put_att_text(ncid, T_oce_det_varid, UNITS,
+                    strlen(T_OCE_UNITS), T_OCE_UNITS)))
+        ERR(retval);
+    if ((retval = nc_put_att_text(ncid, T_oce_stoch_varid, UNITS,
                     strlen(T_OCE_UNITS), T_OCE_UNITS)))
         ERR(retval);
     if ((retval = nc_put_att_text(ncid, T_air_varid, UNITS,
@@ -628,8 +636,11 @@ int f_nc_hr(int N, int N_Z, string path)
     if ((retval = nc_def_var(ncid_hr, T_AIR_NAME, NC_DOUBLE, NDIMS_0,
                     dimids_0_hr, &T_air_varid_hr)))
         ERR(retval);
-    if ((retval = nc_def_var(ncid_hr, T_OCE_NAME, NC_DOUBLE, NDIMS_0,
-                    dimids_0_hr, &T_oce_varid_hr)))
+    if ((retval = nc_def_var(ncid_hr, T_OCE_DET_NAME, NC_DOUBLE, NDIMS_0,
+                    dimids_0_hr, &T_oce_det_varid_hr)))
+        ERR(retval);
+    if ((retval = nc_def_var(ncid_hr, T_OCE_STOCH_NAME, NC_DOUBLE, NDIMS_0,
+                    dimids_0_hr, &T_oce_stoch_varid_hr)))
         ERR(retval);
     
 
@@ -681,6 +692,15 @@ int f_nc_hr(int N, int N_Z, string path)
     if ((retval = nc_put_att_text(ncid_hr, smb_stoch_varid_hr, UNITS,
                     strlen(SMB_STOCH_UNITS), SMB_STOCH_UNITS)))
         ERR(retval);
+    if ((retval = nc_put_att_text(ncid_hr, T_air_varid_hr, UNITS,
+                    strlen(T_AIR_UNITS), T_AIR_UNITS)))
+        ERR(retval);
+    if ((retval = nc_put_att_text(ncid_hr, T_oce_det_varid_hr, UNITS,
+                    strlen(T_OCE_UNITS), T_OCE_UNITS)))
+        ERR(retval);
+    if ((retval = nc_put_att_text(ncid_hr, T_oce_stoch_varid_hr, UNITS,
+                    strlen(T_OCE_UNITS), T_OCE_UNITS)))
+        ERR(retval);
         
     /* End define mode. */
     if ((retval = nc_enddef(ncid_hr)))
@@ -719,8 +739,8 @@ int f_write(int c, ArrayXd u_bar, ArrayXd ub, ArrayXd u_bar_x, ArrayXd H, ArrayX
             double L, double t, double u2_bc, double u2_dif, double error, \
             double dt, int c_picard, double mu, double omega, ArrayXXd theta, \
             ArrayXXd visc, ArrayXXd u_z, ArrayXXd u_x, ArrayXXd u, ArrayXXd w, double A, double dL_dt, \
-            ArrayXd F_1, ArrayXd F_2, double m_stoch, double smb_stoch, ArrayXXd A_theta, double T_oce, \
-            double T_air, ArrayXXd lmbd)
+            ArrayXd F_1, ArrayXd F_2, double m_stoch, double smb_stoch, ArrayXXd A_theta, double T_oce_det, 
+            double T_oce_stoch, double T_air, ArrayXXd lmbd)
 {
     start[0]   = c;
     start_0[0] = c;
@@ -770,14 +790,6 @@ int f_write(int c, ArrayXd u_bar, ArrayXd ub, ArrayXd u_bar_x, ArrayXd H, ArrayX
     ERR(retval);
     if ((retval = nc_put_vara_double(ncid, u2_bc_varid, start_0, cnt_0, &u2_bc)))
     ERR(retval);
-    if ((retval = nc_put_vara_double(ncid, u2_dif_varid, start_0, cnt_0, &u2_dif)))
-    ERR(retval);
-    if ((retval = nc_put_vara_double(ncid, picard_error_varid, start_0, cnt_0, &error)))
-    ERR(retval);
-    if ((retval = nc_put_vara_double(ncid, dt_varid, start_0, cnt_0, &dt)))
-    ERR(retval);
-    if ((retval = nc_put_vara_int(ncid, c_pic_varid, start_0, cnt_0, &c_picard)))
-    ERR(retval);
     if ((retval = nc_put_vara_double(ncid, mu_varid, start_0, cnt_0, &mu)))
     ERR(retval); // currently mu
     if ((retval = nc_put_vara_double(ncid, omega_varid, start_0, cnt_0, &omega)))
@@ -788,7 +800,9 @@ int f_write(int c, ArrayXd u_bar, ArrayXd ub, ArrayXd u_bar_x, ArrayXd H, ArrayX
     ERR(retval);
     if ((retval = nc_put_vara_double(ncid, smb_stoch_varid, start_0, cnt_0, &smb_stoch)))
     ERR(retval);
-    if ((retval = nc_put_vara_double(ncid, T_oce_varid, start_0, cnt_0, &T_oce)))
+    if ((retval = nc_put_vara_double(ncid, T_oce_det_varid, start_0, cnt_0, &T_oce_det)))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid, T_oce_stoch_varid, start_0, cnt_0, &T_oce_stoch)))
     ERR(retval);
     if ((retval = nc_put_vara_double(ncid, T_air_varid, start_0, cnt_0, &T_air)))
     ERR(retval);
@@ -820,7 +834,7 @@ int f_write(int c, ArrayXd u_bar, ArrayXd ub, ArrayXd u_bar_x, ArrayXd H, ArrayX
 int f_write_hr(int c, double u_bar_L, double H_L, \
                double L, double t, double u2_bc, double u2_dif, double error, \
                double dt, int c_picard, double mu, double omega, double A, double dL_dt, \
-               double m_stoch, double smb_stoch, double T_air, double T_oce)
+               double m_stoch, double smb_stoch, double T_air, double T_oce_det, double T_oce_stoch)
 {
     start_hr[0]   = c;
     start_0_hr[0] = c;
@@ -862,7 +876,9 @@ int f_write_hr(int c, double u_bar_L, double H_L, \
     ERR(retval);
     if ((retval = nc_put_vara_double(ncid_hr, T_air_varid_hr, start_0_hr, cnt_0_hr, &T_air)))
     ERR(retval);
-    if ((retval = nc_put_vara_double(ncid_hr, T_oce_varid_hr, start_0_hr, cnt_0_hr, &T_oce)))
+    if ((retval = nc_put_vara_double(ncid_hr, T_oce_det_varid_hr, start_0_hr, cnt_0_hr, &T_oce_det)))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid_hr, T_oce_stoch_varid_hr, start_0_hr, cnt_0_hr, &T_oce_stoch)))
     ERR(retval);
 
     return c;
@@ -881,15 +897,16 @@ ArrayXXd f_nc_read(int N, string path)
     cout << "\n path_new  = " << path_new;*/
 
     /* This will be the netCDF ID for the file and data variable. */
-    int ncid, varid_ocn, varid_smb;
+    int ncid, varid_ocn, varid_smb, varid_T_oce;
 
     // Number of variables.
-    int n_var = 2;
+    int n_var = 3;
 
     // Allocate variables.
     ArrayXXd data(n_var,N);
     ArrayXd noise_ocn(N);
     ArrayXd noise_smb(N);
+    ArrayXd noise_T_oce(N);
 
     /* Loop indexes, and error handling. */
     int retval;
@@ -904,16 +921,19 @@ ArrayXXd f_nc_read(int N, string path)
     /* Get the varid of the data variable, based on its name. */
     nc_inq_varid(ncid, "Noise_ocn", &varid_ocn);
     nc_inq_varid(ncid, "Noise_smb", &varid_smb);
+    nc_inq_varid(ncid, "Noise_T_oce", &varid_T_oce);
 
     /* Read the data. */
     nc_get_var_double(ncid, varid_ocn, &noise_ocn(0));
     nc_get_var_double(ncid, varid_smb, &noise_smb(0));
+    nc_get_var_double(ncid, varid_T_oce, &noise_T_oce(0));
 
     // Allocate in output variable.
     data.row(0) = noise_ocn;
     data.row(1) = noise_smb;
+    data.row(2) = noise_T_oce;
 
-    //cout << "\n data = " << data;
+    //data << noise_ocn, noise_smb, noise_T_oce;
 
     //nc_get_var_double(ncid, varid_ocn, &data_in(0,0));
     //nc_get_var_double(ncid, varid_smb, &data_in(1,0));
