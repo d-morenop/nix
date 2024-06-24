@@ -75,8 +75,8 @@ boundary_conditions:
     tf: 3.0e4
   trend:
     type: none     # None, rate_factor, ablation.
-    t0: 3.0e4             # Start time to apply trend. 3.0e4 [yr]
-    tf: 3.1e4
+    t0_bc: 3.0e4             # Start time to apply trend. 3.0e4 [yr]
+    tf_bc: 3.1e4
     M_0: 30.0             # Original mean frontal ablation [m/yr].
     M_f: 0.8              # Ablation: increased factor from original frontal ablation (80% as in Christian et al., 2022).0.8
 

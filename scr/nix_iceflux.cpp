@@ -7,19 +7,22 @@
 
 double f_melt(double T_oce, SubShelfMeltParams& subshelf, ConstantsParams& cnst)
 {
-    double M;
+    double M, delta_T;
+
+    // Ensure anomaly is positive to produce melt.
+    delta_T = max(0.0, T_oce - subshelf.T_0);
 
     // Linear.
     if ( subshelf.meth == "linear" )
     {
-        M = ( T_oce - subshelf.T_0 ) * subshelf.gamma_T * \
+        M = delta_T * subshelf.gamma_T * \
                 ( cnst.rho_w * subshelf.c_po ) / ( cnst.rho * subshelf.L_i );
     }
 
     // Quadratic.
     else if ( subshelf.meth == "quadratic" )
     {
-        M = pow((T_oce - subshelf.T_0), 2) * subshelf.gamma_T * \
+        M = pow(delta_T, 2) * subshelf.gamma_T * \
                 pow( ( cnst.rho_w * subshelf.c_po ) / ( cnst.rho * subshelf.L_i ), 2);
     }
     
@@ -73,7 +76,10 @@ ArrayXd f_q(ArrayXd u_bar, ArrayXd H, ArrayXd bed, double t, double m_stoch, dou
         else
         {
             // Include an additional stochastic term on the potential melting due to the ocean.
-            double M_tot = M + m_stoch;
+            //double M_tot = M + m_stoch;
+
+            // Noise is coming from temperatures, not melting.
+            //double M_tot = M;
 
             // Prefactor to account for thickness difference in last grid point.
             // GL is defined in the last velocity grid point.
@@ -92,7 +98,7 @@ ArrayXd f_q(ArrayXd u_bar, ArrayXd H, ArrayXd bed, double t, double m_stoch, dou
             // LAST ATTEMPT.
             // ALMOST GOOD, A BIT TOO RETREATED FOR N=350 POINTS.
             //q(dom.n-1) = H(dom.n-1) * 0.5 * ( u_bar(dom.n-1) + u_bar(dom.n-2) + ( H_f / H(dom.n-1) ) * m_dot );
-            q(dom.n-1) = H(dom.n-1) * ( u_bar(dom.n-1) + ( H_f / H(dom.n-1) ) * M_tot );
+            q(dom.n-1) = H(dom.n-1) * ( u_bar(dom.n-1) + ( H_f / H(dom.n-1) ) * M );
 
             // Ice flux at GL computed on the ice thickness grid. Schoof (2007).
             // Mean.

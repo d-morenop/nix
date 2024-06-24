@@ -20,12 +20,14 @@ from scipy.signal import argrelextrema
 from matplotlib.gridspec import GridSpec
 
 
-path_fig        = '/home/dmoreno/figures/nix/transition_indicators/forcing_T_oce/n.350_n_z.35_T_air.233.15_gamma_T.0.0008_tf_bc.35100.0/'
-path_now        = '//home/dmoreno/nix/transition_indicators/forcing_T_oce/test/n.250_n_z.25_T_air.233.15_gamma_T.0.0008_tf_bc.35100.0/'
+path_fig        = '/home/dmoreno/figures/nix/mismip.therm/T_oce_forcing_long_lapse_rate/n.250_n_z.35_T_air.233.15_gamma_T.0.001/'
+path_now        = '/home/dmoreno/nix/transition_indicators/forcing_T_oce_hr/sigma_T_oce.3.0_T_oce_max.283.15/n.200_n_z.35_T_air.233.15_gamma_T.0.0008_tf_bc.45100.0/'
 path_stoch      = '/home/dmoreno/nix/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
+# /home/dmoreno/nix/transition_indicators/forcing_T_oce_hr/T_oce_max.283.15/n.400_n_z.35_T_air.233.15_gamma_T.0.0008_tf_bc.45100.0/
 # /home/dmoreno/nix/mismip.therm/test.issue_long_T/n.250_n_z.25_T_air.218.15/
+# /home/dmoreno/nix/mismip.therm/T_oce_forcing_long/n.250_n_z.25_T_air.233.15_gamma_T.0.001
 # '/home/dmoreno/nix/oscillations/S-C_thw_hr_dt.fixed/S_0.0.10_C_thw.0.10/'
 # '/home/dmoreno/nix/ews/M_rates/smooth/sigma.1.0_A.3.0e-26_yp.176/''
 # /home/dmoreno/flowline/mismip_bp/exp_3/n.100_nz.10/
@@ -39,8 +41,8 @@ file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 save_series        = 1
 save_series_comp   = 0
 save_shooting      = 0
-save_domain        = 1
-coloured_domain    = 0
+save_domain        = 0
+coloured_domain    = 1
 save_var_frames    = 0
 save_series_frames = 0
 save_theta         = 0
@@ -51,7 +53,7 @@ time_series_gif    = 0
 save_L             = 0
 save_series_2D     = 0
 heat_map_fourier   = 0
-save_fig           = False
+save_fig           = True
 read_stoch_nc      = False
 bed_smooth         = False
 
@@ -80,14 +82,14 @@ nix_name = ['u_bar', 'ub', 'u_bar_x', 'u_z', 'u', 'H', 'visc_bar', 'tau_b', 'tau
 				 'BC_error', 'u2_0_vec', 'u2_dif_vec', 'picard_error', \
 				 'c_picard', 'dt', 'mu', 'omega', 'A', 'theta', 'S', \
 				 'm_stoch', 'smb_stoch', 'Q_fric', 'beta', 'visc', 'u_x', 'F_1', 'F_2', \
-				 'A_theta', 'T_oce', 'lmbd', 'w', 'T_air']
+				 'A_theta', 'T_oce_det', 'T_oce_stoch', 'lmbd', 'w', 'T_air']
 
 var_name 	  = ['u_bar', 'ub', 'u_bar_x', 'u_z', 'u', 'H', 'visc_bar', 'tau_b', 'tau_d', \
 				 'L', 'dL_dt', 't', 'b', 'C_bed', 'u_x_bc', \
 				 'dif', 'u2_0_vec', 'u2_dif_vec', 'picard_error', \
 				 'c_picard', 'dt', 'mu', 'omega_picard', 'A_s', 'theta', 'S', \
 				 'm_stoch', 'smb_stoch', 'Q_fric', 'beta', 'visc', 'u_x', 'F_1', 'F_2', \
-				 'A_theta', 'T_oce', 'lmbd', 'w', 'T_air']
+				 'A_theta', 'T_oce_det', 'T_oce_stoch', 'lmbd', 'w', 'T_air']
 
 
 # Dimension.
@@ -236,6 +238,10 @@ elif exp == 'glacier_ews':
 
 bed = f_bed(x_plot, exp, n)
 
+# Return local maxima in Shoof bedrock.
+bed_max = argrelextrema(bed, np.greater)[0]
+print('x-coordinate of bedrock local max = ', x_plot[bed_max])
+
 if bed_smooth == True:
 	n_smth = n
 	dx = 1.0 # This must be 1.0 to leave unchaged the max/min values in the y axis.
@@ -308,7 +314,8 @@ if save_series == 1:
 	# T_air
 	#T_air = theta[:,s[1]-1,s[2]-1]
 
-	T_oce = T_oce - 273.15
+	T_oce = T_oce_det - 273.15
+	T_air = T_air - 273.15
 	
 	# Figure.
 	fig = plt.figure(dpi=600, figsize=(5.5,6))
@@ -361,8 +368,8 @@ if save_series == 1:
 	
 	ax3.plot(t_plot, T_air, linestyle='-', color='purple', marker='None', \
 			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
-	#ax3.plot(t_plot, T_oce, linestyle='-', color='purple', marker='None', \
-	#			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+	ax5.plot(t_plot, T_oce, linestyle='-', color='darkgreen', marker='None', \
+				 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 
 	#ax3.plot(t_plot, b[:,s[2]-1], linestyle='-', color='purple', marker='None', \
 #			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
@@ -416,7 +423,7 @@ if save_series == 1:
 
 	
 	ax3.set_ylabel(r'$ T{\mathrm{air}} \ (^{\circ} \mathrm{C})$', fontsize=18)
-	#ax3.set_ylabel(r'$ \Delta T_{\mathrm{oce}} \ (^{\circ} \mathrm{C})$', fontsize=18)
+	ax5.set_ylabel(r'$ \Delta T_{\mathrm{oce}} \ (^{\circ} \mathrm{C})$', fontsize=18)
 	#ax4.set_ylabel(r'$ \theta(z=0,L) $', fontsize=18)
 	
 	ax4.set_ylabel(r'$  q(L) \ (\mathrm{km^2/yr})$', fontsize=17)
@@ -632,15 +639,16 @@ if save_shooting == 1:
 
 if save_domain == 1:
 	
-	for i in range(0, l, 10): # range(0, l, 2), (l-1, l, 20)
+	for i in range(10, l, 1): # range(0, l, 2), (l-1, l, 20)
 		
 		# Horizontal dimension [km].
 		#L_plot  = np.linspace(0, L[i], s[2])
 		L_plot_sigma = sigma_plot * L[i]
 		
 		# Ice surface elevation [km].
-		b[i,0] = b[i,2] # Impose symmetric BC on bedrock, which it doesn't a priori.
+		#b[i,0] = b[i,2] # Impose symmetric BC on bedrock, which it doesn't a priori.
 		z_s = H[i,:] + b[i,:]
+		z_s[1] = 0.5 * (z_s[0] + z_s[2])
 		
 		# Gaussian smooth for resolution jiggling.
 		#z_s = gaussian_filter1d(z_s, 1.5)
@@ -698,10 +706,10 @@ if save_domain == 1:
 		# PLOT DOMAIN WITH A COLOUR MAP THAT REPRESENTS THE TEMPERATURE WITHIN THE ICE SHEET.
 		# Create the colored plot
 		elif coloured_domain == 1:
-			theta_min = np.min(-theta)
-			theta_max = np.max(-theta)
+			"""theta_min = np.min(-theta)
+			theta_max = np.max(-theta)"""
 
-			theta_max = 80.0
+			theta_max = 80.0 #80.0
 			theta_min = 0.0
 
 			"""theta_min = 0.0

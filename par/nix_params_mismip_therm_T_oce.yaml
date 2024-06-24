@@ -3,7 +3,7 @@
 path:
   nix: /home/dmoreno/scr/nix/                              # Nix path.
   read: /home/dmoreno/nix/data/noise_sigm_ocn.12.0.nc      # File with stochastic bc. 
-  out: /home/dmoreno/nix/mismip.therm/sensitivity/T_oce_therm_long/                     # Output path.
+  out: /home/dmoreno/nix/mismip.therm/T_oce_forcing_long_lapse_rate/                     # Output path.
 
 time:
   t0: 0.0                 # Starting time [yr].
@@ -22,8 +22,8 @@ constants:
 domain:
   bed_exp: mismip_3       # Domain def, i.e., bedrock geometry applied: exp_1 (MISMIP exp_1) and so on.
   experiment: therm_T_oce  # Forcing type. As defined in MISMIP: mismip_1, mismip_3_therm...
-  n: 50                   # Number of horizontal points
-  n_z: 15                 # Number vertical layers
+  n: 250                   # Number of horizontal points
+  n_z: 25                 # Number vertical layers
   grid: even              # Nix grid type.
   grid_exp: 1.0           # Exponent of unevenly-spaced grid. 0.5
   bedrock_ews:            # Transition indicators domain.
@@ -75,8 +75,8 @@ boundary_conditions:
     tf: 3.0e4
   trend:
     type: none     # None, rate_factor, ablation.
-    t0: 3.0e4             # Start time to apply trend. 3.0e4 [yr]
-    tf: 3.1e4
+    t0_bc: 3.0e4             # Start time to apply trend. 3.0e4 [yr]
+    tf_bc: 3.1e4
     M_0: 30.0             # Original mean frontal ablation [m/yr].
     M_f: 0.8              # Ablation: increased factor from original frontal ablation (80% as in Christian et al., 2022).0.8
 
