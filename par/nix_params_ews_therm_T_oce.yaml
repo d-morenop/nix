@@ -2,8 +2,8 @@
 
 path:
   nix: /home/dmoreno/scr/nix/                              # Nix path.
-  read: /home/dmoreno/nix/data/noise_sigma_T.2.0.nc      # File with stochastic bc. 
-  out: /home/dmoreno/nix/transition_indicators/forcing_T_oce_hr/sigma_T_oce.2.0_T_oce_max.283.15/                     # Output path.
+  read: /home/dmoreno/nix/data/noise_sigma_T.3.0.nc      # File with stochastic bc. 
+  out: /home/dmoreno/nix/transition_indicators/forcing_T_oce_hr/sigma_T_oce.3.0_T_oce_max.283.15/                     # Output path.
 
 time:
   t0: 0.0                 # Starting time [yr].

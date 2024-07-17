@@ -21,7 +21,7 @@ from matplotlib.gridspec import GridSpec
 
 
 path_fig        = '/home/dmoreno/figures/nix/mismip.therm/T_oce_forcing_long_lapse_rate/n.250_n_z.35_T_air.233.15_gamma_T.0.001/'
-path_now        = '/home/dmoreno/nix/transition_indicators/forcing_T_oce_hr/sigma_T_oce.3.0_T_oce_max.283.15/n.200_n_z.35_T_air.233.15_gamma_T.0.0008_tf_bc.45100.0/'
+path_now        = '/home/dmoreno/nix/transition_indicators/forcing_T_oce_hr/sigma_T_oce.5.0_T_oce_max.283.15/n.200_n_z.35_T_air.233.15_gamma_T.0.0008_tf_bc.45100.0/'
 path_stoch      = '/home/dmoreno/nix/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
@@ -1081,7 +1081,7 @@ if save_theta == 1:
 
 		# Flip theta matrix so that the plot is not upside down.
 		im = ax.imshow(np.flip(theta[i,:,:],axis=0), cmap=reversed_cmap, \
-						vmin=theta_min, vmax=theta_max, aspect='auto')
+							vmin=theta_min, vmax=theta_max, aspect='auto')
 	
 		ax.set_ylabel(r'$ \mathbf{n}_{z} $', fontsize=20)
 		ax.set_xlabel(r'$\ \mathbf{x} \ (\mathrm{km})$', fontsize=20)
