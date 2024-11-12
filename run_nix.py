@@ -5,7 +5,7 @@ Created on Thu Jun 30 13:23:54 2022
 
 @author: dmoreno
 
-# PYTHON SCRIPT TO COMPILE AND RUN NIX MODEL.
+# PYTHON SCRIPT TO COMPILE AND RUN NIX MODEL v1.0.
 # This script copies nix.cpp and its dependencies to a desired folder
 # where it is compiled and run. The simulation output is then saved in a .nc file
 # where the corresponding directory must be specified in write_nc.cpp and it may differ 
@@ -37,6 +37,7 @@ def all_permutations(*arrays):
 
     return result
 
+
 # Function to find a key recursively in a dictionary and update its value.
 def update_value_recursive(data, key, new_value):
 
@@ -59,6 +60,7 @@ def update_value_recursive(data, key, new_value):
     
     # If no match is found in the current dictionary or its nested dictionaries, return False.
     return False
+
 
 # Modify the dictionary and then save as the yaml file.
 def modify_yaml(file_path, path_modified, yaml_file_name, var_names, data_types, values):
@@ -109,7 +111,7 @@ def modify_yaml(file_path, path_modified, yaml_file_name, var_names, data_types,
 # Define variable names and their corresponding values.
 
 # Define default experiments for reproducibility.
-exp = 'ews_schoof_T_oce'
+exp = 'resolution'
 
 # OSCILLATIONS STUDY.
 if exp == 'oscillations':
@@ -121,10 +123,19 @@ if exp == 'oscillations':
 
 # RESOLUTION STUDY.
 elif exp == 'resolution':
+     
+    yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_resolution.yaml"
+    yaml_file_name = "nix_params_resolution.yaml"
+
     var_names = ['n', 'dt_min']
 
-    values_0 = np.array([2**4, 2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12])
-    values_1 = np.array([0.01])
+    values_0 = np.array([2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12, 2**13, 2**14])
+    values_1 = np.array([0.005])
+
+    # Data type of each array.
+    data_types = [int, float]
+
+    values = [values_0, values_1]
 
 
 # MISMIP_3 WITH ICE RATE FACTOR CONSTANT AND T_OCE FORCING.

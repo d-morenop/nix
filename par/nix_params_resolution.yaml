@@ -3,7 +3,7 @@
 path:
   nix: /home/dmoreno/scr/nix/                              # Nix path.
   read: /home/dmoreno/nix/data/noise_sigm_ocn.12.0.nc      # File with stochastic bc. 
-  out: /home/dmoreno/nix/resolution.even.t.eq/                     # Output path.
+  out: /home/dmoreno/nix/resolution.even.t.eq.HR/                     # Output path.
 
 time:
   t0: 0.0                 # Starting time [yr].
@@ -20,7 +20,8 @@ constants:
   sec_year: 3.154e7       # Seconds in a year.
 
 domain:
-  experiment: mismip_1    # Domain definition.
+  bed_exp: mismip_1       # Domain def, i.e., bedrock geometry applied: exp_1 (MISMIP exp_1) and so on.
+  experiment: therm_T_air  # Forcing type. As defined in MISMIP: mismip_1, mismip_3_therm...
   n: 50                  # Number of horizontal points
   n_z: 15                 # Number vertical layers
   grid: even              # Nix grid type.
@@ -74,8 +75,8 @@ boundary_conditions:
     tf: 3.0e4
   trend:
     type: none     # None, rate_factor, ablation.
-    t0: 3.0e4             # Start time to apply trend. 3.0e4 [yr]
-    tf: 3.1e4
+    t0_bc: 3.0e4             # Start time to apply trend. 3.0e4 [yr]
+    tf_bc: 3.1e4
     M_0: 30.0             # Original mean frontal ablation [m/yr].
     M_f: 0.8              # Ablation: increased factor from original frontal ablation (80% as in Christian et al., 2022).0.8
 
@@ -109,6 +110,7 @@ viscosity:
   eps: 1.0e-8            # Viscosity regularisation term. 
   therm: false           # Temperature-dependent viscosity.
   t_eq_A_theta: 1.5e3    # Eq. time to start applying Arrhenius dependency.
+  A_cnst: 5.0e-26        # Rate factor value in MISMIP_A (constant rate factor) .
   A_act: 4.9e-25         # Threshold rate factor for the two regimes in activation energy [Pa^-3 s^-1] 
   Q_act_1: 60.0          # Activation energies [kJ/mol]. (below theta_act)
   Q_act_2: 139.0         # Activation energies [kJ/mol]. (above theta_act)
