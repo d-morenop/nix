@@ -20,7 +20,7 @@ constants:
   sec_year: 3.154e7       # Seconds in a year.
 
 domain:
-  bed_exp: mismip_3       # Domain def, i.e., bedrock geometry applied: exp_1 (MISMIP exp_1) and so on.
+  bed_exp: mismip_1       # Domain def, i.e., bedrock geometry applied: exp_1 (MISMIP exp_1) and so on.
   experiment: therm_T_oce  # Forcing type. As defined in MISMIP: mismip_1, mismip_3_therm...
   n: 250                   # Number of horizontal points
   n_z: 25                 # Number vertical layers
