@@ -20,8 +20,8 @@ from scipy.signal import argrelextrema
 from matplotlib.gridspec import GridSpec
 
 
-path_fig        = '/home/dmoreno/figures/nix/mismip.therm/T_oce_forcing_long_lapse_rate/n.250_n_z.35_T_air.233.15_gamma_T.0.001/'
-path_now        = '/home/dmoreno/nix/transition_indicators/forcing_T_oce_hr/sigma_T_oce.5.0_T_oce_max.283.15/n.200_n_z.35_T_air.233.15_gamma_T.0.0008_tf_bc.45100.0/'
+path_fig        = '/home/dmoreno/nix/resolution.even.t.eq.HR/n.256_dt_min.0.005/'
+path_now        = '/home/dmoreno/nix/resolution.even.t.eq.HR/n.256_dt_min.0.005/'
 path_stoch      = '/home/dmoreno/nix/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
@@ -41,8 +41,8 @@ file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 save_series        = 1
 save_series_comp   = 0
 save_shooting      = 0
-save_domain        = 0
-coloured_domain    = 1
+save_domain        = 1
+coloured_domain    = 0
 save_var_frames    = 0
 save_series_frames = 0
 save_theta         = 0
@@ -53,7 +53,7 @@ time_series_gif    = 0
 save_L             = 0
 save_series_2D     = 0
 heat_map_fourier   = 0
-save_fig           = True
+save_fig           = False
 read_stoch_nc      = False
 bed_smooth         = False
 
@@ -63,7 +63,7 @@ smth_series        = 0
 # MISMIP bedrock experiments.
 # exp = 1: inclined bed; exp = 3: overdeepening bed.
 exp_name = ['mismip_1', 'mismip_3', 'glacier_ews']
-idx = 1
+idx = 0
 exp = exp_name[idx]
 
 # Create figures directory if it does not exist.

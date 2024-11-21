@@ -47,6 +47,7 @@
 #define MU_NAME "mu"
 #define OMEGA_NAME "omega"
 #define T_NAME "t"
+#define SPEED_NAME "speed"
 #define U2_BC_NAME "dudx_bc"
 #define U2_DIF_NAME "BC_error"
 #define PICARD_ERROR_NAME "picard_error"
@@ -93,6 +94,7 @@
 #define MU_UNITS "dimensionless"
 #define OMEGA_UNITS "dimensionless"
 #define T_UNITS "yr"
+#define SPEED_UNITS "kyr/hr"
 #define U2_BC_UNITS "1/yr"
 #define U2_DIF_UNITS "1/yr"
 #define PICARD_ERROR_UNITS "1/yr"
@@ -123,7 +125,7 @@ int ncid, x_dimid, z_dimid, time_dimid;
 int x_varid, z_varid, u_bar_varid, ub_varid, u_bar_x_varid, u_x_varid, u_z_varid, u_varid, w_varid, 
     H_varid, visc_varid, visc_bar_varid, a_varid, a_theta_varid, s_varid, \
     tau_varid, beta_varid, lmbd_varid, taud_varid, b_varid, L_varid, dL_dt_varid, dt_varid, \
-    c_pic_varid, t_varid, mu_varid, omega_varid, u2_bc_varid, u2_dif_varid, \
+    c_pic_varid, t_varid, speed_varid, mu_varid, omega_varid, u2_bc_varid, u2_dif_varid, \
     picard_error_varid, u2_0_vec_varid, u2_dif_vec_varid, theta_varid, T_oce_det_varid, T_oce_stoch_varid, \
     T_air_varid, C_bed_varid, Q_fric_varid, F_1_varid, F_2_varid, m_stoch_varid, smb_stoch_varid;
 
@@ -312,6 +314,9 @@ int f_nc(int N, int N_Z, string path)
     if ((retval = nc_def_var(ncid, T_NAME, NC_DOUBLE, NDIMS_0,
                     dimids_0, &t_varid)))
         ERR(retval);
+    if ((retval = nc_def_var(ncid, SPEED_NAME, NC_DOUBLE, NDIMS_0,
+                    dimids_0, &speed_varid)))
+        ERR(retval);
     if ((retval = nc_def_var(ncid, U2_BC_NAME, NC_DOUBLE, NDIMS_0,
                     dimids_0, &u2_bc_varid)))
         ERR(retval);
@@ -428,6 +433,9 @@ int f_nc(int N, int N_Z, string path)
         ERR(retval);
     if ((retval = nc_put_att_text(ncid, dt_varid, UNITS,
                     strlen(DT_UNITS), DT_UNITS)))
+        ERR(retval);
+    if ((retval = nc_put_att_text(ncid, speed_varid, UNITS,
+                    strlen(SPEED_UNITS), SPEED_UNITS)))
         ERR(retval);
     if ((retval = nc_put_att_text(ncid, c_pic_varid, UNITS,
                     strlen(C_PIC_UNITS), C_PIC_UNITS)))
@@ -740,7 +748,7 @@ int f_write(int c, ArrayXd u_bar, ArrayXd ub, ArrayXd u_bar_x, ArrayXd H, ArrayX
             double dt, int c_picard, double mu, double omega, ArrayXXd theta, \
             ArrayXXd visc, ArrayXXd u_z, ArrayXXd u_x, ArrayXXd u, ArrayXXd w, double A, double dL_dt, \
             ArrayXd F_1, ArrayXd F_2, double m_stoch, double smb_stoch, ArrayXXd A_theta, double T_oce_det, 
-            double T_oce_stoch, double T_air, ArrayXXd lmbd)
+            double T_oce_stoch, double T_air, ArrayXXd lmbd, double speed)
 {
     start[0]   = c;
     start_0[0] = c;
@@ -787,6 +795,8 @@ int f_write(int c, ArrayXd u_bar, ArrayXd ub, ArrayXd u_bar_x, ArrayXd H, ArrayX
     if ((retval = nc_put_vara_double(ncid, dL_dt_varid, start_0, cnt_0, &dL_dt)))
     ERR(retval);
     if ((retval = nc_put_vara_double(ncid, t_varid, start_0, cnt_0, &t)))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid, speed_varid, start_0, cnt_0, &speed)))
     ERR(retval);
     if ((retval = nc_put_vara_double(ncid, u2_bc_varid, start_0, cnt_0, &u2_bc)))
     ERR(retval);

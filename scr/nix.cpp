@@ -34,7 +34,7 @@ int main()
 {
 
     // Specify the path to YAML file.
-    string yaml_name = "nix_params_ews_therm_T_oce.yaml";
+    string yaml_name = "nix_params_resolution.yaml";
     //string yaml_name = "nix_params_mismip_therm_T_oce.yaml";
 
     // Assuming the path won't exceed 4096 characters.
@@ -182,6 +182,7 @@ int main()
     double mu;                              // Relaxation method within Picard iteration. 
     
     int c_picard;                           // Counter of Picard iterations.
+    double speed;
 
     // PREPARE VARIABLES.
     ArrayXd H(n);                        // Ice thickness [m].
@@ -615,7 +616,7 @@ int main()
 
     // Print spatial and time dimensions.
     cout << " \n Nix ice-shet model v1.0";
-    cout << " \n Experiment = " << n;
+    cout << " \n Experiment = " << exp;
     cout << " \n n          = " << n;
     cout << " \n n_sigma    = " << nixParams.dom.grid_exp;
     cout << " \n tf         = " << tf;
@@ -634,7 +635,8 @@ int main()
 
 
     // Wall time for computational speed.
-    auto begin = std::chrono::high_resolution_clock::now();
+    auto begin_0 = std::chrono::high_resolution_clock::now();
+    auto begin = begin_0;
 
     // Counters to write solution.
     int c    = 0;
@@ -967,7 +969,8 @@ int main()
             f_write(c, u_bar_old_1, ub, u_bar_x, H, visc_bar, S, tau_b, beta, tau_d, bed, \
                     C_bed, Q_fric, u2_dif_vec, u2_0_vec, L, t, u_x_bc, u2_dif, \
                     error, dt, c_picard, mu, omega, theta, visc, u_z, u_x, u, w, A, dL_dt, \
-                    F_1, F_2, m_stoch, smb_stoch, A_theta, T_oce_det, T_oce_stoch, T_air, lmbd);
+                    F_1, F_2, m_stoch, smb_stoch, A_theta, T_oce_det, T_oce_stoch, T_air, \
+                    lmbd, speed);
 
             // Close nc file. 
             if ((retval = nc_close(ncid)))
@@ -993,11 +996,22 @@ int main()
         L_out = f_L(H, q, S, bed, dt, L, ds, nixParams.dom, nixParams.cnst);
         L     = L_out(0);
         dL_dt = L_out(1);
+
         
 
         // Write solution with desired output frequency.
         if ( c == 0 || t > a(c) )
         {
+            // Running time (measures wall time).
+            auto end     = chrono::high_resolution_clock::now();
+            auto elapsed = chrono::duration_cast<chrono::nanoseconds>(end - begin);
+            double speed = 60 * 60 * 1.0e6 * (a(1) - a(0)) / elapsed.count();
+
+            if ( c == 0 )
+            {
+                speed = 0.0;
+            }
+
             // std::cout is typically buffered by default.
             // By using std::flush or std::endl, you ensure that the data is 
             // immediately written to the output device. 
@@ -1014,13 +1028,18 @@ int main()
             // Write solution in nc.
             // Sub-shelf melting as forcing of MISMIP+thermodynamics.
             //m_stoch = M;
+            
 
             f_write(c, u_bar, ub, u_bar_x, H, visc_bar, S, tau_b, beta, tau_d, bed, \
                     C_bed, Q_fric, u2_dif_vec, u2_0_vec, L, t, u_x_bc, u2_dif, \
                     error, dt, c_picard, mu, omega, theta, visc, u_z, u_x, u, w, A, dL_dt, \
-                    F_1, F_2, m_stoch, smb_stoch, A_theta, T_oce_det, T_oce_stoch, T_air, lmbd);
+                    F_1, F_2, m_stoch, smb_stoch, A_theta, T_oce_det, T_oce_stoch, T_air, lmbd, \
+                    speed);
 
             ++c;
+
+            // Wall time for computational speed.
+            begin = std::chrono::high_resolution_clock::now();
         }  
         
 
@@ -1037,7 +1056,8 @@ int main()
         }  
         
 
-    
+        
+
         // Integrate ice thickness forward in time.
         H = f_H(u_bar, H, S, sigma, dt, ds, ds_inv, ds_sym, \
                   L, D, dL_dt, bed, q, M, t, \
@@ -1087,12 +1107,11 @@ int main()
 
     // Running time (measures wall time).
     auto end     = chrono::high_resolution_clock::now();
-    auto elapsed = chrono::duration_cast<chrono::nanoseconds>(end - begin);
+    auto elapsed = chrono::duration_cast<chrono::nanoseconds>(end - begin_0);
     
     // Print computational time.
     printf("\n Time measured: %.3f minutes.\n", elapsed.count() * 1e-9 / 60.0);
-    printf("\n Computational speed: %.3f kyr/hr.\n", \
-            60 * 60 * (1.0e-3 * tf) /  (elapsed.count() * 1e-9) );
+    //printf("\n Computational speed: %.3f kyr/hr.\n", speed);
 
     // Close nc files. 
     if ((retval = nc_close(ncid)))
