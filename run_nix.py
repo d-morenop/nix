@@ -96,20 +96,12 @@ def modify_yaml(file_path, path_modified, yaml_file_name, var_names, data_types,
 
 
 
-
-# Specify the path to your YAML file
-#yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_mismip_therm_T_air.yaml"
-#yaml_file_name = "nix_params_mismip_therm_T_air.yaml"
-
-
-# Modify yaml file to run large ensembles of simulations.
-
 #######################################################################
 #######################################################################
 # Define variable names and their corresponding values.
 
 # Define default experiments for reproducibility.
-exp = 'ews_schoof_T_oce'
+exp = 'resolution'
 
 # OSCILLATIONS STUDY.
 if exp == 'oscillations':
@@ -121,10 +113,21 @@ if exp == 'oscillations':
 
 # RESOLUTION STUDY.
 elif exp == 'resolution':
+
+    yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_resolution.yaml"
+    yaml_file_name = "nix_params_resolution.yaml"
+
     var_names = ['n', 'dt_min']
 
-    values_0 = np.array([2**4, 2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12])
-    values_1 = np.array([0.01])
+    values_0 = np.array([2**4, 2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12, 2**13, 2**14])
+
+    #values_0 = np.array([2**14])
+    values_1 = np.array([0.01]) # 0.01
+
+    # Data type of each array.
+    data_types = [int, float]
+
+    values = [values_0, values_1]
 
 
 # MISMIP_3 WITH ICE RATE FACTOR CONSTANT AND T_OCE FORCING.
@@ -227,7 +230,8 @@ elif exp == 'ews_schoof_T_oce':
 
     values = [values_0, values_1, values_2, values_3, values_4]
 
-
+else:
+    print('Experiment not recognised.')
 
 
 #######################################################################
