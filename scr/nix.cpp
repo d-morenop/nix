@@ -34,13 +34,18 @@ int main()
 {
 
     // Specify the path to YAML file.
+<<<<<<< HEAD
     string yaml_name = "nix_params_resolution.yaml";
     //string yaml_name = "nix_params_mismip_therm_T_oce.yaml";
+=======
+    //string yaml_name = "nix_params_ews_therm_T_oce.yaml";
+    string yaml_name = "nix_params_resolution.yaml";
+>>>>>>> main
 
     // Assuming the path won't exceed 4096 characters.
     char buffer[4096];
 
-    // Rad the symbolic link /proc/self/exe, which points to the executable file of the calling process.
+    // Read the symbolic link /proc/self/exe, which points to the executable file of the calling process.
     ssize_t len = readlink("/proc/self/exe", buffer, sizeof(buffer) - 1);
 
     if (len != -1) 

@@ -105,7 +105,7 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
             // Regularization term to avoid division by 0. 
             strain_1d = pow(u_bar_x,2) + vis.eps;
 
-            // Viscosity potentially dependending on visc_term. 
+            // Viscosity potentially dependending on visc_term.
             visc_bar = 0.5 * B_theta_bar * pow(strain_1d, vis.n_exp);
         }
 

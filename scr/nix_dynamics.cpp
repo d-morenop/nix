@@ -172,7 +172,8 @@ ArrayXXd solver_2D(int n, int n_z, ArrayXd dx, ArrayXd dz, \
 
     // Set the triplets in the sparse matrix
     // declares a column-major sparse matrix type of double.
-    SparseMatrix<double> A_sparse(n*n_z, n*n_z); 
+    //SparseMatrix<double> A_sparse(n*n_z, n*n_z); 
+    SparseMatrix<double,RowMajor> A_sparse(n*n_z, n*n_z); 
     
     // Define your sparse matrix A_spare from triplets.
     A_sparse.setFromTriplets(tripletList.begin(), tripletList.end());
