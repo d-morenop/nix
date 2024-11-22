@@ -1,9 +1,9 @@
 # This is a YAML file example
 
 path:
-  nix: /home/daniel/output/nix/                              # Nix path.
+  nix: /home/daniel/models/nix/                            # Nix path.
   read: /home/daniel/nix/data/noise_sigm_ocn.12.0.nc      # File with stochastic bc. 
-  out: /home/daniel/models/nix/par/resolution.even.t.eq.HR/                     # Output path.
+  out: /home/daniel/output/nix/test/                     # Output path.
 
 time:
   t0: 0.0                 # Starting time [yr].
