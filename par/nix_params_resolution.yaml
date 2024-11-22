@@ -3,11 +3,7 @@
 path:
   nix: /home/dmoreno/scr/nix/                              # Nix path.
   read: /home/dmoreno/nix/data/noise_sigm_ocn.12.0.nc      # File with stochastic bc. 
-<<<<<<< HEAD
-  out: /home/dmoreno/nix/resolution.even.t.eq.HR.DIVA/                     # Output path.
-=======
   out: /home/dmoreno/nix/resolution.even.t.eq.HR/                     # Output path.
->>>>>>> main
 
 time:
   t0: 0.0                 # Starting time [yr].
@@ -25,11 +21,7 @@ constants:
 
 domain:
   bed_exp: mismip_1       # Domain def, i.e., bedrock geometry applied: exp_1 (MISMIP exp_1) and so on.
-<<<<<<< HEAD
   experiment: mismip_1  # Forcing type. As defined in MISMIP: mismip_1, mismip_3_therm...
-=======
-  experiment: therm_T_air  # Forcing type. As defined in MISMIP: mismip_1, mismip_3_therm...
->>>>>>> main
   n: 50                  # Number of horizontal points
   n_z: 15                 # Number vertical layers
   grid: even              # Nix grid type.
