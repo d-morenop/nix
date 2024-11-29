@@ -98,14 +98,6 @@ def modify_yaml(file_path, path_modified, yaml_file_name, var_names, data_types,
 
 
 
-
-# Specify the path to your YAML file
-#yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_mismip_therm_T_air.yaml"
-#yaml_file_name = "nix_params_mismip_therm_T_air.yaml"
-
-
-# Modify yaml file to run large ensembles of simulations.
-
 #######################################################################
 #######################################################################
 # Define variable names and their corresponding values.
@@ -129,7 +121,9 @@ elif exp == 'resolution':
 
     var_names = ['n', 'dt_min']
 
-    values_0 = np.array([2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12, 2**13, 2**14])
+    #values_0 = np.array([2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12, 2**13, 2**14])
+    values_0 = np.array([2**5, 2**6, 2**7, 2**8])
+    
     values_1 = np.array([0.01])
 
     # Data type of each array.
