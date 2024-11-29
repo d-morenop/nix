@@ -115,25 +115,15 @@ if exp == 'oscillations':
 
 # RESOLUTION STUDY.
 elif exp == 'resolution':
-<<<<<<< HEAD
-
-=======
-     
->>>>>>> main
+    
     yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_resolution.yaml"
     yaml_file_name = "nix_params_resolution.yaml"
 
     var_names = ['n', 'dt_min']
-
-<<<<<<< HEAD
     values_0 = np.array([2**4, 2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12, 2**13, 2**14])
 
     #values_0 = np.array([2**14])
     values_1 = np.array([0.01]) # 0.01
-=======
-    values_0 = np.array([2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12, 2**13, 2**14])
-    values_1 = np.array([0.005])
->>>>>>> main
 
     # Data type of each array.
     data_types = [int, float]
