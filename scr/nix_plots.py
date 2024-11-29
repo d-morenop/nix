@@ -63,7 +63,8 @@ time_series_gif    = 0
 save_L             = 0
 save_series_2D     = 0
 heat_map_fourier   = 0
-entropy            = 1
+entropy            = 0
+speed              = 1
 save_fig           = True
 read_stoch_nc      = False
 bed_smooth         = False
@@ -2482,6 +2483,107 @@ if entropy == 1:
 
 	plt.savefig(path_fig+'entropy_flux_time_series.png', bbox_inches='tight')
 
+
+	plt.show()
+	plt.close(fig)
+
+
+if speed == 1:
+
+	# Parent folder.
+	parent_folder = '/home/dmoreno/nix/resolution_new/'
+
+	var  = ['speed']
+
+	# List all subfolders in the parent folder
+	subfolders = [f.path for f in os.scandir(parent_folder) if f.is_dir()]
+	subfolders.sort()
+
+	l = len(subfolders)
+	l_half = int(0.5*l)
+
+	speed = []
+	speed_mean = np.empty(l)
+
+
+	fig = plt.figure(dpi=600, figsize=(6,4))
+	plt.rcParams['text.usetex'] = True
+	ax  = fig.add_subplot(111)
+
+	# Loop through each subfolder.
+	for i in range(l):
+
+		print('Exp = ', subfolders[i])
+		
+		# Define the path to the netCDF file in the current subfolder
+		path_nc = os.path.join(get_datadir(), subfolders[i], 'nix.nc')
+
+		# Check if the file exists before attempting to open it
+		if os.path.exists(path_nc):
+			
+			# Open the netCDF file
+			data = Dataset(path_nc, mode='r')
+
+			speed = data.variables['speed'][:]
+
+			speed_mean[i] = np.mean(speed[11:99])
+
+			ax.plot(speed, 'blue', marker='o', linestyle='--', \
+		   					linewidth=1.0, markersize=2, label=subfolders[i])
+	
+	
+	ax.set_title(r'$S$', fontsize=16)
+	plt.tight_layout()
+
+	#plt.savefig(path_fig+'entropy_flux_time_series.png', bbox_inches='tight')
+
+	plt.show()
+	plt.close(fig)
+
+	# Reshape speed.
+	speed_mean = np.reshape(speed_mean, [2,l_half])
+	#n = np.array([2**4, 2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12, 2**13])
+
+
+	fig = plt.figure(dpi=600, figsize=(6,4))
+	plt.rcParams['text.usetex'] = True
+	ax  = fig.add_subplot(111)
+
+	ax.plot(speed_mean[1,:], 'blue', marker='o', linestyle='--', \
+		   					linewidth=1.0, markersize=6, label='$ \mathrm{SSA} $')
+
+
+	ax.plot(speed_mean[0,:], 'red', marker='o', linestyle='--', \
+		   					linewidth=1.0, markersize=6, label='$ \mathrm{DIVA} $')
+
+	#ax.set_yscale('log')
+	ax.set_yscale('log')
+
+	ax.set_xticks([0,1,2,3,4,5,6,7,8,9])
+	ax.set_xticklabels(['$2^{4}$', '$2^{5}$', '$2^{6}$', '$2^{7}$', \
+					    '$2^{8}$', '$2^{9}$', '$2^{10}$', '$2^{11}$', '$2^{12}$', '$2^{13}$',], fontsize=15)
+
+	ax.set_yticks([1,10,10**2,10**3,10**4,10**5])
+	ax.set_yticklabels(['$10^{0}$','$10^{1}$', '$10^{2}$', '$10^{3}$', '$10^{4}$', \
+					    '$10^{5}$'], fontsize=15)
+
+	#ax.set_title(r'$ \mathrm{Speed} $', fontsize=16)
+
+	ax.legend(loc='best', ncol = 1, frameon = True, framealpha = 1.0, \
+	 		  fontsize = 12, fancybox = True)
+
+
+	plt.tight_layout()	
+
+
+	ax.set_xlabel(r'$ n $', fontsize=20)
+	ax.set_ylabel(r'$ \mathrm{Speed} \ (\mathrm{kyr/hr})$', fontsize=20)
+
+	ax.set_xlim(0,l_half-1)
+	ax.set_ylim(1.0, 1.0e5)
+
+
+	plt.savefig(path_fig+'nix_resolution.png', bbox_inches='tight')
 
 	plt.show()
 	plt.close(fig)
