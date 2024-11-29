@@ -34,13 +34,8 @@ int main()
 {
 
     // Specify the path to YAML file.
-<<<<<<< HEAD
     string yaml_name = "nix_params_resolution.yaml";
     //string yaml_name = "nix_params_mismip_therm_T_oce.yaml";
-=======
-    //string yaml_name = "nix_params_ews_therm_T_oce.yaml";
-    string yaml_name = "nix_params_resolution.yaml";
->>>>>>> main
 
     // Assuming the path won't exceed 4096 characters.
     char buffer[4096];

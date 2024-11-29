@@ -21,14 +21,8 @@ from matplotlib.gridspec import GridSpec
 from PIL import Image
 
 
-<<<<<<< HEAD
 path_fig        = '/home/dmoreno/nix/resolution.even.t.eq.HR/n.256_dt_min.0.005/'
 path_now        = '/home/dmoreno/nix/resolution.even.t.eq.HR/n.256_dt_min.0.005/'
-=======
-
-path_fig        = '/home/dmoreno/figures/nix/mismip.therm/exp-1_T_air_forcing_lapse.rate_ultra_long/n.250_n_z.35/'
-path_now        = '/home/dmoreno/nix/mismip.therm/T_oce_forcing_long/n.250_n_z.25_T_air.233.15_gamma_T.0.001/'
->>>>>>> main
 path_stoch      = '/home/dmoreno/nix/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
@@ -57,11 +51,7 @@ file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 save_series        = 0
 save_series_comp   = 0
 save_shooting      = 0
-<<<<<<< HEAD
-save_domain        = 1
-=======
 save_domain        = 0
->>>>>>> main
 coloured_domain    = 0
 save_var_frames    = 0
 save_series_frames = 0
@@ -73,12 +63,8 @@ time_series_gif    = 0
 save_L             = 0
 save_series_2D     = 0
 heat_map_fourier   = 0
-<<<<<<< HEAD
-save_fig           = False
-=======
 entropy            = 1
 save_fig           = True
->>>>>>> main
 read_stoch_nc      = False
 bed_smooth         = False
 

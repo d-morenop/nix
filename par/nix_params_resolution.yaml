@@ -3,7 +3,7 @@
 path:
   nix: /home/dmoreno/scr/nix/                              # Nix path.
   read: /home/dmoreno/nix/data/noise_sigm_ocn.12.0.nc      # File with stochastic bc. 
-  out: /home/dmoreno/nix/resolution.even.t.eq.HR/                     # Output path.
+  out: /home/dmoreno/nix/resolution.even.t.eq.HR.BP/                     # Output path.
 
 time:
   t0: 0.0                 # Starting time [yr].
@@ -38,13 +38,13 @@ domain:
     
 
 dynamics:
-  vel_meth: DIVA           # Velocity solver: const, SSA, DIVA, Blatter-Pattyn.
+  vel_meth: Blatter-Pattyn           # Velocity solver: const, SSA, DIVA, Blatter-Pattyn.
 
 timestep:
   dt_meth: adapt          # Time-stepping method. fixed, adapt.
   dt_min: 0.05             # Minimum time step [yr]. 0.1
   dt_max: 5.0             # Maximum time step [yr]. 2.0, 5.0
-  t_eq_dt: 3.0e3          # Eq. time until adaptative timestep is applied.
+  t_eq_dt: 3.0e3          # Eq. time until adaptative timestep is applied. 3.0e3
   rel: 0.7                # Relaxation between interations [0,1]. 0.5
 
 stochastic:
