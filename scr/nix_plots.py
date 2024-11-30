@@ -22,7 +22,7 @@ from PIL import Image
 
 
 path_fig        = '/home/dmoreno/nix/resolution.even.t.eq.HR/n.256_dt_min.0.005/'
-path_now        = '/home/dmoreno/nix/resolution.even.t.eq.HR/n.256_dt_min.0.005/'
+path_now        = '/home/dmoreno/nix/resolution_new/SSA_n.0016_dt_min.0.01/'
 path_stoch      = '/home/dmoreno/nix/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
@@ -64,8 +64,8 @@ save_L             = 0
 save_series_2D     = 0
 heat_map_fourier   = 0
 entropy            = 0
-speed              = 1
-save_fig           = True
+plot_speed         = 1
+save_fig           = False
 read_stoch_nc      = False
 bed_smooth         = False
 
@@ -2488,12 +2488,10 @@ if entropy == 1:
 	plt.close(fig)
 
 
-if speed == 1:
+if plot_speed == 1:
 
 	# Parent folder.
 	parent_folder = '/home/dmoreno/nix/resolution_new/'
-
-	var  = ['speed']
 
 	# List all subfolders in the parent folder
 	subfolders = [f.path for f in os.scandir(parent_folder) if f.is_dir()]
@@ -2531,7 +2529,14 @@ if speed == 1:
 			ax.plot(speed, 'blue', marker='o', linestyle='--', \
 		   					linewidth=1.0, markersize=2, label=subfolders[i])
 	
-	
+	# Load extent to include resolution axis.
+	L = data.variables['L'][:]
+	n = np.array([2**4, 2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12, 2**13])
+
+	dx = np.round(1.0e-3 * L[s[1]-1] / n, 1)
+
+
+
 	ax.set_title(r'$S$', fontsize=16)
 	plt.tight_layout()
 
@@ -2565,7 +2570,13 @@ if speed == 1:
 
 	ax.set_yticks([1,10,10**2,10**3,10**4,10**5])
 	ax.set_yticklabels(['$10^{0}$','$10^{1}$', '$10^{2}$', '$10^{3}$', '$10^{4}$', \
-					    '$10^{5}$'], fontsize=15)
+					    '$10^{5}$'], fontsize=13)
+
+
+	secax = ax.secondary_xaxis(-0.3)  # Secondary axis offset below main x-axis
+	secax.set_xticks([0,1,2,3,4,5,6,7,8,9])  # Match ticks with primary axis
+	secax.set_xticklabels([f'${value}$' for value in dx], fontsize=13)
+	secax.set_xlabel(r' $ \Delta x \ (\mathrm{km}) $ ', fontsize=20)
 
 	#ax.set_title(r'$ \mathrm{Speed} $', fontsize=16)
 

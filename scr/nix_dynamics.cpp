@@ -205,6 +205,7 @@ ArrayXXd solver_2D(int n, int n_z, ArrayXd dx, ArrayXd dz, \
     
     cout << "\n #iterations:     " << solver.iterations();
     cout << "\n Estimated error: " << solver.error();
+    cout << "\n Solver info:     " << solver.info();
     
     /* ... update b ... */
     // THINK ABOUT THIS!!!!!!!!!!!
