@@ -192,6 +192,7 @@ ArrayXd f_H(ArrayXd u_bar, ArrayXd H, ArrayXd S, ArrayXd sigma, \
             // Centred in sigma, upwind in flux. Unevenly-spaced horizontal grid.
             H_now(i) = H(i) + dt * ( sigma(i) * dL_dt * ( H(i+1) - H(i-1) ) * dx_sym_inv(i) + \
                                             - dx_inv(i) * ( q(i) - q(i-1) ) + S(i) );
+
         }
         
         // Symmetry at the ice divide (i = 1).
@@ -200,9 +201,14 @@ ArrayXd f_H(ArrayXd u_bar, ArrayXd H, ArrayXd S, ArrayXd sigma, \
         // Lateral boundary: sigma(n-1) = 1.
         // Sub-shelf melt directly on the flux.
         // Note that ds has only (n-1) points.
-        H_now(dom.n-1) = H(dom.n-1) + dt * ( ds_inv(dom.n-2) * L_inv * \
+        //H_now(dom.n-1) = H(dom.n-1) + dt * ( ds_inv(dom.n-2) * L_inv * \
+        //                                ( dL_dt * ( H(dom.n-1) - H(dom.n-2) ) + \
+        //                                    - ( q(dom.n-1) - q(dom.n-2) ) ) + S(dom.n-1) );
+
+        H_now(dom.n-1) = H(dom.n-1) + dt * ( dx_inv(dom.n-2) * \
                                         ( dL_dt * ( H(dom.n-1) - H(dom.n-2) ) + \
                                             - ( q(dom.n-1) - q(dom.n-2) ) ) + S(dom.n-1) );
+
 
         
         // Make sure that grounding line thickness is above minimum?

@@ -103,7 +103,7 @@ def modify_yaml(file_path, path_modified, yaml_file_name, var_names, data_types,
 # Define variable names and their corresponding values.
 
 # Define default experiments for reproducibility.
-exp = 'resolution'
+exp = 'parallel'
 
 # OSCILLATIONS STUDY.
 if exp == 'oscillations':
@@ -111,6 +111,24 @@ if exp == 'oscillations':
 
     values_0 = np.array([0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60])
     values_1 = np.array([0.01, 0.02, 0.03, 0.04])
+
+
+# RESOLUTION STUDY.
+elif exp == 'parallel':
+
+    yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_parallel.yaml"
+    yaml_file_name = "nix_params_parallel.yaml"
+
+    var_names = ['n', 'dt_min']
+    #values_0 = np.array([2**4, 2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12, 2**13, 2**14])
+
+    values_0 = np.array([25, 100, 500, 1000]) # [25, 50, 100, 150, 300, 600]
+    values_1 = np.array([0.01]) # 0.01
+
+    # Data type of each array.
+    data_types = [int, float]
+
+    values = [values_0, values_1]
 
 
 # RESOLUTION STUDY.
@@ -335,7 +353,7 @@ for i in range(len(name)):
 
 
     # Compilation configuration. ['local', 'iceberg', 'brigit']
-    config = 'iceshelf'
+    config = 'parallel'
 
     if config == 'local':
         
@@ -354,6 +372,14 @@ for i in range(len(name)):
 
         # Compiling command. -std=c++17
         cmd = "g++ -std=c++17 -I /usr/include/eigen3/ -o "+path_modified+"nix.o "+path_output_scr+"nix.cpp -lnetcdf -lyaml-cpp"
+
+    elif config == 'parallel':
+        
+        # Compiling command. -std=c++17
+        #cmd = "g++ -std=c++11 -I /usr/include/eigen3/ -o "+path_output+"nix.o "+path_output_scr+"nix.cpp -lnetcdf"
+
+        # Compiling command. -std=c++17
+        cmd = "g++ -std=c++17 -fopenmp -O2 -I /usr/include/eigen3/ -o "+path_modified+"nix.o "+path_output_scr+"nix.cpp -lnetcdf -lyaml-cpp"
 
     elif config == 'brigit':
         

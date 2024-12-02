@@ -10,6 +10,7 @@
 #include <chrono>
 #include <yaml-cpp/yaml.h>
 #include <unistd.h>
+#include <omp.h> // Required for OpenMP
 
 using namespace Eigen;
 using namespace std;
@@ -33,8 +34,14 @@ using namespace std;
 int main()
 {
 
+    // Enable OpenMP if supported by the compiler.
+    #ifdef _OPENMP
+    setNbThreads(4); // Set the number of threads
+    cout << "Using OpenMP with " << nbThreads() << " threads.\n";
+    #endif
+
     // Specify the path to YAML file.
-    string yaml_name = "nix_params_resolution.yaml";
+    string yaml_name = "nix_params_parallel.yaml";
     //string yaml_name = "nix_params_mismip_therm_T_oce.yaml";
 
     // Assuming the path won't exceed 4096 characters.
@@ -266,6 +273,29 @@ int main()
     }
 
     ds_inv = 1.0 / ds;
+
+    //////////////////////////////////////////////////////////////////////////
+    // Uneven spacing for staggered u-grid.
+    /*ArrayXd ds_u(n-1);
+    ArrayXd ds_u_inv(n-1);
+    ArrayXd ds_u_sym(n-1);
+
+    for (int i=0; i<n-2; i++)
+    {
+        //  0.5 * ( sigma(i+2) + sigma(i+1) ) - 0.5 * ( sigma(i+1) + sigma(i) )
+        ds_u(i) = 0.5 * ( sigma(i+2) - sigma(i) );
+    }
+    ds_u(n-2) = sigma(n-1) - sigma(n-2);
+    ds_u_inv = 1.0 / ds_u;
+
+    // For symmetric finite differences schemes we sum two consecutive grid spacings.
+    for (int i=1; i<n-1; i++)
+    {
+        ds_u_sym(i) = ds_u(i) + ds_u(i-1);
+    }*/
+    //////////////////////////////////////////////////////////////////////////
+
+    
 
     // For symmetric finite differences schemes we sum two consecutive grid spacings.
     for (int i=1; i<n-1; i++)
@@ -870,7 +900,7 @@ int main()
             
             // Implicit solver.
             // If SSA solver ub = u_bar.
-            sol = vel_solver(H, ds, ds_inv, ds_sym, dz, visc_bar, bed, L, \
+            sol = vel_solver(H, ds, ds_inv, dz, visc_bar, bed, L, \
                                 C_bed, t, beta, A, A_theta, visc, u, u_z, \
                                     nixParams.dyn, nixParams.dom, \
                                         nixParams.cnst, nixParams.vis);

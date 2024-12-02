@@ -205,7 +205,7 @@ ArrayXXd solver_2D(int n, int n_z, ArrayXd dx, ArrayXd dz, \
     
     cout << "\n #iterations:     " << solver.iterations();
     cout << "\n Estimated error: " << solver.error();
-    cout << "\n Solver info:     " << solver.info();
+    //cout << "\n Solver info:     " << solver.info();
     
     /* ... update b ... */
     // THINK ABOUT THIS!!!!!!!!!!!
@@ -230,7 +230,7 @@ ArrayXXd solver_2D(int n, int n_z, ArrayXd dx, ArrayXd dz, \
 }
 
 
-ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_sym, ArrayXd dz, ArrayXd visc_bar, \
+ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd dz, ArrayXd visc_bar, \
                     ArrayXd bed, double L, ArrayXd C_bed, \
                     double t, ArrayXd beta, double A_ice, ArrayXXd A_theta, ArrayXXd visc, ArrayXXd u, ArrayXXd u_z, \
                     DynamicsParams& dyn , DomainParams& dom, ConstantsParams& cnst, ViscosityParams& vis)
@@ -249,6 +249,7 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_sym, Array
     L_inv    = 1.0 / L;
     ds_inv_2 = pow(ds_inv, 2);
     dz_inv_2 = pow(1.0/dz, 2);
+
 
     // Note that ds has only (dom.n-1) point rather than (dom.n).
     gamma = 4.0 * ds_inv_2 * pow(L_inv, 2); // Factor 2 difference from Vieli and Payne (2005).
@@ -276,11 +277,13 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_sym, Array
             A(i) = gamma(i-1) * visc_H(i);
             B(i) = - gamma(i) * ( visc_H(i) + visc_H(i+1) ) - beta(i);
             C(i) = gamma(i) * visc_H(i+1);
+
         }
 
         // Derivatives at the boundaries O(x).
         dhds(0)       = 0.5 * ( H(0) + H(1) ) * ( h(1) - h(0) ) * ds_inv(0);
         dhds(dom.n-1) = H(dom.n-1) * ( h(dom.n-1) - h(dom.n-2) ) * ds_inv(dom.n-2); 
+        // Failed attempt for second order derivative.
         //dhds(dom.n-1) = H(dom.n-1) * 0.5 * ( 3.0 * h(dom.n-1) - 4.0 * h(dom.n-2) + h(dom.n-3) );
 
         // Tridiagonal boundary values. 
@@ -291,12 +294,11 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_sym, Array
         A(dom.n-1) = gamma(dom.n-2) * visc_H(dom.n-1);
         B(dom.n-1) = - gamma(dom.n-2) * visc_H(dom.n-1) - beta(dom.n-1);
         C(dom.n-1) = 0.0;
+
         
         // Inhomogeneous term.
         F = cnst.rho * cnst.g * dhds * L_inv;
 
-        //A = gamma * A;
-        //C = gamma * C;
 
         // Grounding line sigma = 1 (x = L). 
         D = abs( min(0.0, bed(dom.n-1)) );   

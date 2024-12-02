@@ -22,7 +22,7 @@ from PIL import Image
 
 
 path_fig        = '/home/dmoreno/nix/resolution.even.t.eq.HR/n.256_dt_min.0.005/'
-path_now        = '/home/dmoreno/nix/resolution_new/SSA_n.0016_dt_min.0.01/'
+path_now        = '/home/dmoreno/nix/test_parallel_SSA/n.100_dt_min.0.01/'
 path_stoch      = '/home/dmoreno/nix/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
@@ -90,21 +90,6 @@ data   = Dataset(nc_SSA, mode='r')
 nix_name = list(data.variables.keys())
 var_name = nix_name
 
-# Let us create a dictionary with variable names.
-"""nix_name = ['u_bar', 'ub', 'u_bar_x', 'u_z', 'u', 'H', 'visc_bar', 'tau_b', 'tau_d', \
-				 'L', 'dL_dt', 't', 'b', 'C_bed', 'dudx_bc', \
-				 'BC_error', 'u2_0_vec', 'u2_dif_vec', 'picard_error', \
-				 'c_picard', 'dt', 'mu', 'omega', 'A', 'theta', 'S', \
-				 'm_stoch', 'smb_stoch', 'Q_fric', 'beta', 'visc', 'u_x', 'F_1', 'F_2', \
-				 'A_theta', 'T_oce_det', 'T_oce_stoch', 'lmbd', 'w', 'T_air']
-
-var_name 	  = ['u_bar', 'ub', 'u_bar_x', 'u_z', 'u', 'H', 'visc_bar', 'tau_b', 'tau_d', \
-				 'L', 'dL_dt', 't', 'b', 'C_bed', 'u_x_bc', \
-				 'dif', 'u2_0_vec', 'u2_dif_vec', 'picard_error', \
-				 'c_picard', 'dt', 'mu', 'omega_picard', 'A_s', 'theta', 'S', \
-				 'm_stoch', 'smb_stoch', 'Q_fric', 'beta', 'visc', 'u_x', 'F_1', 'F_2', \
-				 'A_theta', 'T_oce_det', 'T_oce_stoch', 'lmbd', 'w', 'T_air']"""
-
 
 # Dimension.
 l_var = len(var_name)
@@ -132,11 +117,6 @@ s = np.shape(theta)
 # GENEREAL PARAMETERS
 sec_year = 3.154e7
 
-# f_cb
-T       = 50.0       # years  
-omega   = 2.0 * np.pi / T     # Real period is 0.5 * omega due to abs(cos(omega*t))
-x_omega = 5.0e3               # m  
-
 # f_visc_bar
 n_gln = 3
 A     = 4.9e-25               # 4.9e-25 (T=-10ºC) # Pa³ / s (Greve and Blatter, 2009)
@@ -156,8 +136,6 @@ A_0   = 3.985e-13 * sec_year         # [Pa^-3 s^-1]
 #T_air_s = - Q_act / ( R * np.log(A_s / A_0) ) - 273.15
 
 
-#print('A_s = ', A_s)
-#print('T_air_s = ', T_air_s)
 
 def f_bed(x, exp, n):
 	
@@ -518,8 +496,8 @@ if save_series_comp == 1:
 	ax.plot(t_plot[1:n-1], c_picard[1:n-1], linestyle='-', color='darkblue', marker='None', \
 			markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 		
-	#ax6.plot(t_plot, visc_bar, linestyle='-', color='purple', marker='None', \
-	#		markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+	ax6.plot(t_plot, speed, linestyle='-', color='purple', marker='None', \
+			markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 	
 	ax2.plot(t_plot, dt, linestyle='-', color='black', marker='None', \
 			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
@@ -527,7 +505,7 @@ if save_series_comp == 1:
 	ax4.plot(t_plot, np.log10(picard_error), linestyle='-', color='red', marker='None', \
 			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$')
 	
-	ax3.plot(t_plot, omega_picard/np.pi, linestyle='-', color='blue', marker='None', \
+	ax3.plot(t_plot, omega/np.pi, linestyle='-', color='blue', marker='None', \
 			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 		
 	ax5.plot(t_plot, mu, linestyle='-', color='black', marker='None', \
@@ -539,7 +517,7 @@ if save_series_comp == 1:
 	ax4.set_ylabel(r'$ \mathrm{log}_{10} (\varepsilon) $',fontsize=18)
 	ax3.set_ylabel(r'$ \omega \ (\pi \ \mathrm{rad}) $',fontsize=18)
 	ax5.set_ylabel(r'$ \mu $',fontsize=18)
-	ax6.set_ylabel(r'$ \eta \ (Pa \cdot s) $',fontsize=18)
+	ax6.set_ylabel(r'$ \mathrm{Speed} \ (\mathrm{kyr/hr}) $',fontsize=18)
 	ax3.set_xlabel(r'$\mathrm{Time} \ (kyr)$',fontsize=18)
 	
 	ax.set_xlim(t_plot[0], t_plot[l-1])
@@ -658,7 +636,7 @@ if save_domain == 1:
 	delta_T_oce = False
 	
 	if frames == True:
-		for i in range(4, 5, 1): # range(10, l, 1), (l-1, l, 20)
+		for i in range(l-1, l, 1): # range(10, l, 1), (l-1, l, 20)
 
 			print('Frame = ', i)
 			
@@ -981,7 +959,7 @@ if save_domain == 1:
 
 if save_var_frames == 1:
 	
-	for i in range(0, l, 1): # (0, l, 10), (l-1, l, 1)
+	for i in range(l-1, l, 1): # (0, l, 10), (l-1, l, 1)
 		
 		#L_plot  = np.linspace(0, L[i], s[2])
 		L_plot = sigma_plot * L[i]

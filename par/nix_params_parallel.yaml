@@ -3,7 +3,7 @@
 path:
   nix: /home/dmoreno/scr/nix/                              # Nix path.
   read: /home/dmoreno/nix/data/noise_sigm_ocn.12.0.nc      # File with stochastic bc. 
-  out: /home/dmoreno/nix/resolution.uneven.DIVA/                     # Output path.
+  out: /home/dmoreno/nix/test_parallel_SSA/                     # Output path.
 
 time:
   t0: 0.0                 # Starting time [yr].
@@ -23,9 +23,9 @@ domain:
   bed_exp: mismip_1       # Domain def, i.e., bedrock geometry applied: exp_1 (MISMIP exp_1) and so on.
   experiment: mismip_1  # Forcing type. As defined in MISMIP: mismip_1, mismip_3_therm...
   n: 50                  # Number of horizontal points
-  n_z: 15                 # Number vertical layers. 10
+  n_z: 10                 # Number vertical layers. 10
   grid: even              # Nix grid type.
-  grid_exp: 0.5           # Exponent of unevenly-spaced grid. 1.0, 0.5
+  grid_exp: 0.5           # Exponent of unevenly-spaced grid. 1.0, 0.5, 0.25
   bedrock_ews:            # Transition indicators domain.
     smooth_bed: none      # Apply smooth on bed topography. "gauss", "runnning_mean".
     p: 3                  # Number of points at the edges of the array that are not smoothed out.
@@ -38,7 +38,7 @@ domain:
     
 
 dynamics:
-  vel_meth: Blatter-Pattyn           # Velocity solver: const, SSA, DIVA, Blatter-Pattyn.
+  vel_meth: SSA           # Velocity solver: const, SSA, DIVA, Blatter-Pattyn.
 
 timestep:
   dt_meth: adapt          # Time-stepping method. fixed, adapt.

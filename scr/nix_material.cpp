@@ -79,9 +79,6 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
         // Vertically averaged B for the SSA.
         B_theta_bar = B_theta.rowwise().mean();
 
-        // We use the median rather than the mean?
-        //B_theta_bar = f_median(B_theta, n, n_z);
-
         // SSA solver.
         if ( dyn.vel_meth == "SSA" )
         {
@@ -89,13 +86,13 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
             for (int i=1; i<dom.n-1; i++)
             {
                 // Try this for stability of the vertical advection.
-                u_bar_x(i) = ( u_bar(i+1) - u_bar(i-1) ) * dx_sym_inv(i);
+                //u_bar_x(i) = ( u_bar(i+1) - u_bar(i-1) ) * dx_sym_inv(i);
                 
                 // Currently working.
-                //u_bar_x(i) = ( u_bar(i+1) - u_bar(i) ) * dx_inv(i);
+                u_bar_x(i) = ( u_bar(i+1) - u_bar(i) ) * dx_inv(i);
                 
                 // Not working.
-                //u_bar_x(i) =  ( u_bar(i+1) - u_bar(i-1) ) * dx_sym_inv(i);
+                //u_bar_x(i) = ( u_bar(i) - u_bar(i-1) ) * dx_inv(i);
             }
 
             // Boundary derivatives.
@@ -115,17 +112,9 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
             // Horizontal derivative du/dx as defined in Eq. 21 (Lipscomb et al., 2019).
             for (int i=1; i<dom.n-1; i++)
             {
-                // Centred.
-                //u_bar_x(i) = 0.5 * ( u_bar(i+1) - u_bar(i-1) ) * dx_inv(i);
-
                 // Centred with unevenly-spaced grid.
                 u_bar_x(i) =  ( u_bar(i+1) - u_bar(i-1) ) * dx_sym_inv(i);
 
-                // Forward.
-                //u_bar_x(i) = u_bar(i+1) - u_bar(i);
-
-                // Backwards.
-                //u_bar_x(i) = u_bar(i) - u_bar(i-1);
             }
             u_bar_x(0)       = ( u_bar(1) - u_bar(0) ) * dx_inv(0);
             u_bar_x(dom.n-1) = ( u_bar(dom.n-1) - u_bar(dom.n-2) ) * dx_inv(dom.n-2);

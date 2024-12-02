@@ -796,6 +796,10 @@ int f_write(int c, ArrayXd u_bar, ArrayXd ub, ArrayXd u_bar_x, ArrayXd H, ArrayX
     ERR(retval);
     if ((retval = nc_put_vara_double(ncid, t_varid, start_0, cnt_0, &t)))
     ERR(retval);
+    if ((retval = nc_put_vara_double(ncid, dt_varid, start_0, cnt_0, &dt)))
+    ERR(retval);
+    if ((retval = nc_put_vara_double(ncid, picard_error_varid, start_0, cnt_0, &error)))
+    ERR(retval);
     if ((retval = nc_put_vara_double(ncid, speed_varid, start_0, cnt_0, &speed)))
     ERR(retval);
     if ((retval = nc_put_vara_int(ncid, c_pic_varid, start_0, cnt_0, &c_picard)))
