@@ -34,11 +34,113 @@ using namespace std;
 int main()
 {
 
+    //omp_set_num_threads(1); // Set the number of threads to 4
+    //#pragma omp parallel
+    //{
+    //    #pragma omp single
+    //    std::cout << "Number of threads: " << omp_get_num_threads() << std::endl;
+    //}
+
     // Enable OpenMP if supported by the compiler.
-    #ifdef _OPENMP
-    setNbThreads(4); // Set the number of threads
-    cout << "Using OpenMP with " << nbThreads() << " threads.\n";
-    #endif
+    // Is this needed/ 
+    // export OMP_DISPLAY_ENV=TRUE
+    // export OMP_NUM_THREADS=8
+
+
+    // Set Eigen to use multiple threads
+    int num_threads = 8;
+    Eigen::setNbThreads(num_threads);
+    std::cout << "Using " << Eigen::nbThreads() << " threads.\n";
+
+    // Example sparse matrix size and number of non-zeros
+    /*int n1 = 1024; // Matrix dimensions
+    int n_z1 = 1024; // Example non-zero density factor
+    SparseMatrix<double, RowMajor> A_sparse(n1 * n_z1, n1 * n_z1);
+
+    // Define the triplets for sparse matrix initialization
+    std::vector<Triplet<double>> tripletList;
+    for (int i = 0; i < n1 * n_z1; ++i) {
+        tripletList.emplace_back(i, i, 4.0); // Diagonal elements
+        if (i + 1 < n1 * n_z1) tripletList.emplace_back(i, i + 1, -1.0); // Off-diagonal
+        if (i - 1 >= 0) tripletList.emplace_back(i, i - 1, -1.0); // Off-diagonal
+    }
+    A_sparse.setFromTriplets(tripletList.begin(), tripletList.end());
+
+    // Define the solver
+    BiCGSTAB<SparseMatrix<double>> solver;
+
+    // Define the preconditioner
+    IncompleteLUT<double> preconditioner;
+    preconditioner.setDroptol(1.0e-4);
+    solver.preconditioner().compute(A_sparse);
+
+    // Compute the solver
+    solver.compute(A_sparse);
+
+    // Solver parameters
+    solver.setMaxIterations(100);
+    solver.setTolerance(1.0e-4);
+
+    // Define the right-hand side vector
+    VectorXd b = VectorXd::Random(n1 * n_z1);
+
+    // Solve the system
+    auto start1 = std::chrono::high_resolution_clock::now();
+    VectorXd x = solver.solve(b);
+    auto end1 = std::chrono::high_resolution_clock::now();
+
+    // Output results
+    std::cout << "Solver completed in " 
+              << std::chrono::duration_cast<std::chrono::milliseconds>(end1 - start1).count() 
+              << " ms.\n";
+    std::cout << "Converged in " << solver.iterations() << " iterations with error " 
+              << solver.error() << ".\n";*/
+
+    
+    
+    
+    //Eigen::setNbThreads(12); // Set the number of threads. 4
+    //cout << "Number of Eigen threads: " << Eigen::nbThreads() << " threads.\n";
+
+
+    /*Eigen::MatrixXd A1 = Eigen::MatrixXd::Random(10000, 10000);
+    Eigen::MatrixXd A2 = Eigen::MatrixXd::Random(10000, 10000);
+    Eigen::VectorXd b = Eigen::VectorXd::Random(10000);
+
+
+    // Solve without guess (assumes x = 0).
+    auto start1 = std::chrono::high_resolution_clock::now();
+    MatrixXd W = ( A1 * (A1 + A2) ) * A2; 
+    Eigen::VectorXd x = W.partialPivLu().solve(b);
+    auto end1 = std::chrono::high_resolution_clock::now();
+
+    std::cout << "Matrix solution in "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(end1 - start1).count()
+              << " ms.\n";
+
+
+    //Eigen::setNbThreads(1); // Set the number of threads. 4
+    cout << "Number of Eigen threads: " << Eigen::nbThreads() << " threads.\n";*/
+
+
+
+    /*#ifdef _OPENMP
+    {
+        Eigen::setNbThreads(12); // Set the number of threads. 4
+        cout << "Using Eigen with " << Eigen::nbThreads() << " threads.\n";
+    }
+    #endif*/
+
+    /*omp_set_num_threads(12); // Set the number of threads to 4
+    #pragma omp parallel
+    {
+        #pragma omp single
+        std::cout << "Number of threads: " << omp_get_num_threads() << std::endl;
+    }*/
+
+
+    //Eigen::setNbThreads(8);
+    //std::cout << "Using " << Eigen::nbThreads() << " threads.\n";
 
     // Specify the path to YAML file.
     string yaml_name = "nix_params_parallel.yaml";
@@ -276,7 +378,7 @@ int main()
 
     //////////////////////////////////////////////////////////////////////////
     // Uneven spacing for staggered u-grid.
-    /*ArrayXd ds_u(n-1);
+    ArrayXd ds_u(n-1);
     ArrayXd ds_u_inv(n-1);
     ArrayXd ds_u_sym(n-1);
 
@@ -292,7 +394,7 @@ int main()
     for (int i=1; i<n-1; i++)
     {
         ds_u_sym(i) = ds_u(i) + ds_u(i-1);
-    }*/
+    }
     //////////////////////////////////////////////////////////////////////////
 
     
@@ -598,7 +700,6 @@ int main()
         A_theta = ArrayXXd::Constant(n, n_z, A);
     }
 
-
     // TRANSITION INDICATORS EXPERIMENTS. OCEAN TEMPERATURES FORCING (T_air const).
     else if ( exp == "ews_schoof" )
     {
@@ -885,13 +986,142 @@ int main()
                             nixParams.cnst, nixParams.tm, nixParams.fric);
 
 
+        
+        // UNDER DEVELOPMENT.
+        // Homothopy ontinuation in viscosity.
+        /*double eps;
+        double eps_old;
+        double rel = 0.1; // 0.25
+        double eps_min = 1.0e-7; // 1.0e-7
+        double eps_max = 1.0e-4; // 1.0e-5
+
+
+        int c_eps = 0;
+        //error    = 1.0;
+        while ( c_eps < 1 )
+        {
+            // Update eps for Blatter-Pattyn.
+            eps_old = eps;
+            if ( t < 1.0 * nixParams.tm.t_eq )
+            {
+                eps = nixParams.vis.eps;
+            }
+            else
+            {
+                eps = ( 1.0 - pow( min(error, nixParams.pcrd.tol)/nixParams.pcrd.tol, 2) ) * \
+                             ( eps_min - eps_max ) + eps_max;
+
+                eps = rel * eps_old + (1.0 - rel) * eps;
+            }
+            
+            // Picard initialization.
+            error    = 1.0;
+            c_picard = 0;
+            
+            // Implicit velocity solver. Picard iteration for non-linear viscosity and beta.
+            // Loop over the vertical level for Blatter-Pattyn.
+            while ( error > nixParams.pcrd.tol && c_picard < nixParams.pcrd.n_picard )
+            {
+                // Save previous iteration solution.
+                u_bar_old_1 = u_bar;
+                u_old       = u;
+                
+                // Implicit solver.
+                // If SSA solver ub = u_bar.
+                sol = vel_solver(H, ds, ds_inv, ds_u_inv, dz, visc_bar, bed, L, \
+                                    C_bed, t, beta, A, A_theta, visc, u, u_z, \
+                                        nixParams.dyn, nixParams.dom, \
+                                            nixParams.cnst, nixParams.vis);
+                
+                // Allocate variables. sol(n+1,n_z+1)
+                u_bar  = sol.block(0,0,n,1);
+                u      = sol.block(0,1,n,n_z);
+
+                
+                // Update beta with new velocity.
+                fric_all = f_u(u, u_bar, beta, C_bed, visc, H, dz, t, \
+                                    nixParams.dom, nixParams.dyn, \
+                                        nixParams.fric, nixParams.cnst);
+                beta = fric_all.col(0);
+
+                // Update viscosity with new velocity.
+                visc_all = f_visc(theta, u, visc, H, tau_b, u_bar, dz, \
+                                    ds, ds_u, ds_sym, L, t, A, eps, \
+                                        nixParams.dom, nixParams.thrmdyn, \
+                                            nixParams.vis, nixParams.tm, \
+                                                nixParams.dyn, nixParams.init);
+
+
+                // Allocate variables.
+                //ArrayXXd visc_old = visc;
+                visc     = visc_all.block(0,0,n,n_z);
+                visc_bar = visc_all.col(n_z);
+                
+                
+                // Current error (vector class required to compute norm). 
+                // Eq. 12 (De-Smedt et al., 2010).
+                c_u_bar_1 = u_bar - u_bar_old_1;
+                u_bar_vec = u_bar;
+                error     = c_u_bar_1.norm() / u_bar_vec.norm();
+                
+                // New relaxed Picard iteration. Pattyn (2003). 
+                // Necessary to deal with the nonlinear velocity dependence on both viscosity and beta.
+                // Just update beta and visc, not tau_b!
+                // We have previously intialize u_bar_old_2 for t = 0.
+                // Difference between iter (i-1) and (i-2).
+                c_u_bar_2 = u_bar_old_1 - u_bar_old_2;
+                
+                // Angle defined between two consecutive vel solutions.
+                omega = acos( c_u_bar_1.dot(c_u_bar_2) / \
+                                ( c_u_bar_1.norm() * c_u_bar_2.norm() ) );
+                
+
+                // De Smedt et al. (2010). Eq. 10.
+                if (omega <= omega_1 || c_u_bar_1.norm() == 0.0)
+                {
+                    mu = 2.5; // De Smedt.
+                    //mu = 1.0; // To avoid negative velocities?
+                    //mu = 0.7; // Daniel
+                }
+                else if (omega > omega_1 & omega < omega_2)
+                {
+                    mu = 1.0; // De Smedt.
+                    //mu = 0.7; // Daniel
+                }
+                else
+                {
+                    mu = 0.7; // De Smedt.
+                    //mu = 0.5; // Daniel
+                }
+
+                
+                // New velocity guess based on updated mu.
+                u_bar = u_bar_old_1 + mu * c_u_bar_1.array();
+                u     = u_old + mu * ( u - u_old ); 
+
+                //double rel = 0.95; // 0.8 works extremely well.
+                //visc = visc_old * rel + ( 1.0 - rel ) * visc; 
+                //visc     = visc_old + mu * ( visc - visc_old ); 
+                
+                // Update multistep variables.
+                u_bar_old_2 = u_bar_old_1;
+
+                // Update number of iterations.
+                ++c_picard;
+            }
+        
+            ++c_eps;
+        }*/
+
+
+
+
+        // Implicit velocity solver. Picard iteration for non-linear viscosity and beta.
+        // Loop over the vertical level for Blatter-Pattyn.
         // Picard initialization.
         error    = 1.0;
         c_picard = 0;
         
-        // Implicit velocity solver. Picard iteration for non-linear viscosity and beta.
-        // Loop over the vertical level for Blatter-Pattyn.retval
-        // We solve one tridiagonal solver for each vertical level.
         while ( error > nixParams.pcrd.tol && c_picard < nixParams.pcrd.n_picard )
         {
             // Save previous iteration solution.
@@ -900,7 +1130,7 @@ int main()
             
             // Implicit solver.
             // If SSA solver ub = u_bar.
-            sol = vel_solver(H, ds, ds_inv, dz, visc_bar, bed, L, \
+            sol = vel_solver(H, ds, ds_inv, ds_u_inv, dz, visc_bar, bed, L, \
                                 C_bed, t, beta, A, A_theta, visc, u, u_z, \
                                     nixParams.dyn, nixParams.dom, \
                                         nixParams.cnst, nixParams.vis);
@@ -918,7 +1148,7 @@ int main()
 
             // Update viscosity with new velocity.
             visc_all = f_visc(theta, u, visc, H, tau_b, u_bar, dz, \
-                                ds, ds_inv, ds_sym, L, t, A, \
+                                ds, ds_u, ds_sym, L, t, A, \
                                     nixParams.dom, nixParams.thrmdyn, \
                                         nixParams.vis, nixParams.tm, \
                                             nixParams.dyn, nixParams.init);
@@ -975,6 +1205,8 @@ int main()
             // Update number of iterations.
             ++c_picard;
         }
+        
+        
 
         
         // Allocate variables from converged solution.
@@ -1040,6 +1272,7 @@ int main()
             if ( c == 0 )
             {
                 speed = 0.0;
+                error = 0.0;
             }
 
             // std::cout is typically buffered by default.
@@ -1049,7 +1282,7 @@ int main()
             cout << "\n dt                = " << dt << std::flush;
             cout << "\n dx_min            = " << 1.0e-3*L*ds(n-2) << std::flush;
             cout << "\n Picard iterations = " << c_picard << std::flush;
-            //cout << "\n Path:                " << nixParams.path.out << std::flush;
+            //cout << "\n Visc eps:         = " << eps << std::flush;
             //cout << "\n Estimated error:     " << error << std::flush;
             
             //cout << "\n noise_now(0) = " << noise_now(0);
@@ -1089,7 +1322,7 @@ int main()
         
 
         // Integrate ice thickness forward in time.
-        H = f_H(u_bar, H, S, sigma, dt, ds, ds_inv, ds_sym, \
+        H = f_H(u_bar, H, S, sigma, dt, ds, ds_inv, ds_sym, ds_u_inv, \
                   L, D, dL_dt, bed, q, M, t, \
                     nixParams.dom, nixParams.tm, nixParams.adv);
         

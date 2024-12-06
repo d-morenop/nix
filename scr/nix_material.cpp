@@ -5,7 +5,7 @@
 
 
 ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd tau_b, \
-                ArrayXd u_bar, ArrayXd dz, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_sym, \
+                ArrayXd u_bar, ArrayXd dz, ArrayXd ds, ArrayXd ds_u, ArrayXd ds_sym, \
                 double L, double t, double A, DomainParams& dom, ThermodynamicsParams& thrm, \
                 ViscosityParams& vis, TimeParams& tm, DynamicsParams& dyn, InitParams& init)
 {
@@ -17,9 +17,12 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
     ArrayXd u_bar_x(dom.n), strain_1d(dom.n), visc_bar(dom.n), B_theta_bar(dom.n);
     
     // Handy definitions.
-    ArrayXd dx_inv = 1.0 / ( ds * L );
+    //ArrayXd dx_inv = 1.0 / ( ds * L );
+    ArrayXd dx_inv = 1.0 / ( ds_u * L );
     ArrayXd dz_inv = 1.0 / dz;
     ArrayXd dx_sym_inv = 1.0 / ( ds_sym * L );
+
+    //ArrayXd dx_u_sym_inv = 1.0 / ( ds_u_sym * L );
 
     
     // Equilibration and constant viscosity experiments.
@@ -89,10 +92,10 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
                 //u_bar_x(i) = ( u_bar(i+1) - u_bar(i-1) ) * dx_sym_inv(i);
                 
                 // Currently working.
-                u_bar_x(i) = ( u_bar(i+1) - u_bar(i) ) * dx_inv(i);
+                //u_bar_x(i) = ( u_bar(i+1) - u_bar(i) ) * dx_inv(i);
                 
-                // Not working.
-                //u_bar_x(i) = ( u_bar(i) - u_bar(i-1) ) * dx_inv(i);
+                // Working.
+                u_bar_x(i) = ( u_bar(i) - u_bar(i-1) ) * dx_inv(i-1);
             }
 
             // Boundary derivatives.
@@ -113,7 +116,10 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
             for (int i=1; i<dom.n-1; i++)
             {
                 // Centred with unevenly-spaced grid.
-                u_bar_x(i) =  ( u_bar(i+1) - u_bar(i-1) ) * dx_sym_inv(i);
+                //u_bar_x(i) =  ( u_bar(i+1) - u_bar(i-1) ) * dx_sym_inv(i);
+
+                // Working.
+                u_bar_x(i) = ( u_bar(i) - u_bar(i-1) ) * dx_inv(i-1);
 
             }
             u_bar_x(0)       = ( u_bar(1) - u_bar(0) ) * dx_inv(0);
@@ -156,15 +162,12 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
                 // Forwards.
                 //u_z.col(j) = ( u.col(j+1) - u.col(j) ) * dz_inv(j);
 
-                // Forwards. It works.
-                //u_z.col(j) = u.col(j) - u.col(j-1);
+                // Backwards. It works.
+                //u_z.col(j) = ( u.col(j) - u.col(j-1) ) * dz_inv(j);
             }
 
             for (int i=1; i<dom.n-1; i++)
             {
-                // Centred.
-                //u_x.row(i) = 0.5 * ( u.row(i+1) - u.row(i-1) ) * dx_inv(i);
-
                 // Centred with unevenly-spaced grid.
                 u_x.row(i) = ( u.row(i+1) - u.row(i-1) ) * dx_sym_inv(i);
                 
@@ -172,7 +175,7 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
                 //u_x.row(i) = ( u.row(i+1) - u.row(i) ) * dx_inv(i);
 
                 // Try backwards instead. It works.
-                //u_x.row(i) = u.row(i) - u.row(i-1);
+                //u_x.row(i) = ( u.row(i) - u.row(i-1) ) * dx_inv(i-1);
             }
 
             // Boundaries.
@@ -180,7 +183,7 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
             /*
             u_x.row(0) = ( u.row(1) - u.row(0) ) * dx_inv(0);
             u_z.col(0) = ( u.col(1) - u.col(0) ) * dz_inv(0);
-
+            
             u_x.row(dom.n-1)   = ( u.row(dom.n-1) - u.row(dom.n-2) ) * dx_inv(dom.n-2);
             u_z.col(dom.n_z-1) = ( u.col(dom.n_z-1) - u.col(dom.n_z-2) ) * dz_inv(dom.n_z-1);
             */
@@ -188,7 +191,6 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
             // Three-point derivative.
             // MIT.
             // du/dz = 0.5 * ( 3.0 * u(dom.n_z-1) - 4.0 * u(dom.n_z-2) + 1.0 * u(dom.n_z-3) ) 
-            
             u_x.row(0) = 0.5 * ( u.row(0) - 4.0 * u.row(1) + 3.0 * u.row(2) ) * dx_inv(0);
             u_z.col(0) = 0.5 * ( u.col(0) - 4.0 * u.col(1) + 3.0 * u.col(2) ) * dz_inv(0);
 
@@ -196,6 +198,7 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
             //u_z.col(dom.n_z-1) = 0.5 * ( u.col(dom.n_z-1) - 4.0 * u.col(dom.n_z-2) + 3.0 * u.col(dom.n_z-3) ) * dz_inv(dom.n-1);
             u_x.row(dom.n-1)   = ( u.row(dom.n-1) - u.row(dom.n-2) ) * dx_inv(dom.n-2);
             u_z.col(dom.n_z-1) = ( u.col(dom.n_z-1) - u.col(dom.n_z-2) ) * dz_inv(dom.n_z-1);
+            
             
             // Try Vieli and Payne assymetric differences.
             // Vieli 1 (Eq. B12).
@@ -211,9 +214,13 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
 
             // Strain rate and regularization term to avoid division by 0. 
             strain_2d = pow(u_x,2) + 0.25 * pow(u_z,2) + vis.eps;
+            //strain_2d = pow(u_x,2) + 0.25 * pow(u_z,2) + eps;
 
             // Viscosity option dependending on visc_term.
             visc = 0.5 * B_theta * pow(strain_2d, vis.n_exp);
+
+            // Viscosity in divide????????????
+            visc.row(0) = visc.row(2);
 
             // Vertically-averaged viscosity.
             visc_bar = visc.rowwise().mean();

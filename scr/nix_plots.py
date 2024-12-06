@@ -22,30 +22,10 @@ from PIL import Image
 
 
 path_fig        = '/home/dmoreno/nix/resolution.even.t.eq.HR/n.256_dt_min.0.005/'
-path_now        = '/home/dmoreno/nix/test_parallel_SSA/n.100_dt_min.0.01/'
+path_now        = '/home/dmoreno/nix/resolution_parallel/SSA_n.0128_dt_min.0.01/'
 path_stoch      = '/home/dmoreno/nix/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
-
-# '/home/dmoreno/nix/mismip.therm/exp-1_T_air_forcing_lapse.rate_ultra_long/n.250_n_z.35/'
-# /home/dmoreno/nix/mismip.therm/T_oce_forcing_long/n.250_n_z.25_T_air.233.15_gamma_T.0.001/
-# /home/dmoreno/nix/mismip.therm/cnst_A.1.0e-26_T_oce_forcing_long_2/n.250_n_z.25
-
-# Entropy:
-# /home/dmoreno/nix/transition_indicators/forcing_T_oce_hr/sigma_T_oce.5.0_T_oce_max.283.15/n.200_n_z.35_T_air.233.15_gamma_T.0.0008_tf_bc.45100.0/'
-
-# /home/dmoreno/nix/transition_indicators/forcing_T_oce_hr/sigma_T_oce.5.0_T_oce_max.283.15/n.200_n_z.35_T_air.233.15_gamma_T.0.0008_tf_bc.45100.0/
-# /home/dmoreno/nix/transition_indicators/forcing_T_oce_hr/T_oce_max.283.15/n.400_n_z.35_T_air.233.15_gamma_T.0.0008_tf_bc.45100.0/
-# /home/dmoreno/nix/mismip.therm/test.issue_long_T/n.250_n_z.25_T_air.218.15/
-# /home/dmoreno/nix/mismip.therm/T_oce_forcing_long/n.250_n_z.25_T_air.233.15_gamma_T.0.001
-# '/home/dmoreno/nix/oscillations/S-C_thw_hr_dt.fixed/S_0.0.10_C_thw.0.10/'
-# '/home/dmoreno/nix/ews/M_rates/smooth/sigma.1.0_A.3.0e-26_yp.176/''
-# /home/dmoreno/flowline/mismip_bp/exp_3/n.100_nz.10/
-
-
-# /home/dmoreno/nix/mismip.therm/exp-1_T_air_forcing_lapse.rate_long_cold/n.250_n_z.35/
-# /home/dmoreno/nix/mismip.therm/T_air_forcing_lapse.rate_long_cold/n.250_n_z.35/
-# /home/dmoreno/nix/mismip.therm/test.issue_long_T_oce_forcing/n.250_n_z.25_T_air.223.15_gamma_T.0.001/
 
 # Select plots to be saved (boolean integer).
 save_series        = 0
@@ -211,7 +191,7 @@ def f_bed(x, exp, n):
 
 # Account for unevenly-spaced horizontal grid.
 sigma = np.linspace(0, 1.0, s[2])
-sigma_plot = sigma**(1.0) # 0.5 (uneven), 1.0 (even)
+sigma_plot = sigma**(0.25) # 0.5 (uneven), 1.0 (even)
 
 
 
@@ -494,22 +474,22 @@ if save_series_comp == 1:
 	plt.rcParams['text.usetex'] = True
 	
 	ax.plot(t_plot[1:n-1], c_picard[1:n-1], linestyle='-', color='darkblue', marker='None', \
-			markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+			markersize=3.0, linewidth=2.0, alpha=1.0, label=r'$u_{b}(x)$') 
 		
 	ax6.plot(t_plot, speed, linestyle='-', color='purple', marker='None', \
-			markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+			markersize=3.0, linewidth=2.0, alpha=1.0, label=r'$u_{b}(x)$') 
 	
 	ax2.plot(t_plot, dt, linestyle='-', color='black', marker='None', \
-			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+			 markersize=3.0, linewidth=2.0, alpha=1.0, label=r'$u_{b}(x)$') 
 
 	ax4.plot(t_plot, np.log10(picard_error), linestyle='-', color='red', marker='None', \
-			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$')
+			 markersize=3.0, linewidth=2.0, alpha=1.0, label=r'$u_{b}(x)$')
 	
 	ax3.plot(t_plot, omega/np.pi, linestyle='-', color='blue', marker='None', \
-			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+			 markersize=3.0, linewidth=2.0, alpha=1.0, label=r'$u_{b}(x)$') 
 		
 	ax5.plot(t_plot, mu, linestyle='-', color='black', marker='None', \
-			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+			 markersize=3.0, linewidth=2.0, alpha=1.0, label=r'$u_{b}(x)$') 
 	
 	
 	ax.set_ylabel(r'$N_{\mathrm{pic}}$',fontsize=18)
@@ -1216,9 +1196,9 @@ if save_visc == 1:
 		ax  = fig.add_subplot(111)
 
 		# Flip theta matrix so that the plot is not upside down.
-		im = ax.imshow(np.flip(visc[i,:,:],axis=0), cmap='plasma', norm="log", \
-						vmin=var_min, vmax=var_max, aspect='auto')
-		#im = ax.imshow(np.flip(visc[i,:,:],axis=0), cmap='plasma', aspect='auto')
+		#im = ax.imshow(np.flip(visc[i,:,:],axis=0), cmap='plasma', norm="log", \
+		#				vmin=var_min, vmax=var_max, aspect='auto')
+		im = ax.imshow(np.flip(visc[i,:,:],axis=0), cmap='plasma', aspect='auto')
 	
 		ax.set_ylabel(r'$ \mathbf{n}_{z} $', fontsize=20)
 		ax.set_xlabel(r'$\ \mathbf{x} \ (\mathrm{km})$', fontsize=20)
@@ -1293,7 +1273,7 @@ if save_u == 1:
 
 	ind_plot = np.array([0, int(0.5*s[0]), s[0]-1])
 	
-	for i in range(0, l, 10): # (l-1, l, 1), ind_plot
+	for i in range(l-1, l, 1): # (l-1, l, 1), ind_plot
 
 		# Update x_labels as domain extension changes in each iteration.
 		x_labels  = np.linspace(0, L[i], n_ticks, dtype=int)
@@ -1311,8 +1291,11 @@ if save_u == 1:
 		cmap = plt.get_cmap("viridis") #RdYlBu, Spectral, rainbow, jet, turbo
 		reversed_cmap = cmap.reversed()
 
-		im = ax.imshow(np.flip((w[i,:,:]),axis=0), vmin=w_min, vmax=w_max,\
-		 				cmap=reversed_cmap, aspect='auto')
+		#im = ax.imshow(np.flip((w[i,:,:]),axis=0), vmin=w_min, vmax=w_max,\
+		# 				cmap=reversed_cmap, aspect='auto')
+		
+		im = ax.imshow(np.flip((np.log10(abs(u[i,:,:]))),axis=0), \
+		 				cmap=cmap, aspect='auto')
 	
 	
 		ax.set_ylabel(r'$ \mathbf{n}_{z} $', fontsize=20)
@@ -1325,7 +1308,7 @@ if save_u == 1:
 		#cb.set_ticks(cb_ticks_u)
 		#cb.set_ticklabels(list(cb_ticks_u), fontsize=14)
 
-		cb.set_label(r'$ w (x,z) \ ( \mathrm{m / yr})$', \
+		cb.set_label(r'$ \mathrm{log_{10}} (u) (x,z) \ ( \mathrm{m / yr})$', \
 					 rotation=90, labelpad=6, fontsize=20)
 
 		"""
@@ -2469,17 +2452,22 @@ if entropy == 1:
 if plot_speed == 1:
 
 	# Parent folder.
-	parent_folder = '/home/dmoreno/nix/resolution_new/'
+	parent_folder = '/home/dmoreno/nix/resolution_parallel/'
+	folder_BP = '/home/dmoreno/nix/resolution_parallel_BP/'
 
 	# List all subfolders in the parent folder
 	subfolders = [f.path for f in os.scandir(parent_folder) if f.is_dir()]
 	subfolders.sort()
+
+	subfolders_BP = [f.path for f in os.scandir(folder_BP) if f.is_dir()]
+	subfolders_BP.sort()
 
 	l = len(subfolders)
 	l_half = int(0.5*l)
 
 	speed = []
 	speed_mean = np.empty(l)
+	speed_mean_BP = np.empty(7)
 
 
 	fig = plt.figure(dpi=600, figsize=(6,4))
@@ -2507,11 +2495,44 @@ if plot_speed == 1:
 			ax.plot(speed, 'blue', marker='o', linestyle='--', \
 		   					linewidth=1.0, markersize=2, label=subfolders[i])
 	
+	
+	
+	
+	for i in range(len(subfolders_BP)):
+
+		print('Exp = ', subfolders_BP[i])
+		
+		# Define the path to the netCDF file in the current subfolder
+		path_nc = os.path.join(get_datadir(), subfolders_BP[i], 'nix.nc')
+
+		# Check if the file exists before attempting to open it
+		if os.path.exists(path_nc):
+			
+			# Open the netCDF file
+			data = Dataset(path_nc, mode='r')
+
+			speed = data.variables['speed'][:]
+
+			speed_mean_BP[i] = np.mean(speed[11:99])
+
+
+
 	# Load extent to include resolution axis.
 	L = data.variables['L'][:]
-	n = np.array([2**4, 2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12, 2**13])
+	n_s = np.array([2**4, 2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12, 2**13])
+	
+	dx = np.empty(10)
+	for i in range(10):
+		
+		a = np.linspace(0.0, 1.0, n_s[i])**0.25
+		if i < 7:
+			n_round = 1
+		else:
+			n_round = 2
+		dx[i] = np.round(1.0e-3 * L[s[1]-1] * ( a[n_s[i]-1] - a[n_s[i]-2] ), n_round)
 
-	dx = np.round(1.0e-3 * L[s[1]-1] / n, 1)
+
+	#dx = np.round(1.0e-3 * L[s[1]-1] / n, 1)
 
 
 
@@ -2538,23 +2559,25 @@ if plot_speed == 1:
 
 	ax.plot(speed_mean[0,:], 'red', marker='o', linestyle='--', \
 		   					linewidth=1.0, markersize=6, label='$ \mathrm{DIVA} $')
+	
+	ax.plot(speed_mean_BP[:], 'darkgreen', marker='o', linestyle='--', \
+		   					linewidth=1.0, markersize=6, label='$ \mathrm{Blatter-Pattyn} $')
 
 	#ax.set_yscale('log')
-	ax.set_yscale('log')
+	
 
 	ax.set_xticks([0,1,2,3,4,5,6,7,8,9])
 	ax.set_xticklabels(['$2^{4}$', '$2^{5}$', '$2^{6}$', '$2^{7}$', \
 					    '$2^{8}$', '$2^{9}$', '$2^{10}$', '$2^{11}$', '$2^{12}$', '$2^{13}$',], fontsize=15)
 
-	ax.set_yticks([1,10,10**2,10**3,10**4,10**5])
-	ax.set_yticklabels(['$10^{0}$','$10^{1}$', '$10^{2}$', '$10^{3}$', '$10^{4}$', \
-					    '$10^{5}$'], fontsize=13)
+	ax.set_yticks([10**1, 10**3, 10**5, 10**7])
+	ax.set_yticklabels(['$10^{1}$',' $10^{3}$', '$10^{5}$', '$10^{7}$'], fontsize=13)
 
 
-	secax = ax.secondary_xaxis(-0.3)  # Secondary axis offset below main x-axis
+	secax = ax.secondary_xaxis(-0.4)  # Secondary axis offset below main x-axis
 	secax.set_xticks([0,1,2,3,4,5,6,7,8,9])  # Match ticks with primary axis
 	secax.set_xticklabels([f'${value}$' for value in dx], fontsize=13)
-	secax.set_xlabel(r' $ \Delta x \ (\mathrm{km}) $ ', fontsize=20)
+	secax.set_xlabel(r' $ \Delta x \ (\mathrm{km}) 	$ ', fontsize=20)
 
 	#ax.set_title(r'$ \mathrm{Speed} $', fontsize=16)
 
@@ -2568,8 +2591,10 @@ if plot_speed == 1:
 	ax.set_xlabel(r'$ n $', fontsize=20)
 	ax.set_ylabel(r'$ \mathrm{Speed} \ (\mathrm{kyr/hr})$', fontsize=20)
 
-	ax.set_xlim(0,l_half-1)
-	ax.set_ylim(1.0, 1.0e5)
+	ax.set_xlim(-0.1,l_half-1+0.1)
+	ax.set_ylim(10, 1.0e7)
+
+	ax.set_yscale('log')
 
 
 	plt.savefig(path_fig+'nix_resolution.png', bbox_inches='tight')

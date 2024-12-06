@@ -122,8 +122,9 @@ elif exp == 'parallel':
     var_names = ['n', 'dt_min']
     #values_0 = np.array([2**4, 2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12, 2**13, 2**14])
 
-    values_0 = np.array([25, 100, 500, 1000]) # [25, 50, 100, 150, 300, 600]
-    values_1 = np.array([0.01]) # 0.01
+    #values_0 = np.array([1000, 5000]) # [20, 50, 100, 1000, 5000]
+    values_0 = np.array([2**11, 2**12])
+    values_1 = np.array([0.05]) # 0.01
 
     # Data type of each array.
     data_types = [int, float]
@@ -378,8 +379,8 @@ for i in range(len(name)):
         # Compiling command. -std=c++17
         #cmd = "g++ -std=c++11 -I /usr/include/eigen3/ -o "+path_output+"nix.o "+path_output_scr+"nix.cpp -lnetcdf"
 
-        # Compiling command. -std=c++17
-        cmd = "g++ -std=c++17 -fopenmp -O2 -I /usr/include/eigen3/ -o "+path_modified+"nix.o "+path_output_scr+"nix.cpp -lnetcdf -lyaml-cpp"
+        # Compiling command. -std=c++17. -O2
+        cmd = "g++ -std=c++17 -fopenmp -O3 -I /usr/include/eigen3/ -o "+path_modified+"nix.o "+path_output_scr+"nix.cpp -lnetcdf -lyaml-cpp"
 
     elif config == 'brigit':
         
@@ -424,7 +425,10 @@ for i in range(len(name)):
         cmd_run = path_modified+"nix.o &"
 
 
-    # Run Nix model.
+    # Run Nix model. export OMP_NUM_THREADS=8
+    #p = subprocess.Popen("export OMP_NUM_THREADS=8", shell=True, \
+    #                        stdout=f, universal_newlines=True)
+    
     p = subprocess.Popen(cmd_run, shell=True, \
                             stdout=f, universal_newlines=True)
 

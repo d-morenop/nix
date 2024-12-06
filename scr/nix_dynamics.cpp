@@ -110,11 +110,10 @@ ArrayXXd solver_2D(int n, int n_z, ArrayXd dx, ArrayXd dz, \
     /*
     u_0.col(0)     = ArrayXd::Zero(n);
     u_0.col(n_z-1) = ArrayXd::Zero(n);
-    u_0.row(0)     = ArrayXd::Zero(dom.n_z);
-    u_0.row(n-1)   = ArrayXd::Zero(dom.n_z);
+    u_0.row(0)     = ArrayXd::Zero(n_z);
+    u_0.row(n-1)   = ArrayXd::Zero(n_z);
 
-    Map<VectorXd> x_0(u_0.data(), n*n_z);
-    */
+    Map<VectorXd> x_0(u_0.data(), n*n_z);*/
     
     // Initialize a triplet list to store non-zero entries.
     typedef Eigen::Triplet<double> T;
@@ -133,15 +132,7 @@ ArrayXXd solver_2D(int n, int n_z, ArrayXd dx, ArrayXd dz, \
             // New index.
             int idx = i*n_z + j;
 
-            // Compute coefficients. This works!!
-            /*
-            double c_x1 = gamma * visc(i+1,j);
-            double c_x  = gamma * visc(i,j);
-
-            double c_z1 = dz_2_inv(i) * visc(i,j+1);
-            double c_z  = dz_2_inv(i) * visc(i,j);
-            */
-            
+            // Compute coefficients. This works!!    
             double c_x1 = gamma(i) * visc(i+1,j);
             double c_x  = gamma(i-1) * visc(i,j);
 
@@ -153,7 +144,7 @@ ArrayXXd solver_2D(int n, int n_z, ArrayXd dx, ArrayXd dz, \
            // to calculate the velocities at j = n_z-2. 
            if ( j == n_z-2 )
            {
-            c_z1 = 0.0;
+                c_z1 = 0.0;
            }
             
 
@@ -170,23 +161,77 @@ ArrayXXd solver_2D(int n, int n_z, ArrayXd dx, ArrayXd dz, \
         }
     }
 
+
+    /*typedef Eigen::Triplet<double> T;
+
+    std::vector<T> globalTripletList;
+
+    // Loop through grid points
+    #pragma omp parallel
+    {
+        std::vector<T> tripletList;
+
+        #pragma omp for collapse(2) schedule(static)
+        for (int i = 1; i < n - 1; i++) 
+        {
+            for (int j = 1; j < n_z - 1; j++) 
+            {
+                int idx = i * n_z + j;
+
+                // Compute coefficients
+                double c_x1 = gamma(i) * visc(i + 1, j);
+                double c_x  = gamma(i - 1) * visc(i, j);
+                double c_z1 = dz_2_inv(i) * visc(i, j + 1);
+                double c_z  = dz_2_inv(i) * visc(i, j);
+
+                // Handle boundary condition
+                if (j == n_z - 2) {
+                    c_z1 = 0.0;
+                }
+
+                // Add entries to local triplet list
+                tripletList.push_back(T(idx, idx, -(c_x1 + c_x + c_z1 + c_z)));
+                tripletList.push_back(T(idx, idx + n_z, c_x1));
+                tripletList.push_back(T(idx, idx - n_z, c_x));
+                tripletList.push_back(T(idx, idx + 1, c_z1));
+                tripletList.push_back(T(idx, idx - 1, c_z));
+
+                // Fill vector b
+                b(idx) = F(i);
+            }
+        }
+
+        // Merge local triplet lists into a global list
+        #pragma omp critical
+        {
+            globalTripletList.insert(globalTripletList.end(), tripletList.begin(), tripletList.end());
+        }
+    }
+
+    // Construct the sparse matrix
+    SparseMatrix<double, RowMajor> A_sparse(n * n_z, n * n_z);
+    A_sparse.setFromTriplets(globalTripletList.begin(), globalTripletList.end());*/
+
+
+
     // Set the triplets in the sparse matrix
     // declares a column-major sparse matrix type of double.
-    //SparseMatrix<double> A_sparse(n*n_z, n*n_z); 
     SparseMatrix<double,RowMajor> A_sparse(n*n_z, n*n_z); 
     
     // Define your sparse matrix A_spare from triplets.
     A_sparse.setFromTriplets(tripletList.begin(), tripletList.end());
 
+
     // Solver.
     BiCGSTAB<SparseMatrix<double> > solver;
+    //ConjugateGradient<SparseMatrix<double> > solver;
     //solver.compute(A_sparse);
 
     // Preconditioner. It works as fast as using the previous vel sol as guess x_0.
     // If we use an initial guess x_0 from previous iter, do not use a preconditioner.
-    IncompleteLUT<double> preconditioner;
-    preconditioner.setDroptol(1.0e-4); // 1.0e-4. Set ILU preconditioner parameters
-    solver.preconditioner().compute(A_sparse);
+    //IncompleteLUT<double> preconditioner;
+    //preconditioner.setDroptol(1.0e-4); // 1.0e-4. Set ILU preconditioner parameters
+    //solver.preconditioner().compute(A_sparse);
     solver.compute(A_sparse);
     
 
@@ -197,14 +242,17 @@ ArrayXXd solver_2D(int n, int n_z, ArrayXd dx, ArrayXd dz, \
     solver.setTolerance(tol);
 
     // Solve without guess (assumes x = 0).
+    //Eigen::setNbThreads(12); // Set the number of threads. 4
+    //cout << "Number of Eigen threads: " << Eigen::nbThreads() << " threads.\n";
+
     VectorXd x = solver.solve(b);
 
     // Solve with first guess x_0.
     //solver.compute(A_sparse);
     //VectorXd x = solver.solveWithGuess(b, x_0);
     
-    cout << "\n #iterations:     " << solver.iterations();
-    cout << "\n Estimated error: " << solver.error();
+    //cout << "\n #iterations:     " << solver.iterations();
+    //cout << "\n Estimated error: " << solver.error();
     //cout << "\n Solver info:     " << solver.info();
     
     /* ... update b ... */
@@ -230,7 +278,7 @@ ArrayXXd solver_2D(int n, int n_z, ArrayXd dx, ArrayXd dz, \
 }
 
 
-ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd dz, ArrayXd visc_bar, \
+ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_u_inv, ArrayXd dz, ArrayXd visc_bar, \
                     ArrayXd bed, double L, ArrayXd C_bed, \
                     double t, ArrayXd beta, double A_ice, ArrayXXd A_theta, ArrayXXd visc, ArrayXXd u, ArrayXXd u_z, \
                     DynamicsParams& dyn , DomainParams& dom, ConstantsParams& cnst, ViscosityParams& vis)
@@ -241,7 +289,7 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd dz, ArrayXd v
 
     ArrayXd u_bar(dom.n), dhds(dom.n), visc_H(dom.n), h(dom.n), A_bar(dom.n), \
             A(dom.n), B(dom.n), C(dom.n), F(dom.n), dz_inv_2(dom.n), \
-            ds_inv_2(dom.n-1), gamma(dom.n-1);
+            ds_inv_2(dom.n-1), gamma(dom.n-1), gamma_2(dom.n-1);
 
     double D, u_x_bc, L_inv;
     
@@ -252,7 +300,8 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd dz, ArrayXd v
 
 
     // Note that ds has only (dom.n-1) point rather than (dom.n).
-    gamma = 4.0 * ds_inv_2 * pow(L_inv, 2); // Factor 2 difference from Vieli and Payne (2005).
+    gamma_2 = 4.0 * ds_inv_2 * pow(L_inv, 2); // Factor 2 difference from Vieli and Payne (2005).
+    gamma   = 2.0 * ds_inv * pow(L_inv, 2);
     
     // Handy definitions.
     h = bed + H;           // Ice surface elevation.
@@ -274,9 +323,23 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd dz, ArrayXd v
             dhds(i) = 0.5 * ( H(i) + H(i+1) ) * ( h(i+1) - h(i) ) * ds_inv(i);
 
             // Diagonal, B; lower diagonal, A; upper diagonal, C.
-            A(i) = gamma(i-1) * visc_H(i);
-            B(i) = - gamma(i) * ( visc_H(i) + visc_H(i+1) ) - beta(i);
-            C(i) = gamma(i) * visc_H(i+1);
+            //A(i) = gamma(i-1) * visc_H(i);
+            //B(i) = - gamma(i) * ( visc_H(i) + visc_H(i+1) ) - beta(i);
+            //C(i) = gamma(i) * visc_H(i+1);
+
+            //////////////////////////////////////////////////////////////////////////
+            // Diagonal, B; lower diagonal, A; upper diagonal, C.
+            //A(i) = 4.0 * ds_inv(i) * ds_u_inv(i-1) * pow(L_inv, 2) * visc_H(i);
+            //B(i) = - 2.0 * ds_inv(i) * ( ds_u_inv(i-1) + ds_u_inv(i) ) * pow(L_inv, 2) * \
+            //                                    ( visc_H(i) + visc_H(i+1) ) - beta(i);
+            //C(i) = 4.0 * ds_inv(i) * ds_u_inv(i) * pow(L_inv, 2) * visc_H(i+1);
+
+            A(i) = 2.0 * gamma(i) * ds_u_inv(i-1) * visc_H(i);
+            B(i) = - gamma(i) * ( ds_u_inv(i-1) + ds_u_inv(i) ) * \
+                                ( visc_H(i) + visc_H(i+1) ) - beta(i);
+            C(i) = 2.0 * gamma(i) * ds_u_inv(i) * visc_H(i+1);;
+
+            //////////////////////////////////////////////////////////////////////////
 
         }
 
@@ -288,11 +351,11 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd dz, ArrayXd v
 
         // Tridiagonal boundary values. 
         A(0) = 0.0;
-        B(0) = - gamma(0) * ( visc_H(0) + visc_H(1) ) - beta(0);
-        C(0) = gamma(1) * visc_H(1); // gamma(0)
+        B(0) = - gamma_2(0) * ( visc_H(0) + visc_H(1) ) - beta(0);
+        C(0) = gamma_2(1) * visc_H(1); // gamma(0)
 
-        A(dom.n-1) = gamma(dom.n-2) * visc_H(dom.n-1);
-        B(dom.n-1) = - gamma(dom.n-2) * visc_H(dom.n-1) - beta(dom.n-1);
+        A(dom.n-1) = gamma_2(dom.n-2) * visc_H(dom.n-1);
+        B(dom.n-1) = - gamma_2(dom.n-2) * visc_H(dom.n-1) - beta(dom.n-1);
         C(dom.n-1) = 0.0;
 
         
@@ -345,9 +408,10 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd dz, ArrayXd v
         ArrayXd dx(dom.n-1), dx_inv(dom.n-1), dx_2_inv(dom.n-1);
         dx       = ds * L;
         dx_inv   = 1.0 / dx;
-        dx_2_inv = pow(dx_inv,2);    
+        dx_2_inv = pow(dx_inv,2);   
 
-        //cout << "\n dx = " << dx;
+        //ArrayXd dx_u_inv = ds_u_inv / L; 
+
 
         for (int i=0; i<dom.n-1; i++)
         {

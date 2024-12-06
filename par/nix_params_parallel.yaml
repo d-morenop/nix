@@ -3,7 +3,7 @@
 path:
   nix: /home/dmoreno/scr/nix/                              # Nix path.
   read: /home/dmoreno/nix/data/noise_sigm_ocn.12.0.nc      # File with stochastic bc. 
-  out: /home/dmoreno/nix/test_parallel_SSA/                     # Output path.
+  out: /home/dmoreno/nix/resolution_parallel_BP/                     # Output path.
 
 time:
   t0: 0.0                 # Starting time [yr].
@@ -23,9 +23,9 @@ domain:
   bed_exp: mismip_1       # Domain def, i.e., bedrock geometry applied: exp_1 (MISMIP exp_1) and so on.
   experiment: mismip_1  # Forcing type. As defined in MISMIP: mismip_1, mismip_3_therm...
   n: 50                  # Number of horizontal points
-  n_z: 10                 # Number vertical layers. 10
+  n_z: 15                 # Number vertical layers. 10, 15
   grid: even              # Nix grid type.
-  grid_exp: 0.5           # Exponent of unevenly-spaced grid. 1.0, 0.5, 0.25
+  grid_exp: 0.25           # Exponent of unevenly-spaced grid. 1.0, 0.5, 0.25
   bedrock_ews:            # Transition indicators domain.
     smooth_bed: none      # Apply smooth on bed topography. "gauss", "runnning_mean".
     p: 3                  # Number of points at the edges of the array that are not smoothed out.
@@ -38,11 +38,11 @@ domain:
     
 
 dynamics:
-  vel_meth: SSA           # Velocity solver: const, SSA, DIVA, Blatter-Pattyn.
+  vel_meth: Blatter-Pattyn           # Velocity solver: const, SSA, DIVA, Blatter-Pattyn.
 
 timestep:
   dt_meth: adapt          # Time-stepping method. fixed, adapt.
-  dt_min: 0.05             # Minimum time step [yr]. 0.1
+  dt_min: 0.05             # Minimum time step [yr]. 0.1, 0.05
   dt_max: 5.0             # Maximum time step [yr]. 2.0, 5.0
   t_eq_dt: 2.0e3          # Eq. time until adaptative timestep is applied. 3.0e3
   rel: 0.7                # Relaxation between interations [0,1]. 0.5
@@ -107,7 +107,7 @@ friction:
 
 viscosity:
   n_gln: 3.0             # Glen flow law exponent
-  eps: 1.0e-8            # Viscosity regularisation term. 
+  eps: 1.0e-6            # Viscosity regularisation term. SSA/DIVA: 1e-8. Blatter-Pattyn: 5e-6, 1e-6 perfect, 1e-5 (low resolutions). Play with resolution and eps!
   therm: false           # Temperature-dependent viscosity.
   t_eq_A_theta: 1.5e3    # Eq. time to start applying Arrhenius dependency.
   A_cnst: 5.0e-26        # Rate factor value in MISMIP_A (constant rate factor) .
@@ -135,7 +135,7 @@ calving:
     T_0: 273.15          # Reference ocean temperature [K].
 
 picard:
-  n_picard: 10           # Max number iter. Good results: 10.
+  n_picard: 5           # Max number iter. Good results: 10.
   tol: 1.0e-4            # Convergence tolerance within Picard iteration. 1.0e-4
   omega_1: 0.125         # Angle predictor. De Smedt et al. (2010) Eq. 10.
   omega_2: 0.95

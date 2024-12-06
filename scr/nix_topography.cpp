@@ -166,7 +166,7 @@ ArrayXd f_smb(ArrayXd sigma, double L, double t, double smb_stoch, \
 
 // First order scheme. New variable sigma.
 ArrayXd f_H(ArrayXd u_bar, ArrayXd H, ArrayXd S, ArrayXd sigma, \
-            double dt, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_sym, \
+            double dt, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_sym, ArrayXd ds_u_inv, \
             double L, double D, double dL_dt, ArrayXd bed, ArrayXd q, \
             double M, double t, DomainParams& dom, TimeParams& tm, AdvectionParams& adv)
 {
@@ -177,6 +177,8 @@ ArrayXd f_H(ArrayXd u_bar, ArrayXd H, ArrayXd S, ArrayXd sigma, \
     
     dx_inv     = L_inv * ds_inv;
     dx_sym_inv = L_inv * ds_sym;
+
+    ArrayXd dx_u_inv = L_inv * ds_u_inv;
 
     // Solution to the modified advection equation considering a streched coordinate
     // system sigma. Two schemes are available, explicit and implicit, noted as
@@ -190,8 +192,12 @@ ArrayXd f_H(ArrayXd u_bar, ArrayXd H, ArrayXd S, ArrayXd sigma, \
         for (int i=1; i<dom.n-1; i++)
         {
             // Centred in sigma, upwind in flux. Unevenly-spaced horizontal grid.
-            H_now(i) = H(i) + dt * ( sigma(i) * dL_dt * ( H(i+1) - H(i-1) ) * dx_sym_inv(i) + \
+            //H_now(i) = H(i) + dt * ( sigma(i) * dL_dt * ( H(i+1) - H(i-1) ) * dx_sym_inv(i) + \
                                             - dx_inv(i) * ( q(i) - q(i-1) ) + S(i) );
+
+            // Test uneven velocty grid.
+            H_now(i) = H(i) + dt * ( sigma(i) * dL_dt * ( H(i+1) - H(i-1) ) * dx_sym_inv(i) + \
+                                            - dx_u_inv(i) * ( q(i) - q(i-1) ) + S(i) );
 
         }
         
