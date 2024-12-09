@@ -124,7 +124,7 @@ elif exp == 'parallel':
 
     #values_0 = np.array([1000, 5000]) # [20, 50, 100, 1000, 5000]
     values_0 = np.array([2**11, 2**12])
-    values_1 = np.array([0.05]) # 0.01
+    values_1 = np.array([0.01]) # 0.01
 
     # Data type of each array.
     data_types = [int, float]

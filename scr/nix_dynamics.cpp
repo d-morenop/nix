@@ -86,9 +86,6 @@ ArrayXXd F_int_all(ArrayXXd visc, ArrayXd H, ArrayXd dz, int n_z, int n) {
     }
     
     // Allocate solutions.
-    //F_all.block(0,0,n,1)   = F_2;
-    //F_all.block(0,1,n,n_z) = F_1;
-
     F_all << F_2, F_1;
     
     return F_all;
@@ -317,7 +314,7 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_u_inv, Arr
         visc_H = visc_bar * H;
 
         // Staggered grid (Vieli and Payne solutions, appendix).
-        for (int i=1; i<dom.n-1; i++)
+        /*for (int i=1; i<dom.n-1; i++)
         {
             // Surface elevation gradient. Centred stencil.
             dhds(i) = 0.5 * ( H(i) + H(i+1) ) * ( h(i+1) - h(i) ) * ds_inv(i);
@@ -329,19 +326,27 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_u_inv, Arr
 
             //////////////////////////////////////////////////////////////////////////
             // Diagonal, B; lower diagonal, A; upper diagonal, C.
-            //A(i) = 4.0 * ds_inv(i) * ds_u_inv(i-1) * pow(L_inv, 2) * visc_H(i);
-            //B(i) = - 2.0 * ds_inv(i) * ( ds_u_inv(i-1) + ds_u_inv(i) ) * pow(L_inv, 2) * \
-            //                                    ( visc_H(i) + visc_H(i+1) ) - beta(i);
-            //C(i) = 4.0 * ds_inv(i) * ds_u_inv(i) * pow(L_inv, 2) * visc_H(i+1);
-
             A(i) = 2.0 * gamma(i) * ds_u_inv(i-1) * visc_H(i);
             B(i) = - gamma(i) * ( ds_u_inv(i-1) + ds_u_inv(i) ) * \
                                 ( visc_H(i) + visc_H(i+1) ) - beta(i);
-            C(i) = 2.0 * gamma(i) * ds_u_inv(i) * visc_H(i+1);;
+            C(i) = 2.0 * gamma(i) * ds_u_inv(i) * visc_H(i+1);
 
             //////////////////////////////////////////////////////////////////////////
 
-        }
+        }*/
+
+
+        // Surface elevation gradient. Centred stencil.
+        //dhds(i) = 0.5 * ( H(i) + H(i+1) ) * ( h(i+1) - h(i) ) * ds_inv(i);
+        dhds = 0.5 * ( H + shift(H,-1,dom.n) ) * ( shift(h,-1,dom.n) - h ) * ds_inv;
+
+        A = 2.0 * gamma * shift(ds_u_inv,1,dom.n) * visc_H;
+
+        B = - gamma * ( shift(ds_u_inv,1,dom.n) + ds_u_inv ) * \
+                            ( visc_H + shift(visc_H,-1,dom.n) ) - beta;
+        
+        C = 2.0 * gamma * ds_u_inv * shift(visc_H,-1,dom.n);
+        
 
         // Derivatives at the boundaries O(x).
         dhds(0)       = 0.5 * ( H(0) + H(1) ) * ( h(1) - h(0) ) * ds_inv(0);
@@ -410,17 +415,18 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_u_inv, Arr
         dx_inv   = 1.0 / dx;
         dx_2_inv = pow(dx_inv,2);   
 
-        //ArrayXd dx_u_inv = ds_u_inv / L; 
 
-
-        for (int i=0; i<dom.n-1; i++)
+        /*for (int i=0; i<dom.n-1; i++)
         {
             // Surface elevation gradient.
             dhds(i) = ( h(i+1) - h(i) ) * dx_inv(i);
 
             // Unstable.
             //dhds(i) = 0.5 * ( h(i+1) - h(i-1) );
-        }
+        }*/
+
+        // Surface elevation gradient.
+        dhds = ( shift(h,-1,dom.n) - h ) * dx_inv;
         
         // Boundaries.
         dhds(dom.n-1) = ( h(dom.n-1) - h(dom.n-2) ) * dx_inv(dom.n-2); 

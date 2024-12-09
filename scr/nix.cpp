@@ -360,9 +360,9 @@ int main()
     // Try an unevenly-spaced horizontal grid to allows for fewer point whilst keeping
     // high resolution at the grounding line.
     ArrayXd sigma = ArrayXd::LinSpaced(n, 0.0, 1.0);      // Dimensionless x-coordinates.
-    ArrayXd ds(n-1);
-    ArrayXd ds_inv(n-1);
-    ArrayXd ds_sym(n-1);
+    ArrayXd ds(n);
+    ArrayXd ds_inv(n);
+    ArrayXd ds_sym(n);
     
     //double const n_sigma = 1.0;          // 0.5. Exponent of spacing in horizontal grid (1.0 = evenly-spaced). 
     sigma = pow(sigma, grid_exp);
@@ -373,14 +373,15 @@ int main()
     {
         ds(i) = sigma(i+1) - sigma(i);
     }
+    ds(n-1) = ds(n-2);
 
     ds_inv = 1.0 / ds;
 
     //////////////////////////////////////////////////////////////////////////
     // Uneven spacing for staggered u-grid.
-    ArrayXd ds_u(n-1);
-    ArrayXd ds_u_inv(n-1);
-    ArrayXd ds_u_sym(n-1);
+    ArrayXd ds_u(n);
+    ArrayXd ds_u_inv(n);
+    ArrayXd ds_u_sym(n);
 
     for (int i=0; i<n-2; i++)
     {
@@ -388,10 +389,12 @@ int main()
         ds_u(i) = 0.5 * ( sigma(i+2) - sigma(i) );
     }
     ds_u(n-2) = sigma(n-1) - sigma(n-2);
+    ds_u(n-1) = ds_u(n-2);
+
     ds_u_inv = 1.0 / ds_u;
 
     // For symmetric finite differences schemes we sum two consecutive grid spacings.
-    for (int i=1; i<n-1; i++)
+    for (int i=1; i<n; i++)
     {
         ds_u_sym(i) = ds_u(i) + ds_u(i-1);
     }
@@ -400,7 +403,7 @@ int main()
     
 
     // For symmetric finite differences schemes we sum two consecutive grid spacings.
-    for (int i=1; i<n-1; i++)
+    for (int i=1; i<n; i++)
     {
         ds_sym(i) = ds(i) + ds(i-1);
     }

@@ -1,6 +1,58 @@
 
 // NIX MODULE WITH HANDY COMPUTATIONAL TOOLS.
 
+ArrayXd shift(ArrayXd array, int shift, int n) 
+{
+    ArrayXd result(n);
+
+    // Normalize the shift value to be within the array size
+    shift = ((shift % n) + n) % n;
+
+    // Rearrange elements
+    /*for (int i = 0; i < n; ++i) 
+    {
+        //cout << (i + shift) % n;
+        result((i + shift) % n) = array(i);
+    }*/
+
+    result.block(shift,0,n-shift,1) = array.block(0,0,n-shift,1);
+    result.block(0,0,shift,1)       = array.block(n-shift,0,shift,1);
+
+
+    result.block(0,shift,1,n-shift) = array.block(0,0,1,n-shift);
+    result.block(0,0,1,shift)       = array.block(0,n-shift,1,shift);
+
+    return result;
+}
+
+
+
+ArrayXd shift_2D(ArrayXd x, int shift_x, int shift_z) 
+{
+    int n   = x.rows();    // Number of rows
+    //int n_z = x.cols(); 
+
+    ArrayXd result(n);
+
+    // Normalize the shift value to be within the array size.
+    shift_x = ((shift_x % n) + n) % n;
+    
+    result.block(shift_x,0,n-shift_x,1) = x.block(0,0,n-shift_x,1);
+    result.block(0,0,shift_x,1)       = x.block(n-shift_x,0,shift_x,1);
+
+    // 2D arrays.
+    /*if ( shift_z != 0 )
+    {
+        shift_z = ((shift_z % n_z) + n_z) % n_z;
+        result.block(0,shift_z,1,n_z-shift_z) = x.block(0,0,1,n_z-shift_z);
+        result.block(0,0,1,shift_z)         = x.block(0,n_z-shift_z,1,shift_z);
+    }*/
+    
+
+    return result;
+}
+
+
 ArrayXd gaussian_filter(ArrayXd w, ArrayXd sigma, ArrayXd ds, double sigma_gauss, int p, int n)
 {
     ArrayXd smth(n);

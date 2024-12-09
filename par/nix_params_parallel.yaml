@@ -3,7 +3,7 @@
 path:
   nix: /home/dmoreno/scr/nix/                              # Nix path.
   read: /home/dmoreno/nix/data/noise_sigm_ocn.12.0.nc      # File with stochastic bc. 
-  out: /home/dmoreno/nix/resolution_parallel_BP/                     # Output path.
+  out: /home/dmoreno/nix/test_vector/                     # Output path.
 
 time:
   t0: 0.0                 # Starting time [yr].
@@ -107,7 +107,7 @@ friction:
 
 viscosity:
   n_gln: 3.0             # Glen flow law exponent
-  eps: 1.0e-6            # Viscosity regularisation term. SSA/DIVA: 1e-8. Blatter-Pattyn: 5e-6, 1e-6 perfect, 1e-5 (low resolutions). Play with resolution and eps!
+  eps: 1.0e-7            # Viscosity regularisation term. SSA/DIVA: 1e-8. Blatter-Pattyn: 5e-6, 1e-6 perfect, 1e-5 (low resolutions). Play with resolution and eps!
   therm: false           # Temperature-dependent viscosity.
   t_eq_A_theta: 1.5e3    # Eq. time to start applying Arrhenius dependency.
   A_cnst: 5.0e-26        # Rate factor value in MISMIP_A (constant rate factor) .
