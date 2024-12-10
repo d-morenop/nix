@@ -34,12 +34,12 @@ using namespace std;
 int main()
 {
 
-    //omp_set_num_threads(1); // Set the number of threads to 4
-    //#pragma omp parallel
-    //{
-    //    #pragma omp single
-    //    std::cout << "Number of threads: " << omp_get_num_threads() << std::endl;
-    //}
+    omp_set_num_threads(1); // Set the number of threads to 4
+    #pragma omp parallel
+    {
+        #pragma omp single
+        std::cout << "Number of threads: " << omp_get_num_threads() << std::endl;
+    }
 
     // Enable OpenMP if supported by the compiler.
     // Is this needed/ 
@@ -1124,12 +1124,16 @@ int main()
         // Picard initialization.
         error    = 1.0;
         c_picard = 0;
+
+        ArrayXd beta_old(n);
         
         while ( error > nixParams.pcrd.tol && c_picard < nixParams.pcrd.n_picard )
         {
             // Save previous iteration solution.
             u_bar_old_1 = u_bar;
             u_old       = u;
+
+            beta_old = beta;
             
             // Implicit solver.
             // If SSA solver ub = u_bar.
@@ -1159,6 +1163,53 @@ int main()
             // Allocate variables.
             visc     = visc_all.block(0,0,n,n_z);
             visc_bar = visc_all.col(n_z);
+
+            // Execute functions in parallel using OpenMP
+            /*#pragma omp parallel sections
+            {
+                #pragma omp section
+                {
+                    // Implicit solver.
+                    // If SSA solver ub = u_bar.
+                    sol = vel_solver(H, ds, ds_inv, ds_u_inv, dz, visc_bar, bed, L, \
+                                        C_bed, t, beta, A, A_theta, visc, u, u_z, \
+                                            nixParams.dyn, nixParams.dom, \
+                                                nixParams.cnst, nixParams.vis);
+                    
+                    // Allocate variables. sol(n+1,n_z+1)
+                    u_bar  = sol.block(0,0,n,1);
+                    u      = sol.block(0,1,n,n_z);
+
+                    // Update beta with new velocity.
+                    fric_all = f_u(u, u_bar, beta_old, C_bed, visc, H, dz, t, \
+                                        nixParams.dom, nixParams.dyn, \
+                                            nixParams.fric, nixParams.cnst);
+                    beta = fric_all.col(0);
+                    
+                }
+
+
+                #pragma omp section
+                {
+                    // Update viscosity with new velocity.
+                    visc_all = f_visc(theta, u, visc, H, tau_b, u_bar, dz, \
+                                        ds, ds_u, ds_sym, L, t, A, \
+                                            nixParams.dom, nixParams.thrmdyn, \
+                                                nixParams.vis, nixParams.tm, \
+                                                    nixParams.dyn, nixParams.init);
+
+                    // Allocate variables.
+                    visc     = visc_all.block(0,0,n,n_z);
+                    visc_bar = visc_all.col(n_z);
+                }
+
+            }*/
+
+            /*cout << "\n c_picard =  " << c_picard;
+            cout << "\n u_bar =  " << u_bar;
+            cout << "\n beta =  " << beta;
+            cout << "\n visc_bar =  " << visc_bar;*/
+
             
             
             // Current error (vector class required to compute norm). 
@@ -1252,6 +1303,8 @@ int main()
         {
             M = f_melt(T_oce, nixParams.calv.sub_shelf_melt, nixParams.cnst);
         }
+        
+        
         
         // Ice flux calculation. Flotation thickness H_f.
         q = f_q(u_bar, H, bed, t, m_stoch, M, nixParams.dom, \

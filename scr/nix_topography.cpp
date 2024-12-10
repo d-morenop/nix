@@ -6,34 +6,6 @@
 // It does not follow the ice sheet, but rather there's a certain 
 // value for each position x.
 
-/*ArrayXd shift(ArrayXd array, int shift, int n) 
-{
-    ArrayXd result(n);
-
-    // Normalize the shift value to be within the array size
-    shift = ((shift % n) + n) % n;
-
-    result.block(shift,0,n-shift,1) = array.block(0,0,n-shift,1);
-    result.block(0,0,shift,1)       = array.block(n-shift,0,shift,1);
-
-    return result;
-}*/
-
-/*ArrayXd shift(ArrayXd array, int shift, int n) 
-{
-    ArrayXd result(n);
-
-    // Normalize the shift value to be within the array size
-    shift = ((shift % n) + n) % n;
-
-    // Rearrange elements
-    for (int i = 0; i < n; ++i) 
-    {
-        //cout << (i + shift) % n;
-        result((i + shift) % n) = array(i);
-    }
-}*/
-
 
 ArrayXd f_bed(double L, ArrayXd sigma, ArrayXd ds, double t, DomainParams dom)
 {
@@ -231,16 +203,8 @@ ArrayXd f_H(ArrayXd u_bar, ArrayXd H, ArrayXd S, ArrayXd sigma, \
         }*/
 
         // Vectorized version.
-        //shift(H, -1, dom.n);
-        //cout << "\n shift(H,-1,dom.n) =  " << shift(H,-1,dom.n);
-        //cout << "\n shift(H,1,dom.n) =  " << shift(H,1,dom.n);
-
-        //H_now = H + dt * ( sigma * dL_dt * ( shift(H,-1,dom.n) - shift(H,1,dom.n) ) * dx_sym_inv + \
+        H_now = H + dt * ( sigma * dL_dt * ( shift(H,-1,dom.n) - shift(H,1,dom.n) ) * dx_sym_inv + \
                                             - dx_u_inv * ( q - shift(q,1,dom.n) ) + S );
-
-
-        H_now = H + dt * ( sigma * dL_dt * ( shift_2D(H,-1,0) - shift_2D(H,1,0) ) * dx_sym_inv + \
-                                            - dx_u_inv * ( q - shift_2D(q,1,0) ) + S );
         
         // Symmetry at the ice divide (i = 1).
         H_now(0) = H_now(2);
@@ -251,10 +215,6 @@ ArrayXd f_H(ArrayXd u_bar, ArrayXd H, ArrayXd S, ArrayXd sigma, \
         //H_now(dom.n-1) = H(dom.n-1) + dt * ( ds_inv(dom.n-2) * L_inv * \
         //                                ( dL_dt * ( H(dom.n-1) - H(dom.n-2) ) + \
         //                                    - ( q(dom.n-1) - q(dom.n-2) ) ) + S(dom.n-1) );
-
-        //H_now(dom.n-1) = H(dom.n-1) + dt * ( dx_inv(dom.n-2) * \
-                                        ( dL_dt * ( H(dom.n-1) - H(dom.n-2) ) + \
-                                            - ( q(dom.n-1) - q(dom.n-2) ) ) + S(dom.n-1) );
 
         H_now(dom.n-1) = H(dom.n-1) + dt * ( dx_inv(dom.n-2) * \
                                         ( dL_dt * ( H(dom.n-1) - H(dom.n-2) ) + \

@@ -42,14 +42,17 @@ ArrayXd f_q(ArrayXd u_bar, ArrayXd H, ArrayXd bed, double t, double m_stoch, dou
     double H_f = ( cnst.rho_w / cnst.rho ) * abs(min(0.0, bed(dom.n-1)));
 
     // Flux defined on velocity grid. Staggered grid.
-    for (int i=0; i<dom.n-1; i++)
+    /*for (int i=0; i<dom.n-1; i++)
     {
         // Vieli and Payne (2005) discretization.
         q(i) = u_bar(i) * 0.5 * ( H(i+1) + H(i) );
 
         // "One-before-last" approach.
         //q(i) = ub(i) * H(i+1);
-    }   
+    }*/   
+
+    // Vieli and Payne (2005) discretization.
+    q = u_bar * 0.5 * ( shift(H,-1,dom.n) + H );
     
     // GL flux definition (Vieli and Payne, 2005).
     if ( calv.meth == "none" )

@@ -120,6 +120,26 @@ ArrayXXd solver_2D(int n, int n_z, ArrayXd dx, ArrayXd dz, \
     // 5 unkowns in a n*n_z array.
     tripletList.reserve(5 * (n-2) * (n_z-2));  
 
+    // Create values.
+    ArrayXXd gamma_mat(n,n_z), dz_2_mat(n,n_z), alpha(n,n_z), \
+             c_x1(n,n_z), c_x(n,n_z), c_z1(n,n_z), c_z(n,n_z);
+
+    gamma_mat = gamma.replicate(1, n_z);
+    dz_2_mat  = dz_2_inv.replicate(1, n_z);
+
+    // Compute coefficients.   
+    c_x1 = gamma_mat * shift_2D(visc,-1,0);
+    c_x  = shift_2D(gamma_mat,1,0) * visc;
+
+    c_z1 = dz_2_mat * shift_2D(visc,0,-1); //(i,j+1);
+    c_z  = dz_2_mat * visc;
+
+    // From the staggered grid definition, we should not take points at n_z-1 (j+1)
+    // to calculate the velocities at j = n_z-2. 
+    c_z1.col(n_z-2) = 0.0;
+
+    alpha = - ( c_x1 + c_x + c_z1 + c_z );
+
     
     // Loop through grid points
     for (int i=1; i<n-1; i++) 
@@ -130,7 +150,7 @@ ArrayXXd solver_2D(int n, int n_z, ArrayXd dx, ArrayXd dz, \
             int idx = i*n_z + j;
 
             // Compute coefficients. This works!!    
-            double c_x1 = gamma(i) * visc(i+1,j);
+            /*double c_x1 = gamma(i) * visc(i+1,j);
             double c_x  = gamma(i-1) * visc(i,j);
 
             double c_z1 = dz_2_inv(i) * visc(i,j+1);
@@ -150,7 +170,14 @@ ArrayXXd solver_2D(int n, int n_z, ArrayXd dx, ArrayXd dz, \
             tripletList.push_back(T(idx, idx+n_z, c_x1));
             tripletList.push_back(T(idx, idx-n_z, c_x));
             tripletList.push_back(T(idx, idx+1, c_z1));
-            tripletList.push_back(T(idx, idx-1, c_z));
+            tripletList.push_back(T(idx, idx-1, c_z));*/
+
+            // Add non-zero entries to the triplet list
+            tripletList.push_back(T(idx, idx, alpha(i,j)));
+            tripletList.push_back(T(idx, idx+n_z, c_x1(i,j)));
+            tripletList.push_back(T(idx, idx-n_z, c_x(i,j)));
+            tripletList.push_back(T(idx, idx+1, c_z1(i,j)));
+            tripletList.push_back(T(idx, idx-1, c_z(i,j)));
             
 
             // Fill vector b.
@@ -248,14 +275,6 @@ ArrayXXd solver_2D(int n, int n_z, ArrayXd dx, ArrayXd dz, \
     //solver.compute(A_sparse);
     //VectorXd x = solver.solveWithGuess(b, x_0);
     
-    //cout << "\n #iterations:     " << solver.iterations();
-    //cout << "\n Estimated error: " << solver.error();
-    //cout << "\n Solver info:     " << solver.info();
-    
-    /* ... update b ... */
-    // THINK ABOUT THIS!!!!!!!!!!!
-    //x = solver.solve(b); // solve again??? No need to update b in our case.
-        
 
     /* Copy values from x into u (no memory reallocation).
     Unlike u = x.reshaped<RowMajor>(n,n_z), where there is reallocation.
@@ -440,7 +459,7 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_u_inv, Arr
         
         // VELOCITY BOUNDARY CONDITIONS.
         // Eq. 25, Pattyn (2003).
-        for (int i=1; i<dom.n-1; i++)
+        /*for (int i=1; i<dom.n-1; i++)
         {
             // Derivative from current velocity sol.
             // Centred differences and changed sign.
@@ -454,23 +473,6 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_u_inv, Arr
 
             u_sol(i,0) = u_sol(i,1) - dz(i) * alpha;
             u_sol(i,0) = max(1.0, u_sol(i,0));
-            
-            //cout << "\n i          = " << i;
-            //cout << "\n visc(i,1)    = " <<  visc(i,1);
-            //cout << "\n u_sol(i,0) = " << u_sol(i,0);
-
-            /*
-            double alpha_0 = dz(i) * 4.0 * ( 0.5 * beta(i) * u_sol(i,0) / visc(i,0) + \
-                                        0.5 * ( u_sol(i+1,0) - u_sol(i-1,0) ) *  \
-                                            abs( bed(i+1) - bed(i) ) * dx_2_inv );
-            
-            u_sol(i,0) = ( 4.0 * u_sol(i,1) - u_sol(i,2) - alpha_0 ) / 3.0;
-            */
-            
-            // Free surface. Pattyn (2003).
-            //cout << "\n dx_2_inv     = " << dx_2_inv;
-            //cout << "\n abs(du/dx)      = " << abs(u_sol(i+1,n_z-2) - u_sol(i,n_z-2)) * dx_inv;
-            //cout << "\n abs(dh/dx) = " << abs(dhds(i)) * dx_inv;
             
             // Three-point vertical derivative. As Pattyn (2003).
             double alpha_h = dz(i) * 4.0 * ( u_sol(i+1,dom.n_z-2) - u_sol(i,dom.n_z-2) ) *  \
@@ -487,7 +489,24 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_u_inv, Arr
             // Test to avoid velocity differences between u_sol.col(dom.n_z-1) and u_sol.col(dom.n_z-2).
             // It works, but too mild effect.
             //u_sol(i,n_z-2) = 0.25 * ( 4.0 * u_sol(i,n_z-1) - 3.0 * u_sol(i,n_z-3) + 3.0 * alpha_h );
-        }
+        }*/
+
+        
+        // Vector form.
+        ArrayXd alpha = 4.0 * ( u_sol.col(1) - shift(u_sol.col(1),1,dom.n) ) \
+                            * abs( shift(bed,-1,dom.n) - bed ) * dx_2_inv + \
+                             0.5 * beta * u.col(0) / visc.col(0);
+
+        u_sol.col(0) = u_sol.col(1) - dz * alpha;
+
+        // Three-point vertical derivative. As Pattyn (2003).
+        ArrayXd alpha_h = dz * 4.0 * ( shift(u_sol.col(dom.n_z-2),-1,dom.n) - u_sol.col(dom.n_z-2) ) \
+                                    * abs(dhds) * dx_2_inv;
+        
+        // MIT calculator.
+        // du/dz = 0.5 * ( 3.0 * u(dom.n_z-1) - 4.0 * u(dom.n_z-2) + 1.0 * u(dom.n_z-3) ) 
+        u_sol.col(dom.n_z-1) = ( 4.0 * u_sol.col(dom.n_z-2) - u_sol.col(dom.n_z-3) + 2.0 * alpha_h ) / 3.0;
+
 
         // Test to avoid velocity differences between u_sol.col(dom.n_z-1) and u_sol.col(dom.n_z-2).
         //u_sol.col(dom.n_z-2) = u_sol.col(dom.n_z-1);
@@ -495,7 +514,7 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_u_inv, Arr
         
 
         // Hydrostatic equilibrium with the ocean.
-        for (int j=0; j<dom.n_z; j++)
+        /*for (int j=0; j<dom.n_z; j++)
         {
             // Stable.
             //u_x_bc = dx * A_ice * pow( 0.25 * ( cnst.rho * cnst.g * ( H(dom.n-1) - j * dz(dom.n-1) ) * \
@@ -508,11 +527,16 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_u_inv, Arr
             u_x_bc = dx(dom.n-2) * A_ice * pow( 0.25 * ( cnst.rho * cnst.g * H(dom.n-1) * \
                                         (1.0 - cnst.rho / cnst.rho_w) ), vis.n_gln);
             u_sol(dom.n-1,j) = u_sol(dom.n-2,j) + u_x_bc;
-        }
+        }*/
+
+        
+        // Vector form.
+        u_x_bc = dx(dom.n-2) * A_ice * pow( 0.25 * ( cnst.rho * cnst.g * H(dom.n-1) * \
+                                        (1.0 - cnst.rho / cnst.rho_w) ), vis.n_gln);
+        u_sol.row(dom.n-1) = u_sol.row(dom.n-2) + u_x_bc;
 
         
         // Ensure positive velocities.
-        //u_sol = (u_sol < 0.0).select(0.0, u_sol);
         u_sol = (u_sol < 0.1).select(0.1, u_sol);
 
         // Symmetry at the ice divide.
