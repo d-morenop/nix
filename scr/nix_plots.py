@@ -21,23 +21,23 @@ from matplotlib.gridspec import GridSpec
 from PIL import Image
 
 
-path_fig        = '/home/dmoreno/nix/resolution.even.t.eq.HR/n.256_dt_min.0.005/'
-path_now        = '/home/dmoreno/nix/test_vector/n.128_dt_min.0.1/'
+path_fig        = '//home/dmoreno/figures/nix/resolution/'
+path_now        = '/home/dmoreno/nix/test_vector/n.64_dt_min.0.1/'
 path_stoch      = '/home/dmoreno/nix/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
 
 # Select plots to be saved (boolean integer).
-save_series        = 1
-save_series_comp   = 1
+save_series        = 0
+save_series_comp   = 0
 save_shooting      = 0
-save_domain        = 1
+save_domain        = 0
 coloured_domain    = 0
 save_var_frames    = 0
 save_series_frames = 0
 save_theta         = 0
-save_visc          = 1
-save_u             = 1
+save_visc          = 0
+save_u             = 0
 save_u_der         = 0
 time_series_gif    = 0
 save_L             = 0
@@ -45,7 +45,7 @@ save_series_2D     = 0
 heat_map_fourier   = 0
 entropy            = 0
 plot_speed         = 1
-save_fig           = False
+save_fig           = True
 read_stoch_nc      = False
 bed_smooth         = False
 
@@ -1099,7 +1099,7 @@ if save_theta == 1:
 
 	cb_ticks = np.round(np.linspace(theta_min, theta_max, 6),1)
 	
-	for i in range(0, l, 1):
+	for i in range(l-1, l, 1):
 
 		# Update x_labels as domain extension changes in each iteration.
 		x_labels  = np.linspace(0, L[i], n_ticks, dtype=int)
@@ -1369,8 +1369,10 @@ if save_u_der == 1:
 		ax  = fig.add_subplot(111)
 
 		# Flip theta matrix so that the plot is not upside down.
-		im = ax.imshow(np.flip(u_z[i,:,:],axis=0), norm='log', cmap='PuOr', \
-						vmin=u_z_min, vmax=u_z_max, aspect='auto')
+		#im = ax.imshow(np.flip(u_z[i,:,:],axis=0), cmap='PuOr', \
+	#					vmin=u_z_min, vmax=u_z_max, aspect='auto')
+		
+		im = ax.imshow(np.flip(u_z[i,:,:],axis=0), cmap='PuOr', aspect='auto')
 		
 		#im = ax.imshow(np.flip(lmbd[i,:,:],axis=0), cmap='cividis', aspect='auto')
 
@@ -2539,7 +2541,6 @@ if plot_speed == 1:
 	ax.set_title(r'$S$', fontsize=16)
 	plt.tight_layout()
 
-	#plt.savefig(path_fig+'entropy_flux_time_series.png', bbox_inches='tight')
 
 	plt.show()
 	plt.close(fig)
@@ -2549,7 +2550,7 @@ if plot_speed == 1:
 	#n = np.array([2**4, 2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12, 2**13])
 
 
-	fig = plt.figure(dpi=600, figsize=(6,4))
+	fig = plt.figure(dpi=600, figsize=(6,5))
 	plt.rcParams['text.usetex'] = True
 	ax  = fig.add_subplot(111)
 
@@ -2566,6 +2567,13 @@ if plot_speed == 1:
 	#ax.set_yscale('log')
 	
 
+	
+
+	secax = ax.secondary_xaxis(-0.2)  # Secondary axis offset below main x-axis
+	secax.set_xticks([0,1,2,3,4,5,6,7,8,9])  # Match ticks with primary axis
+	secax.set_xticklabels([f'${value}$' for value in dx], fontsize=13)
+	secax.set_xlabel(r' $ \Delta x \ (\mathrm{km}) 	$ ', fontsize=20)
+
 	ax.set_xticks([0,1,2,3,4,5,6,7,8,9])
 	ax.set_xticklabels(['$2^{4}$', '$2^{5}$', '$2^{6}$', '$2^{7}$', \
 					    '$2^{8}$', '$2^{9}$', '$2^{10}$', '$2^{11}$', '$2^{12}$', '$2^{13}$',], fontsize=15)
@@ -2573,11 +2581,6 @@ if plot_speed == 1:
 	ax.set_yticks([10**1, 10**3, 10**5, 10**7])
 	ax.set_yticklabels(['$10^{1}$',' $10^{3}$', '$10^{5}$', '$10^{7}$'], fontsize=13)
 
-
-	secax = ax.secondary_xaxis(-0.4)  # Secondary axis offset below main x-axis
-	secax.set_xticks([0,1,2,3,4,5,6,7,8,9])  # Match ticks with primary axis
-	secax.set_xticklabels([f'${value}$' for value in dx], fontsize=13)
-	secax.set_xlabel(r' $ \Delta x \ (\mathrm{km}) 	$ ', fontsize=20)
 
 	#ax.set_title(r'$ \mathrm{Speed} $', fontsize=16)
 
@@ -2592,12 +2595,14 @@ if plot_speed == 1:
 	ax.set_ylabel(r'$ \mathrm{Speed} \ (\mathrm{kyr/hr})$', fontsize=20)
 
 	ax.set_xlim(-0.1,l_half-1+0.1)
-	ax.set_ylim(10, 1.0e7)
+	ax.set_ylim(7, 1.0e7)
 
+	
+	ax.grid(visible=True, which='major', linestyle=':', linewidth=0.5)
 	ax.set_yscale('log')
 
 
-	plt.savefig(path_fig+'nix_resolution.png', bbox_inches='tight')
+	plt.savefig(path_fig+'nix_speed.png', bbox_inches='tight')
 
 	plt.show()
 	plt.close(fig)

@@ -123,7 +123,7 @@ elif exp == 'parallel':
     #values_0 = np.array([2**4, 2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12, 2**13, 2**14])
 
     #values_0 = np.array([1000, 5000]) # [20, 50, 100, 1000, 5000]
-    values_0 = np.array([2**5])
+    values_0 = np.array([2**11,2**12])
     values_1 = np.array([0.1]) # 0.01
 
     # Data type of each array.

@@ -34,7 +34,7 @@ using namespace std;
 int main()
 {
 
-    omp_set_num_threads(1); // Set the number of threads to 4
+    omp_set_num_threads(4); // Set the number of threads to 4
     #pragma omp parallel
     {
         #pragma omp single
@@ -1125,7 +1125,7 @@ int main()
         error    = 1.0;
         c_picard = 0;
 
-        ArrayXd beta_old(n);
+        //ArrayXd beta_old(n);
         
         while ( error > nixParams.pcrd.tol && c_picard < nixParams.pcrd.n_picard )
         {
@@ -1133,11 +1133,11 @@ int main()
             u_bar_old_1 = u_bar;
             u_old       = u;
 
-            beta_old = beta;
+            //beta_old = beta;
             
             // Implicit solver.
             // If SSA solver ub = u_bar.
-            sol = vel_solver(H, ds, ds_inv, ds_u_inv, dz, visc_bar, bed, L, \
+            /*sol = vel_solver(H, ds, ds_inv, ds_u_inv, dz, visc_bar, bed, L, \
                                 C_bed, t, beta, A, A_theta, visc, u, u_z, \
                                     nixParams.dyn, nixParams.dom, \
                                         nixParams.cnst, nixParams.vis);
@@ -1162,10 +1162,10 @@ int main()
 
             // Allocate variables.
             visc     = visc_all.block(0,0,n,n_z);
-            visc_bar = visc_all.col(n_z);
+            visc_bar = visc_all.col(n_z);*/
 
             // Execute functions in parallel using OpenMP
-            /*#pragma omp parallel sections
+            #pragma omp parallel sections
             {
                 #pragma omp section
                 {
@@ -1181,7 +1181,7 @@ int main()
                     u      = sol.block(0,1,n,n_z);
 
                     // Update beta with new velocity.
-                    fric_all = f_u(u, u_bar, beta_old, C_bed, visc, H, dz, t, \
+                    fric_all = f_u(u, u_bar, beta, C_bed, visc, H, dz, t, \
                                         nixParams.dom, nixParams.dyn, \
                                             nixParams.fric, nixParams.cnst);
                     beta = fric_all.col(0);
@@ -1203,7 +1203,7 @@ int main()
                     visc_bar = visc_all.col(n_z);
                 }
 
-            }*/
+            }
 
             /*cout << "\n c_picard =  " << c_picard;
             cout << "\n u_bar =  " << u_bar;
@@ -1304,22 +1304,10 @@ int main()
             M = f_melt(T_oce, nixParams.calv.sub_shelf_melt, nixParams.cnst);
         }
         
-        
-        
-        // Ice flux calculation. Flotation thickness H_f.
-        q = f_q(u_bar, H, bed, t, m_stoch, M, nixParams.dom, \
-                    nixParams.cnst, nixParams.tm, nixParams.calv);
-        
-        // Update grounding line position with new velocity field.
-        L_out = f_L(H, q, S, bed, dt, L, ds, nixParams.dom, nixParams.cnst);
-        L     = L_out(0);
-        dL_dt = L_out(1);
-
-        
-
-        // Write solution with desired output frequency.
+        // Writing directories.
         if ( c == 0 || t > a(c) )
         {
+            // Write solution with desired output frequency.
             // Running time (measures wall time).
             auto end     = chrono::high_resolution_clock::now();
             auto elapsed = chrono::duration_cast<chrono::nanoseconds>(end - begin);
@@ -1359,67 +1347,82 @@ int main()
 
             // Wall time for computational speed.
             begin = std::chrono::high_resolution_clock::now();
-        }  
-        
-
-        // Write solution with high resolution output frequency.
+        }
+    
         if ( out_hr == true && t > a_hr(c_hr) )
         {
+            // Write solution with high resolution output frequency.
             //cout << "\n t_hr = " << t;
             // Write solution in nc.
             f_write_hr(c_hr, u_bar(n-1), H(n-1), L, t, u_x_bc, u2_dif, \
-                       error, dt, c_picard, mu, omega, A, dL_dt, m_stoch, \
-                       smb_stoch, T_air, T_oce_det, T_oce_stoch);
+                    error, dt, c_picard, mu, omega, A, dL_dt, m_stoch, \
+                    smb_stoch, T_air, T_oce_det, T_oce_stoch);
 
             ++c_hr;
-        }  
-        
-
-        
-
-        // Integrate ice thickness forward in time.
-        H = f_H(u_bar, H, S, sigma, dt, ds, ds_inv, ds_sym, ds_u_inv, \
-                  L, D, dL_dt, bed, q, M, t, \
-                    nixParams.dom, nixParams.tm, nixParams.adv);
-        
-        // Update vertical discretization.
-        dz = H / n_z;
-
-        
-
-        // THERMODYNAMICS.
-        // Vertical advection is the key to obtain oscillations.
-        // It provides with a feedback to cool down the ice base and balance frictional heat.
-        if ( nixParams.thrmdyn.therm == false || t < nixParams.tm.t_eq )
-        {
-            theta = ArrayXXd::Constant(n, n_z, theta_0);
-        }
-
-    
-        // Obtain vertical velocities and integrate Fourier heat equation.
-        else if ( nixParams.thrmdyn.therm == true && t >= nixParams.tm.t_eq )
-        {
-            // Vertical velocity from incompressibility of ice flow.
-            w = f_w(u_bar_x, H, dz, b_melt, u_bar, bed, ds, L, nixParams.dom);
-
-            // Integrate heat equation and calculate basal melt.
-            sol_thrm = f_theta(theta, ub, H, tau_b, Q_fric, bed, sigma, dz, \
-                                dt, ds, L, T_air, dL_dt, t, w, strain_2d, \
-                                    nixParams.dom, nixParams.thrmdyn, nixParams.dyn, \
-                                        nixParams.bc, nixParams.cnst, nixParams.calv);
-
-            // Allocate variables.
-            theta  = sol_thrm.block(0,0,n,n_z);
-            b_melt = sol_thrm.block(0,n_z,n,1);
 
         }
+        
 
+        
+        #pragma omp parallel sections
+        {
+            #pragma omp section
+            {
 
-        // Update timestep and current time.
-        dt_out = f_dt(L, t, dt, u_bar.maxCoeff(), ds.minCoeff(), error, \
-                        nixParams.tmstep, nixParams.tm, nixParams.pcrd);
-        t  = dt_out(0);
-        dt = dt_out(1);
+                // Ice flux calculation. Flotation thickness H_f.
+                q = f_q(u_bar, H, bed, t, m_stoch, M, nixParams.dom, \
+                            nixParams.cnst, nixParams.tm, nixParams.calv);
+                
+                // Update grounding line position with new velocity field.
+                L_out = f_L(H, q, S, bed, dt, L, ds, nixParams.dom, nixParams.cnst);
+                L     = L_out(0);
+                dL_dt = L_out(1);
+
+                // Integrate ice thickness forward in time.
+                H = f_H(u_bar, H, S, sigma, dt, ds, ds_inv, ds_sym, ds_u_inv, \
+                        L, D, dL_dt, bed, q, M, t, \
+                            nixParams.dom, nixParams.tm, nixParams.adv);
+                
+                // Update vertical discretization.
+                dz = H / n_z;
+
+                // THERMODYNAMICS.
+                // Vertical advection is the key to obtain oscillations.
+                // It provides with a feedback to cool down the ice base and balance frictional heat.
+                if ( nixParams.thrmdyn.therm == false || t < nixParams.tm.t_eq )
+                {
+                    theta = ArrayXXd::Constant(n, n_z, theta_0);
+                }
+
+            
+                // Obtain vertical velocities and integrate Fourier heat equation.
+                else if ( nixParams.thrmdyn.therm == true && t >= nixParams.tm.t_eq )
+                {
+                    // Vertical velocity from incompressibility of ice flow.
+                    w = f_w(u_bar_x, H, dz, b_melt, u_bar, bed, ds, L, nixParams.dom);
+
+                    // Integrate heat equation and calculate basal melt.
+                    sol_thrm = f_theta(theta, ub, H, tau_b, Q_fric, bed, sigma, dz, \
+                                        dt, ds, L, T_air, dL_dt, t, w, strain_2d, \
+                                            nixParams.dom, nixParams.thrmdyn, nixParams.dyn, \
+                                                nixParams.bc, nixParams.cnst, nixParams.calv);
+
+                    // Allocate variables.
+                    theta  = sol_thrm.block(0,0,n,n_z);
+                    b_melt = sol_thrm.block(0,n_z,n,1);
+
+                }
+            }
+
+            #pragma omp section
+            {
+                // Update timestep and current time.
+                dt_out = f_dt(L, t, dt, u_bar.maxCoeff(), ds.minCoeff(), error, \
+                                nixParams.tmstep, nixParams.tm, nixParams.pcrd);
+                t  = dt_out(0);
+                dt = dt_out(1);
+            }
+        }
         
     }
     
