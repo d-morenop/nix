@@ -21,7 +21,7 @@ from matplotlib.gridspec import GridSpec
 from PIL import Image
 
 
-path_fig        = '//home/dmoreno/figures/nix/resolution/'
+path_fig        = '/home/dmoreno/figures/nix/resolution/'
 path_now        = '/home/dmoreno/nix/test_vector/n.64_dt_min.0.1/'
 path_stoch      = '/home/dmoreno/nix/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'

@@ -102,15 +102,24 @@ def modify_yaml(file_path, path_modified, yaml_file_name, var_names, data_types,
 #######################################################################
 # Define variable names and their corresponding values.
 
-# Define default experiments for reproducibility.
+# Select desired experiment.
 exp = 'parallel'
 
 # OSCILLATIONS STUDY.
 if exp == 'oscillations':
+
+    yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_oscillations.yaml"
+    yaml_file_name = "nix_params_oscillations.yaml"
+
     var_names = ['S_0', 'C_thw']
 
     values_0 = np.array([0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60])
     values_1 = np.array([0.01, 0.02, 0.03, 0.04])
+
+    # Data type of each array.
+    data_types = [float, float]
+
+    values = [values_0, values_1]
 
 
 # RESOLUTION STUDY.
@@ -120,10 +129,8 @@ elif exp == 'parallel':
     yaml_file_name = "nix_params_parallel.yaml"
 
     var_names = ['n', 'dt_min']
-    #values_0 = np.array([2**4, 2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12, 2**13, 2**14])
 
-    #values_0 = np.array([1000, 5000]) # [20, 50, 100, 1000, 5000]
-    values_0 = np.array([2**11,2**12])
+    values_0 = np.array([2**7])
     values_1 = np.array([0.1]) # 0.01
 
     # Data type of each array.
@@ -131,6 +138,10 @@ elif exp == 'parallel':
 
     values = [values_0, values_1]
 
+
+
+
+    
 
 # RESOLUTION STUDY.
 elif exp == 'resolution':
