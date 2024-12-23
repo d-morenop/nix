@@ -34,11 +34,11 @@ using namespace std;
 int main()
 {
 
-    omp_set_num_threads(4); // Set the number of threads to 4
+    omp_set_num_threads(1); // Set the number of threads to 4
     #pragma omp parallel
     {
         #pragma omp single
-        std::cout << "Number of threads: " << omp_get_num_threads() << std::endl;
+        std::cout << "Number of OPM threads: " << omp_get_num_threads() << std::endl;
     }
 
     // Enable OpenMP if supported by the compiler.
@@ -47,10 +47,10 @@ int main()
     // export OMP_NUM_THREADS=8
 
 
-    // Set Eigen to use multiple threads
+    // Set Eigen to use multiple threads.
     int num_threads = 1;
     Eigen::setNbThreads(num_threads);
-    std::cout << "Using " << Eigen::nbThreads() << " threads.\n";
+    std::cout << "Using " << Eigen::nbThreads() << " eigen threads.\n";
 
     // Example sparse matrix size and number of non-zeros
     /*int n1 = 1024; // Matrix dimensions
@@ -1241,6 +1241,7 @@ int main()
             {
                 mu = 1.0; // De Smedt.
                 //mu = 0.7; // Daniel
+                //mu = 0.7;
             }
             else
             {

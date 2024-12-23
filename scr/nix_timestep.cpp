@@ -27,8 +27,8 @@ Array2d f_dt(double L, double t, double dt, double u_bar_max, \
         // Fixed timestep.
         if ( tmstep.dt_meth == "fixed" )
         {
-            //dt = tmstep.dt_min;
-            dt = 1.0;
+            dt = tmstep.dt_min;
+            //dt = 1.0;
         }
         
         // Idea: adaptative timestep from Picard error.
@@ -41,6 +41,10 @@ Array2d f_dt(double L, double t, double dt, double u_bar_max, \
             // Quadratic dependency.
             dt_tilde = ( 1.0 - pow( min(error, picard.tol) / picard.tol, 2) ) * \
                         ( tmstep.dt_max - tmstep.dt_min ) + tmstep.dt_min;
+
+            // Quadratic dependency.
+            //dt_tilde = ( 1.0 - pow( min(error, picard.tol) / picard.tol, 2) ) * \
+                        ( tmstep.dt_max - dt_CFL ) + dt_CFL;
 
             // Apply relaxation.
             dt = tmstep.rel * dt + (1.0 - tmstep.rel) * dt_tilde;
@@ -56,8 +60,8 @@ Array2d f_dt(double L, double t, double dt, double u_bar_max, \
             }*/
             
             // Ensure Courant-Friedrichs-Lewis condition is met (in both directions if necessary).
-            //dt = min(dt, dt_CFL_min);
             dt = min(dt, dt_CFL);
+            //dt = min(tmstep.dt_max, dt_CFL);
         }
     }
 

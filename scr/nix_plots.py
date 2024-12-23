@@ -21,31 +21,31 @@ from matplotlib.gridspec import GridSpec
 from PIL import Image
 
 
-path_fig        = '/home/dmoreno/figures/nix/resolution/'
-path_now        = '/home/dmoreno/nix/test_vector/n.64_dt_min.0.1/'
+path_fig        = '/home/dmoreno/nix/test_threads/n.128_dt_min.0.1_eps.1e-05/'
+path_now        = '/home/dmoreno/nix/test_threads.1/n.64_n_z.15_dt_min.1.0_eps.1e-10/'
 path_stoch      = '/home/dmoreno/nix/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
 
 # Select plots to be saved (boolean integer).
-save_series        = 0
-save_series_comp   = 0
+save_series        = 1
+save_series_comp   = 1
 save_shooting      = 0
-save_domain        = 0
-coloured_domain    = 0
+save_domain        = 1
+coloured_domain    = 1
 save_var_frames    = 0
 save_series_frames = 0
 save_theta         = 0
-save_visc          = 0
-save_u             = 0
-save_u_der         = 0
+save_visc          = 1
+save_u             = 1
+save_u_der         = 1
 time_series_gif    = 0
 save_L             = 0
 save_series_2D     = 0
 heat_map_fourier   = 0
 entropy            = 0
-plot_speed         = 1
-save_fig           = True
+plot_speed         = 0
+save_fig           = False
 read_stoch_nc      = False
 bed_smooth         = False
 
@@ -191,7 +191,7 @@ def f_bed(x, exp, n):
 
 # Account for unevenly-spaced horizontal grid.
 sigma = np.linspace(0, 1.0, s[2])
-sigma_plot = sigma**(0.25) # 0.5 (uneven), 1.0 (even)
+sigma_plot = sigma**(1.0) # 0.5 (uneven), 1.0 (even)
 
 
 
@@ -727,11 +727,11 @@ if save_domain == 1:
 				#color_theta = np.flip(u[i,:,:],axis=0)
 
 				# Plot a rectangle.
-				def rect(ax, x, b, y, w, h, c,**kwargs):
+				def rect(ax, x, b, y, dx, h, c,**kwargs):
 					
 					# Varying only in x.
 					if len(c.shape) is 1:
-						rect = plt_lab.Rectangle((x, y), w, h, color=c, ec=c,**kwargs)
+						rect = plt_lab.Rectangle((x, y), dx, h, color=c, ec=c,**kwargs)
 						ax.add_patch(rect)
 					
 					# Varying in x and y.
@@ -745,28 +745,38 @@ if save_domain == 1:
 						dz = np.linspace(0.0,1.0,N+1)
 						hb = dz * h; yl = y - hb
 
-						for i in range(N-1):
+						"""for i in range(N-1):
 							dz_H = hb[i+1]-hb[i]
-							#yl += hb
-							#rect = plt_lab.Rectangle((x, yl), w, hb, 
-							#					color=c[i,:], ec=c[i,:],**kwargs)
 							
 							rect = plt_lab.Rectangle((x, b-hb[i+1]), w, dz_H, 
 												color=c[i,:], ec=c[i,:],**kwargs)
 							ax.add_patch(rect)
-
+							
 						# Plot the uppermost region as len(dz_H)=N+1 but the loop goes to N-1.
 						rect = plt_lab.Rectangle((x, b-hb[N]), w, dz_H, 
+												color=c[N-1,:], ec=c[N-1,:],**kwargs)
+						ax.add_patch(rect)"""
+
+						for i in range(N-1):
+						
+							dz_H = hb[i+1]-hb[i]
+							
+							rect = plt_lab.Rectangle((x, b-hb[i+1]), dx, dz_H, 
+												color=c[i,:], ec=c[i,:],**kwargs)
+							ax.add_patch(rect)
+
+						# Plot the uppermost region as len(dz_H)=N+1 but the loop goes to N-1.
+						rect = plt_lab.Rectangle((x, b-hb[N]), dx, dz_H, 
 												color=c[N-1,:], ec=c[N-1,:],**kwargs)
 						ax.add_patch(rect)
 
 				# Fill a contour between two lines.
-				def rainbow_fill_between(ax, X, Y1, Y2, colors=None, 
+				def rainbow_fill_between(ax, X, Y1, Y2, dxs, colors=None, 
 										cmap=plt.get_cmap("Spectral").reversed(),**kwargs):
 					
 					plt.plot(X,Y1,lw=0)  # Plot so the axes scale correctly
 
-					dx = X[1]-X[0]
+					#dx = X[1]-X[0]
 					N  = X.size
 
 					# Pad a float or int to same size as x.
@@ -806,7 +816,11 @@ if save_domain == 1:
 					#colors = 1.0 - np.array(colors)
 
 					# Create the patch objects.
-					for (color,x,y1,y2) in zip(colors,X,Y1,Y2):
+					"""for (color,x,y1,y2) in zip(colors,X,Y1,Y2):
+						rect(ax,x,y1,y2,dx,y1-y2,color,**kwargs)"""
+
+					# Create the patch objects.
+					for (color,x,y1,y2,dx) in zip(colors,X,Y1,Y2,dxs):
 						rect(ax,x,y1,y2,dx,y1-y2,color,**kwargs)
 
 
@@ -821,8 +835,9 @@ if save_domain == 1:
 				reversed_cmap = cmap.reversed()
 
 				# Plot fill and curves changing in x and y.
+				dx = [ X[i+1]-X[i] for i in range(s[2]-1) ]
 				colors = np.rot90(g,3)
-				rainbow_fill_between(ax, X, Y1, Y2, colors=colors)
+				rainbow_fill_between(ax, X, Y1, Y2, dx, colors=colors)
 
 				# Add a colorbar based on the colormap
 				#cbar_ax = fig.add_axes([1.025, 0.17, 0.045, 0.779]) 
@@ -1198,7 +1213,14 @@ if save_visc == 1:
 		# Flip theta matrix so that the plot is not upside down.
 		#im = ax.imshow(np.flip(visc[i,:,:],axis=0), cmap='plasma', norm="log", \
 		#				vmin=var_min, vmax=var_max, aspect='auto')
-		im = ax.imshow(np.flip(visc[i,:,:],axis=0), cmap='plasma', aspect='auto')
+		
+		#im = ax.imshow(np.flip(visc[i,:,:],axis=0), cmap='plasma', aspect='auto')
+
+		# We account for potential unevenly-spaced grids.
+		x = sigma_plot * s[2]
+		y = np.linspace(0.0, s[1], s[1])
+		im = ax.pcolormesh(x, y, np.log10(visc[i,:,:]), cmap='plasma', edgecolors='none', linewidth=1)
+		
 	
 		ax.set_ylabel(r'$ \mathbf{n}_{z} $', fontsize=20)
 		ax.set_xlabel(r'$\ \mathbf{x} \ (\mathrm{km})$', fontsize=20)
@@ -1210,7 +1232,7 @@ if save_visc == 1:
 		#cb.set_ticks(cb_ticks)
 		#cb.set_ticklabels(list(cb_ticks), fontsize=14)
 
-		cb.set_label(r'$\eta (x,z) \ (10^{6} \ \mathrm{Pa \cdot s})$', \
+		cb.set_label(r'$ \mathrm{log_{10}} \left ( \eta \right ) \ (\mathrm{Pa \cdot s})$', \
 					 rotation=90, labelpad=6, fontsize=20)
 
 		"""
@@ -1291,11 +1313,18 @@ if save_u == 1:
 		cmap = plt.get_cmap("viridis") #RdYlBu, Spectral, rainbow, jet, turbo
 		reversed_cmap = cmap.reversed()
 
-		#im = ax.imshow(np.flip((w[i,:,:]),axis=0), vmin=w_min, vmax=w_max,\
-		# 				cmap=reversed_cmap, aspect='auto')
 		
-		im = ax.imshow(np.flip((np.log10(abs(u[i,:,:]))),axis=0), \
-		 				cmap=cmap, aspect='auto')
+		#im = ax.imshow(np.flip((np.log10(abs(u[i,:,:]))),axis=0), \
+		# 				cmap=cmap, aspect='auto')
+
+		
+		x = sigma_plot * s[2]
+		y = np.linspace(0.0, s[1], s[1])
+		im = ax.pcolormesh(x, y, np.log10(abs(u[i,:,:])), \
+					 			cmap=cmap, edgecolors='none', linewidth=1)
+
+		# Add a colorbar
+		#fig.colorbar(mesh, ax=ax)
 	
 	
 		ax.set_ylabel(r'$ \mathbf{n}_{z} $', fontsize=20)
@@ -1308,7 +1337,7 @@ if save_u == 1:
 		#cb.set_ticks(cb_ticks_u)
 		#cb.set_ticklabels(list(cb_ticks_u), fontsize=14)
 
-		cb.set_label(r'$ \mathrm{log_{10}} (u) (x,z) \ ( \mathrm{m / yr})$', \
+		cb.set_label(r'$ \mathrm{log_{10}} (u) \ ( \mathrm{m / yr})$', \
 					 rotation=90, labelpad=6, fontsize=20)
 
 		"""
@@ -1372,7 +1401,12 @@ if save_u_der == 1:
 		#im = ax.imshow(np.flip(u_z[i,:,:],axis=0), cmap='PuOr', \
 	#					vmin=u_z_min, vmax=u_z_max, aspect='auto')
 		
-		im = ax.imshow(np.flip(u_z[i,:,:],axis=0), cmap='PuOr', aspect='auto')
+		#im = ax.imshow(np.flip(u_z[i,:,:],axis=0), cmap='PuOr', aspect='auto')
+
+		# We account for potential unevenly-spaced grids.
+		x = sigma_plot * s[2]
+		y = np.linspace(0.0, s[1], s[1])
+		im = ax.pcolormesh(x, y, np.log10(u_z[i,:,:]), cmap='PuOr', edgecolors='none', linewidth=1)
 		
 		#im = ax.imshow(np.flip(lmbd[i,:,:],axis=0), cmap='cividis', aspect='auto')
 
@@ -1389,7 +1423,7 @@ if save_u_der == 1:
 		#cb.set_label(r'$ u_{z} (x,z) \ ( \mathrm{1 / yr})$', \
 		#			 rotation=90, labelpad=6, fontsize=20)
 
-		cb.set_label(r'$ u_{z} (x,z) \ ( \mathrm{1 / yr})$', \
+		cb.set_label(r'$ \mathrm{log_{10}} \left ( u_{z} \right )  \ ( \mathrm{1 / yr})$', \
 					 rotation=90, labelpad=6, fontsize=20)
 		"""
 		ax.set_xticks(x_ticks)
@@ -1437,10 +1471,15 @@ if save_u_der == 1:
 		ax  = fig.add_subplot(111)
 
 		# Flip theta matrix so that the plot is not upside down.
-		im = ax.imshow(np.flip(u_x[i,:,:],axis=0), norm='log', cmap='Spectral', \
-						vmin=u_x_min, vmax=u_x_max, aspect='auto')
+		#im = ax.imshow(np.flip(u_x[i,:,:],axis=0), norm='log', cmap='Spectral', \
+		#				vmin=u_x_min, vmax=u_x_max, aspect='auto')
 		
 		#im = ax.imshow(np.flip(lmbd[i,:,:],axis=0), cmap='cividis', aspect='auto')
+
+		x = sigma_plot * s[2]
+		y = np.linspace(0.0, s[1], s[1])
+		im = ax.pcolormesh(x, y, np.log10(u_x[i,:,:]), cmap='Spectral', edgecolors='none', linewidth=1)
+		
 
 		ax.set_ylabel(r'$ \mathbf{n}_{z} $', fontsize=20)
 		ax.set_xlabel(r'$\ \mathbf{x} \ (\mathrm{km})$', fontsize=20)
@@ -1455,7 +1494,7 @@ if save_u_der == 1:
 		#cb.set_label(r'$ u_{z} (x,z) \ ( \mathrm{1 / yr})$', \
 		#			 rotation=90, labelpad=6, fontsize=20)
 
-		cb.set_label(r'$ u_{x} (x,z) \ ( \mathrm{1 / yr})$', \
+		cb.set_label(r'$ \mathrm{log_{10}} \left ( u_{x} \right ) \ ( \mathrm{1 / yr})$', \
 					rotation=90, labelpad=6, fontsize=20)
 		"""
 		ax.set_xticks(x_ticks)

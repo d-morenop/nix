@@ -204,15 +204,17 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
                 //u_z.col(j) = ( u.col(j) - u.col(j-1) ) * dz_inv(j);
             }*/
 
-            ArrayXXd dz_inv_mat(dom.n,dom.n_z), dx_inv_mat(dom.n,dom.n_z);
-
-            dz_inv_mat = dz_inv.replicate(1, dom.n_z);
-            dx_inv_mat = dx_sym_inv.replicate(1, dom.n_z);
+            ArrayXXd dz_inv_mat = dz_inv.replicate(1, dom.n_z);
+            ArrayXXd dx_inv_mat = dx_sym_inv.replicate(1, dom.n_z);
 
 
             // Centred (evenly-spaced grid in the z axis).
             // There is no uneven grid in the vertical dimension for now.
-            u_z = 0.5 * ( shift_2D(u,0,-1) - shift_2D(u,0,1) ) * dz_inv_mat;
+            //u_z = 0.5 * ( shift_2D(u,0,-1) - shift_2D(u,0,1) ) * dz_inv_mat;
+            //u_z = ( u - shift_2D(u,0,1) ) * dz_inv_mat; 
+            
+            
+            u_z = ( shift_2D(u,0,-1) - u ) * dz_inv_mat; // GOOD!
 
 
             /*for (int i=1; i<dom.n-1; i++)
@@ -233,10 +235,10 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
 
             // Boundaries.
             // Two-point derivative.
-            /*
-            u_x.row(0) = ( u.row(1) - u.row(0) ) * dx_inv(0);
-            u_z.col(0) = ( u.col(1) - u.col(0) ) * dz_inv(0);
             
+            //u_x.row(0) = ( u.row(1) - u.row(0) ) * dx_inv(0);
+            //u_z.col(0) = ( u.col(1) - u.col(0) ) * dz_inv(0);
+            /*
             u_x.row(dom.n-1)   = ( u.row(dom.n-1) - u.row(dom.n-2) ) * dx_inv(dom.n-2);
             u_z.col(dom.n_z-1) = ( u.col(dom.n_z-1) - u.col(dom.n_z-2) ) * dz_inv(dom.n_z-1);
             */
@@ -244,13 +246,22 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
             // Three-point derivative.
             // MIT.
             // du/dz = 0.5 * ( 3.0 * u(dom.n_z-1) - 4.0 * u(dom.n_z-2) + 1.0 * u(dom.n_z-3) ) 
-            u_x.row(0) = 0.5 * ( u.row(0) - 4.0 * u.row(1) + 3.0 * u.row(2) ) * dx_inv(0);
-            u_z.col(0) = 0.5 * ( u.col(0) - 4.0 * u.col(1) + 3.0 * u.col(2) ) * dz_inv(0);
+            //u_x.row(0) = 0.5 * ( u.row(0) - 4.0 * u.row(1) + 3.0 * u.row(2) ) * dx_inv(0);
+            
+            //u_z.col(0) = ( u.col(1) - u.col(0) ) * dz_inv(0);
+            //u_z.col(0) = 0.5 * ( u.col(0) - 4.0 * u.col(1) + 3.0 * u.col(2) ) * dz_inv(0);
+            u_z.col(0) = 0.5 * ( u.col(0) - 4.0 * u.col(1) + 3.0 * u.col(2) ) * dz_inv;
+
+        
+
 
             //u_x.row(dom.n-1)   = 0.5 * ( u.row(dom.n-1) - 4.0 * u.row(dom.n-2) + 3.0 * u.row(dom.n-3) ) * dx_inv(dom.n-2);
             //u_z.col(dom.n_z-1) = 0.5 * ( u.col(dom.n_z-1) - 4.0 * u.col(dom.n_z-2) + 3.0 * u.col(dom.n_z-3) ) * dz_inv(dom.n-1);
             u_x.row(dom.n-1)   = ( u.row(dom.n-1) - u.row(dom.n-2) ) * dx_inv(dom.n-2);
-            u_z.col(dom.n_z-1) = ( u.col(dom.n_z-1) - u.col(dom.n_z-2) ) * dz_inv(dom.n_z-1);
+            
+            
+            u_z.col(dom.n_z-1) = ( u.col(dom.n_z-1) - u.col(dom.n_z-2) ) * dz_inv;            
+            //u_z.col(dom.n_z-1) = 0.5 * ( u.col(dom.n_z-3) - 4.0 * u.col(dom.n_z-2) + 3.0 * u.col(dom.n_z-1) ) * dz_inv;
             
             
             // Try Vieli and Payne assymetric differences.
@@ -263,11 +274,15 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
             u_x.row(dom.n-1)   = ( 4.0 * u.row(dom.n-1) - 3.0 * u.row(dom.n-2) - u.row(dom.n-3) ) / 3.0;
             u_z.col(dom.n_z-1) = ( 4.0 * u.col(dom.n_z-1) - 3.0 * u.col(dom.n_z-2) - u.col(dom.n_z-3) ) / 3.0;
             */
+
+            // Try symmetry of ice divide. Vel derivatives are evaluated on the H-grid.
+            u_x.row(0) = u_x.row(2);
+            //u_z.row(0) = u_z.row(2);
             
 
             // Strain rate and regularization term to avoid division by 0. 
             strain_2d = pow(u_x,2) + 0.25 * pow(u_z,2) + vis.eps;
-            //strain_2d = pow(u_x,2) + 0.25 * pow(u_z,2) + eps;
+            //strain_2d = (strain_2d < 1.0e-7).select(1.0e-7, strain_2d);
 
             // Viscosity option dependending on visc_term.
             visc = 0.5 * B_theta * pow(strain_2d, vis.n_exp);

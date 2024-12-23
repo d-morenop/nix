@@ -197,7 +197,7 @@ ArrayXd f_H(ArrayXd u_bar, ArrayXd H, ArrayXd S, ArrayXd sigma, \
                                             - dx_inv(i) * ( q(i) - q(i-1) ) + S(i) );
 
             // Test uneven velocty grid.
-            H_now(i) = H(i) + dt * ( sigma(i) * dL_dt * ( H(i+1) - H(i-1) ) * dx_sym_inv(i) + \
+            //H_now(i) = H(i) + dt * ( sigma(i) * dL_dt * ( H(i+1) - H(i-1) ) * dx_sym_inv(i) + \
                                             - dx_u_inv(i) * ( q(i) - q(i-1) ) + S(i) );
 
         }*/

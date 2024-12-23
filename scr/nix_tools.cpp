@@ -13,7 +13,7 @@ ArrayXd shift(ArrayXd array, int shift, int n)
     //result.block(0,0,shift,1)       = array.block(n-shift,0,shift,1);
 
 
-    result.head(shift) = array.tail(shift);
+    result.head(shift)     = array.tail(shift);
     result.tail(n - shift) = array.head(n - shift);
 
     return result;

@@ -128,15 +128,18 @@ elif exp == 'parallel':
     yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_parallel.yaml"
     yaml_file_name = "nix_params_parallel.yaml"
 
-    var_names = ['n', 'dt_min']
+    var_names = ['n', 'n_z', 'dt_min', 'eps']
 
-    values_0 = np.array([2**7])
-    values_1 = np.array([0.1]) # 0.01
+    values_0 = np.array([2**6])
+    values_1 = np.array([15])
+    values_2 = np.array([1.0]) # 0.01
+    values_3 = np.array([1.0e-10]) # 1.0e-4, 1.0e-5, 1.0e-6, 1.0e-7, 1.0e-8, 1.0e-9
+    
 
     # Data type of each array.
-    data_types = [int, float]
+    data_types = [int, int, float, float]
 
-    values = [values_0, values_1]
+    values = [values_0, values_1, values_2, values_3]
 
 
 

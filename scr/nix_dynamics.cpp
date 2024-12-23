@@ -120,25 +120,21 @@ ArrayXXd solver_2D(int n, int n_z, ArrayXd dx, ArrayXd dz, \
     // 5 unkowns in a n*n_z array.
     tripletList.reserve(5 * (n-2) * (n_z-2));  
 
-    // Create values.
-    ArrayXXd gamma_mat(n,n_z), dz_2_mat(n,n_z), alpha(n,n_z), \
-             c_x1(n,n_z), c_x(n,n_z), c_z1(n,n_z), c_z(n,n_z);
+    // Handy definitions.
+    ArrayXXd gamma_mat = gamma.replicate(1, n_z);
+    ArrayXXd dz_2_mat  = dz_2_inv.replicate(1, n_z);
+ 
+    ArrayXXd c_x1 = gamma_mat * shift_2D(visc,-1,0);
+    ArrayXXd c_x  = shift_2D(gamma_mat,1,0) * visc;
 
-    gamma_mat = gamma.replicate(1, n_z);
-    dz_2_mat  = dz_2_inv.replicate(1, n_z);
-
-    // Compute coefficients.   
-    c_x1 = gamma_mat * shift_2D(visc,-1,0);
-    c_x  = shift_2D(gamma_mat,1,0) * visc;
-
-    c_z1 = dz_2_mat * shift_2D(visc,0,-1); //(i,j+1);
-    c_z  = dz_2_mat * visc;
+    ArrayXXd c_z1 = dz_2_mat * shift_2D(visc,0,-1); //(i,j+1);
+    ArrayXXd c_z  = dz_2_mat * visc;
 
     // From the staggered grid definition, we should not take points at n_z-1 (j+1)
     // to calculate the velocities at j = n_z-2. 
     c_z1.col(n_z-2) = 0.0;
 
-    alpha = - ( c_x1 + c_x + c_z1 + c_z );
+    ArrayXXd alpha = - ( c_x1 + c_x + c_z1 + c_z );
 
     
     // Loop through grid points
@@ -428,11 +424,9 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_u_inv, Arr
     
     else if ( dyn.vel_meth == "Blatter-Pattyn" )
     {
-
-        ArrayXd dx(dom.n-1), dx_inv(dom.n-1), dx_2_inv(dom.n-1);
-        dx       = ds * L;
-        dx_inv   = 1.0 / dx;
-        dx_2_inv = pow(dx_inv,2);   
+        ArrayXd dx       = ds * L;
+        ArrayXd dx_inv   = 1.0 / dx;
+        ArrayXd dx_2_inv = pow(dx_inv,2);   
 
 
         /*for (int i=0; i<dom.n-1; i++)
@@ -493,12 +487,14 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_u_inv, Arr
 
         
         // Vector form.
+        // Basal boundary condition (friction).
         ArrayXd alpha = 4.0 * ( u_sol.col(1) - shift(u_sol.col(1),1,dom.n) ) \
                             * abs( shift(bed,-1,dom.n) - bed ) * dx_2_inv + \
                              0.5 * beta * u.col(0) / visc.col(0);
 
         u_sol.col(0) = u_sol.col(1) - dz * alpha;
 
+        // Upper boundary condition (free surface).
         // Three-point vertical derivative. As Pattyn (2003).
         ArrayXd alpha_h = dz * 4.0 * ( shift(u_sol.col(dom.n_z-2),-1,dom.n) - u_sol.col(dom.n_z-2) ) \
                                     * abs(dhds) * dx_2_inv;
@@ -529,7 +525,7 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_u_inv, Arr
             u_sol(dom.n-1,j) = u_sol(dom.n-2,j) + u_x_bc;
         }*/
 
-        
+        // Hydrostatic equilibrium with the ocean.
         // Vector form.
         u_x_bc = dx(dom.n-2) * A_ice * pow( 0.25 * ( cnst.rho * cnst.g * H(dom.n-1) * \
                                         (1.0 - cnst.rho / cnst.rho_w) ), vis.n_gln);
