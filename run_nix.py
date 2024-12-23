@@ -122,8 +122,8 @@ elif exp == 'resolution':
     var_names = ['n', 'dt_min']
     #values_0 = np.array([2**4, 2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12, 2**13, 2**14])
 
-    values_0 = np.array([1200, 2400]) # [25, 50, 100, 150, 300, 600]
-    values_1 = np.array([0.01]) # 0.01
+    values_0 = np.array([2**7]) # [25, 50, 100, 150, 300, 600]
+    values_1 = np.array([1.0]) # 0.01
 
     # Data type of each array.
     data_types = [int, float]

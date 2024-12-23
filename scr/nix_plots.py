@@ -22,7 +22,7 @@ from PIL import Image
 
 
 path_fig        = '/home/dmoreno/nix/resolution.even.t.eq.HR/n.256_dt_min.0.005/'
-path_now        = '/home/dmoreno/nix/resolution_new/SSA_n.0016_dt_min.0.01/'
+path_now        = '/home/dmoreno/nix/resolution.uneven.SSA/n.128_dt_min.0.1/'
 path_stoch      = '/home/dmoreno/nix/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
@@ -48,10 +48,10 @@ file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 # /home/dmoreno/nix/mismip.therm/test.issue_long_T_oce_forcing/n.250_n_z.25_T_air.223.15_gamma_T.0.001/
 
 # Select plots to be saved (boolean integer).
-save_series        = 0
-save_series_comp   = 0
+save_series        = 1
+save_series_comp   = 1
 save_shooting      = 0
-save_domain        = 0
+save_domain        = 1
 coloured_domain    = 0
 save_var_frames    = 0
 save_series_frames = 0
@@ -64,7 +64,7 @@ save_L             = 0
 save_series_2D     = 0
 heat_map_fourier   = 0
 entropy            = 0
-plot_speed         = 1
+plot_speed         = 0
 save_fig           = False
 read_stoch_nc      = False
 bed_smooth         = False
@@ -658,7 +658,7 @@ if save_domain == 1:
 	delta_T_oce = False
 	
 	if frames == True:
-		for i in range(4, 5, 1): # range(10, l, 1), (l-1, l, 20)
+		for i in range(l-1, l, 1): # range(10, l, 1), (l-1, l, 20)
 
 			print('Frame = ', i)
 			
