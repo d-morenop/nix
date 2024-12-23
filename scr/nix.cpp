@@ -228,6 +228,10 @@ int main()
     
     // Prepare variables for forcing.
     // BETTER TO USE AN EVEN NUMBER FOR n_s!!
+    if ( exp == "constant_A" )
+    {
+        n_s = 1;
+    }
     if ( exp == "mismip_1" || exp == "mismip_1_therm" )
     {
         n_s = 17;
@@ -451,6 +455,20 @@ int main()
 
     /////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////
+
+    // MISMIP EXPERIMENTS 1-2 FORCING.
+    if ( exp == "constant_A" )
+    {
+        // Constant forcing.
+        A_s = ArrayXd::Constant(n_s, 4.6416e-24); // 1.0e-26
+        t_s = ArrayXd::Constant(n_s, tf); // 1.0e-26
+
+        A_s = A_s * nixParams.cnst.sec_year; 
+
+        // Initialization.
+        A       = A_s(0);
+        A_theta = ArrayXXd::Constant(n, n_z, A);
+    }
 
     // MISMIP EXPERIMENTS 1-2 FORCING.
     if ( exp == "mismip_1" )
@@ -818,6 +836,15 @@ int main()
             }
         }
         
+
+        // MISMIP EXPERIMENTS 1, 3 and 3.
+        if ( exp == "constant_A" )
+        {
+            // Ice hardness.
+            A = A_s(0);
+            B = pow(A, (-1 / nixParams.vis.n_gln) );
+
+        }
 
         // MISMIP EXPERIMENTS 1, 3 and 3.
         if ( exp == "mismip_1" || exp == "mismip_3" )
@@ -1233,8 +1260,8 @@ int main()
             // De Smedt et al. (2010). Eq. 10.
             if (omega <= omega_1 || c_u_bar_1.norm() == 0.0)
             {
-                mu = 2.5; // De Smedt.
-                //mu = 1.0; // To avoid negative velocities?
+                //mu = 2.5; // De Smedt.
+                mu = 1.0; // To avoid negative velocities?
                 //mu = 0.7; // Daniel
             }
             else if (omega > omega_1 & omega < omega_2)

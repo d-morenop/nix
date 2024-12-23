@@ -715,7 +715,7 @@ if save_domain == 1:
 				# Constant temperature experiments.
 				#theta[:] = -30.0
 
-				theta_max = 80.0 #80.0
+				theta_max = 50.0 #80.0
 				theta_min = 0.0
 
 				
