@@ -7,7 +7,7 @@ path:
 
 time:
   t0: 0.0                 # Starting time [yr].
-  tf: 3.0e4              # End time [yr]. 3.0e4, 54.0, 32.0e4, MISMIP-therm: 3.0e4, 90.0e4, Ending time [yr]. EWR: 5.0e3
+  tf: 10.0e4              # End time [yr]. 3.0e4, 54.0, 32.0e4, MISMIP-therm: 3.0e4, 90.0e4, Ending time [yr]. EWR: 5.0e3
   t_eq: 1.0e3             # Equilibration time [yr]. 1.5e3
   output:
     t_n: 100              # Number of output frames
@@ -38,7 +38,7 @@ domain:
     
 
 dynamics:
-  vel_meth: Blatter-Pattyn           # Velocity solver: const, SSA, DIVA, Blatter-Pattyn.
+  vel_meth: SSA           # Velocity solver: const, SSA, DIVA, Blatter-Pattyn.
 
 timestep:
   dt_meth: adapt          # Time-stepping method. fixed, adapt.
