@@ -130,10 +130,10 @@ elif exp == 'parallel':
 
     var_names = ['n', 'n_z', 'dt_min', 'eps']
 
-    values_0 = np.array([2**6])
-    values_1 = np.array([15])
-    values_2 = np.array([1.0]) # 0.01
-    values_3 = np.array([1.0e-10]) # 1.0e-4, 1.0e-5, 1.0e-6, 1.0e-7, 1.0e-8, 1.0e-9
+    values_0 = np.array([100]) # 2**6
+    values_1 = np.array([35])
+    values_2 = np.array([0.1]) # 0.05
+    values_3 = np.array([1.0e-7]) # 1.0e-4, 1.0e-5, 1.0e-6, 1.0e-7, 1.0e-8, 1.0e-9
     
 
     # Data type of each array.
@@ -390,9 +390,6 @@ for i in range(len(name)):
 
     elif config == 'parallel':
         
-        # Compiling command. -std=c++17
-        #cmd = "g++ -std=c++11 -I /usr/include/eigen3/ -o "+path_output+"nix.o "+path_output_scr+"nix.cpp -lnetcdf"
-
         # Compiling command. -std=c++17. -O2
         cmd = "g++ -std=c++17 -fopenmp -O3 -I /usr/include/eigen3/ -o "+path_modified+"nix.o "+path_output_scr+"nix.cpp -lnetcdf -lyaml-cpp"
 

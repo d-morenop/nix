@@ -228,7 +228,7 @@ int main()
     
     // Prepare variables for forcing.
     // BETTER TO USE AN EVEN NUMBER FOR n_s!!
-    if ( exp == "constant_A" )
+    if ( exp == "constant_A" || exp == "constant_T_air" )
     {
         n_s = 1;
     }
@@ -346,6 +346,7 @@ int main()
     ArrayXXd sol_thrm(n,n_z+1);  
     ArrayXXd u(n,n_z);                   // Full velocity u(x,z) [m/yr].  
     ArrayXXd u_old(n,n_z);
+    ArrayXXd u_old_2(n,n_z);
     ArrayXXd u_z(n,n_z);                 // Full vertical vel derivative [1/yr]
     ArrayXXd u_x(n,n_z);                 // Velocity horizontal derivative [1/yr].
     ArrayXXd strain_2d(n,n_z);           // Strain ratefrom DIVA solver.
@@ -431,8 +432,11 @@ int main()
     u_bar       = ArrayXd::Constant(n, u_0);               // [m / yr]
     u_bar_old_2 = ArrayXd::Constant(n, u_0); 
     u           = ArrayXXd::Constant(n, n_z, u_0);         // [m / yr]
+    u_old_2     = ArrayXXd::Constant(n, n_z, u_0); 
     beta        = ArrayXd::Constant(n, beta_0);             // [Pa yr / m]
     tau_b       = beta * ub;
+
+
 
     // Thermodynamical initial conditions (-25ºC).
     theta  = ArrayXXd::Constant(n, n_z, theta_0);
@@ -468,6 +472,23 @@ int main()
         // Initialization.
         A       = A_s(0);
         A_theta = ArrayXXd::Constant(n, n_z, A);
+    }
+
+    // MISMIP THERMODYNAMICS. AIR TEMPERATURES FORCING
+    else if ( exp == "constant_T_air" )
+    {
+        
+        T_air_s << 273.15;
+        A_s     << 4.6416e-24; 
+
+        A_s = A_s * nixParams.cnst.sec_year; 
+
+        // Initialization.
+        T_air   = T_air_s(0);
+        A       = A_s(0);
+
+        A_theta = ArrayXXd::Constant(n, n_z, A);
+
     }
 
     // MISMIP EXPERIMENTS 1-2 FORCING.
@@ -1158,13 +1179,14 @@ int main()
         {
             // Save previous iteration solution.
             u_bar_old_1 = u_bar;
-            u_old       = u;
-
-            //beta_old = beta;
+            
+            
+            ArrayXXd u_old_1 = u;
+            ArrayXXd visc_old = visc;
             
             // Implicit solver.
             // If SSA solver ub = u_bar.
-            /*sol = vel_solver(H, ds, ds_inv, ds_u_inv, dz, visc_bar, bed, L, \
+            sol = vel_solver(H, ds, ds_inv, ds_u_inv, dz, visc_bar, bed, L, \
                                 C_bed, t, beta, A, A_theta, visc, u, u_z, \
                                     nixParams.dyn, nixParams.dom, \
                                         nixParams.cnst, nixParams.vis);
@@ -1172,6 +1194,55 @@ int main()
             // Allocate variables. sol(n+1,n_z+1)
             u_bar  = sol.block(0,0,n,1);
             u      = sol.block(0,1,n,n_z);
+
+            if ( nixParams.dyn.vel_meth == "SSA" || nixParams.dyn.vel_meth == "DIVA" )
+            {
+                u = u_bar.replicate(1, n_z);
+            }
+
+
+            // Current error (vector class required to compute norm). 
+            // Eq. 12 (De-Smedt et al., 2010).
+            MatrixXd c_u_1 = u - u_old_1;
+            MatrixXd c_u_2 = u_old_1 - u_old_2;
+            MatrixXd u_vec = u;
+            error     = c_u_1.norm() / u_vec.norm();
+            
+            // New relaxed Picard iteration. Pattyn (2003). 
+            // Necessary to deal with the nonlinear velocity dependence on both viscosity and beta.
+            // Just update beta and visc, not tau_b!
+            // We have previously intialize u_bar_old_2 for t = 0.
+            // Difference between iter (i-1) and (i-2).
+            
+            
+            // Angle defined between two consecutive vel solutions.
+            MatrixXd u_dot = c_u_1.array() * c_u_2.array();
+            omega = acos( u_dot.norm() / \
+                            ( c_u_1.norm() * c_u_2.norm() ) );
+            
+
+            // De Smedt et al. (2010). Eq. 10.
+            if (omega <= omega_1 || c_u_1.norm() == 0.0)
+            {
+                mu = 2.5; // De Smedt.
+                //mu = 1.0; // To avoid negative velocities?
+                //mu = 0.7; // Daniel
+            }
+            else if (omega > omega_1 & omega < omega_2)
+            {
+                mu = 1.0; // De Smedt.
+                //mu = 0.7; // Daniel
+                //mu = 0.7;
+            }
+            else
+            {
+                mu = 0.7; // De Smedt.
+                //mu = 0.5; // Daniel
+            }
+            
+            // New velocity guess based on updated mu.
+            u      = u_old_1 + mu * c_u_1.array();
+            u_bar  = u_bar_old_1 + mu * ( u_bar - u_bar_old_1 ); 
 
             
             // Update beta with new velocity.
@@ -1189,10 +1260,14 @@ int main()
 
             // Allocate variables.
             visc     = visc_all.block(0,0,n,n_z);
-            visc_bar = visc_all.col(n_z);*/
+            visc_bar = visc_all.col(n_z);
+
+            // Test relaxing viscosity.
+            //double rel = 0.0;
+            //visc = ( 1.0 - rel ) * visc + rel * visc_old;
 
             // Execute functions in parallel using OpenMP
-            #pragma omp parallel sections
+            /*#pragma omp parallel sections
             {
                 #pragma omp section
                 {
@@ -1230,7 +1305,7 @@ int main()
                     visc_bar = visc_all.col(n_z);
                 }
 
-            }
+            }*/
 
             /*cout << "\n c_picard =  " << c_picard;
             cout << "\n u_bar =  " << u_bar;
@@ -1241,7 +1316,7 @@ int main()
             
             // Current error (vector class required to compute norm). 
             // Eq. 12 (De-Smedt et al., 2010).
-            c_u_bar_1 = u_bar - u_bar_old_1;
+            /*c_u_bar_1 = u_bar - u_bar_old_1;
             u_bar_vec = u_bar;
             error     = c_u_bar_1.norm() / u_bar_vec.norm();
             
@@ -1278,11 +1353,16 @@ int main()
 
             
             // New velocity guess based on updated mu.
-            u_bar = u_bar_old_1 + mu * c_u_bar_1.array();
-            u     = u_old + mu * ( u - u_old ); 
+            u_bar = u_bar_old_1 + mu * c_u_bar_1.array();*/
+
+
+            //u     = u_old + mu * ( u - u_old ); 
+
+            
             
             // Update multistep variables.
             u_bar_old_2 = u_bar_old_1;
+            u_old_2     = u_old_1;
 
             // Update number of iterations.
             ++c_picard;
@@ -1389,10 +1469,75 @@ int main()
             ++c_hr;
 
         }
+
+
+
+        // Ice flux calculation. Flotation thickness H_f.
+        q = f_q(u_bar, H, bed, t, m_stoch, M, nixParams.dom, \
+                    nixParams.cnst, nixParams.tm, nixParams.calv);
+        
+        // Update grounding line position with new velocity field.
+        L_out = f_L(H, q, S, bed, dt, L, ds, nixParams.dom, nixParams.cnst);
+        L     = L_out(0);
+        dL_dt = L_out(1);
+
+        // Integrate ice thickness forward in time.
+        H = f_H(u_bar, H, S, sigma, dt, ds, ds_inv, ds_sym, ds_u_inv, \
+                L, D, dL_dt, bed, q, M, t, \
+                    nixParams.dom, nixParams.tm, nixParams.adv);
+        
+        // Update vertical discretization.
+        dz = H / n_z;
+
+        // THERMODYNAMICS.
+        // Vertical advection is the key to obtain oscillations.
+        // It provides with a feedback to cool down the ice base and balance frictional heat.
+        if ( nixParams.thrmdyn.therm == false || t < nixParams.tm.t_eq )
+        {
+            theta = ArrayXXd::Constant(n, n_z, theta_0);
+        }
+
+    
+        // Obtain vertical velocities and integrate Fourier heat equation.
+        else if ( nixParams.thrmdyn.therm == true && t >= nixParams.tm.t_eq )
+        {
+            // Vertical velocity from incompressibility of ice flow.
+            w = f_w(u_bar_x, H, dz, b_melt, u_bar, bed, u, u_x, ds, L, \
+                        nixParams.dom, nixParams.dyn);
+
+            ArrayXXd theta_old = theta;
+            
+            // Integrate heat equation and calculate basal melt.
+            sol_thrm = f_theta(theta, u_bar, H, tau_b, Q_fric, bed, sigma, dz, \
+                                dt, ds, L, T_air, dL_dt, t, w, strain_2d, u, \
+                                    nixParams.dom, nixParams.thrmdyn, nixParams.dyn, \
+                                        nixParams.bc, nixParams.cnst, nixParams.calv);
+
+            // Allocate variables.
+            theta  = sol_thrm.block(0,0,n,n_z);
+            b_melt = sol_thrm.block(0,n_z,n,1);
+
+            if ( t < 3.0 * nixParams.tm.t_eq )
+            {
+                double rel = 0.8;
+                theta = ( 1.0 - rel ) * theta + rel * theta_old;
+            }
+
+        }
+    
+
+
+        // Update timestep and current time.
+        dt_out = f_dt(L, t, dt, u_bar.maxCoeff(), \
+                        w.minCoeff(), dz.minCoeff(), ds.minCoeff(), error, \
+                            nixParams.tmstep, nixParams.tm, nixParams.pcrd, nixParams.thrmdyn);
+        t  = dt_out(0);
+        dt = dt_out(1);
+            
         
 
         
-        #pragma omp parallel sections
+        /*#pragma omp parallel sections
         {
             #pragma omp section
             {
@@ -1427,11 +1572,12 @@ int main()
                 else if ( nixParams.thrmdyn.therm == true && t >= nixParams.tm.t_eq )
                 {
                     // Vertical velocity from incompressibility of ice flow.
-                    w = f_w(u_bar_x, H, dz, b_melt, u_bar, bed, ds, L, nixParams.dom);
+                    w = f_w(u_bar_x, H, dz, b_melt, u_bar, bed, u, u_x, ds, L, \
+                                nixParams.dom, nixParams.dyn);
 
                     // Integrate heat equation and calculate basal melt.
                     sol_thrm = f_theta(theta, ub, H, tau_b, Q_fric, bed, sigma, dz, \
-                                        dt, ds, L, T_air, dL_dt, t, w, strain_2d, \
+                                        dt, ds, L, T_air, dL_dt, t, w, strain_2d, u, u_bar, \
                                             nixParams.dom, nixParams.thrmdyn, nixParams.dyn, \
                                                 nixParams.bc, nixParams.cnst, nixParams.calv);
 
@@ -1445,12 +1591,13 @@ int main()
             #pragma omp section
             {
                 // Update timestep and current time.
-                dt_out = f_dt(L, t, dt, u_bar.maxCoeff(), ds.minCoeff(), error, \
-                                nixParams.tmstep, nixParams.tm, nixParams.pcrd);
+                dt_out = f_dt(L, t, dt, u_bar.maxCoeff(), \
+                                w.minCoeff(), dz.minCoeff(), ds.minCoeff(), error, \
+                                    nixParams.tmstep, nixParams.tm, nixParams.pcrd, nixParams.thrmdyn);
                 t  = dt_out(0);
                 dt = dt_out(1);
             }
-        }
+        }*/
         
     }
     

@@ -22,7 +22,7 @@ from PIL import Image
 
 
 path_fig        = '/home/dmoreno/nix/test_threads/n.128_dt_min.0.1_eps.1e-05/'
-path_now        = '/home/dmoreno/nix/test_threads.1/n.64_n_z.15_dt_min.1.0_eps.1e-10/'
+path_now        = '/home/dmoreno/nix/test_therm/n.100_n_z.35_dt_min.1.0_eps.1e-07/'
 path_stoch      = '/home/dmoreno/nix/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
@@ -33,11 +33,12 @@ save_series_comp   = 1
 save_shooting      = 0
 save_domain        = 1
 coloured_domain    = 1
-save_var_frames    = 0
+save_var_frames    = 1
 save_series_frames = 0
-save_theta         = 0
+save_theta         = 1
 save_visc          = 1
 save_u             = 1
+save_w             = 1
 save_u_der         = 1
 time_series_gif    = 0
 save_L             = 0
@@ -340,8 +341,8 @@ if save_series == 1:
 	
 	ax3.plot(t_plot, T_air, linestyle='-', color='purple', marker='None', \
 			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
-	ax5.plot(t_plot, T_oce, linestyle='-', color='darkgreen', marker='None', \
-				 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+	#ax5.plot(t_plot, T_oce, linestyle='-', color='darkgreen', marker='None', \
+	#			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 
 	#ax3.plot(t_plot, b[:,s[2]-1], linestyle='-', color='purple', marker='None', \
 #			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
@@ -715,7 +716,8 @@ if save_domain == 1:
 				# Constant temperature experiments.
 				#theta[:] = -30.0
 
-				theta_max = 50.0 #80.0
+				#theta_max = 50.0 #80.0
+				theta_max = abs(np.nanmin(theta))
 				theta_min = 0.0
 
 				
@@ -1114,7 +1116,7 @@ if save_theta == 1:
 
 	cb_ticks = np.round(np.linspace(theta_min, theta_max, 6),1)
 	
-	for i in range(l-1, l, 1):
+	for i in range(l-2, l, 1):
 
 		# Update x_labels as domain extension changes in each iteration.
 		x_labels  = np.linspace(0, L[i], n_ticks, dtype=int)
@@ -1166,7 +1168,7 @@ if save_theta == 1:
 			else:
 				frame = str(i)
 			
-			plt.savefig(path_fig+'flow_line_theta_'+frame+'.png', bbox_inches='tight')
+			plt.savefig(path_fig+'fnix_theta_'+frame+'.png', bbox_inches='tight')
 		
 		plt.show()
 		plt.close(fig)
@@ -1201,7 +1203,7 @@ if save_visc == 1:
 
 	cb_ticks = np.linspace(var_min, var_max, 6)
 	
-	for i in range(l-1, l, 1):
+	for i in range(l-2, l, 1):
 
 		# Update x_labels as domain extension changes in each iteration.
 		x_labels  = np.linspace(0, L[i], n_ticks, dtype=int)
@@ -1295,7 +1297,7 @@ if save_u == 1:
 
 	ind_plot = np.array([0, int(0.5*s[0]), s[0]-1])
 	
-	for i in range(l-1, l, 1): # (l-1, l, 1), ind_plot
+	for i in range(l-2, l, 1): # (l-1, l, 1), ind_plot
 
 		# Update x_labels as domain extension changes in each iteration.
 		x_labels  = np.linspace(0, L[i], n_ticks, dtype=int)
@@ -1390,7 +1392,7 @@ if save_u_der == 1:
 
 	ind_plot = np.array([0, int(0.5*s[0]), s[0]-1])
 	
-	for i in range(l-1, l, 1): # (l-1, l, 1), ind_plot
+	for i in range(l-2, l, 1): # (l-1, l, 1), ind_plot
 
 		# FIGURE FOR U_Z.
 		fig = plt.figure(dpi=600, figsize=(6,4))
@@ -1407,8 +1409,8 @@ if save_u_der == 1:
 		x = sigma_plot * s[2]
 		y = np.linspace(0.0, s[1], s[1])
 		im = ax.pcolormesh(x, y, np.log10(u_z[i,:,:]), cmap='PuOr', edgecolors='none', linewidth=1)
+		#im = ax.pcolormesh(x, y, u_z[i,:,:], cmap='PuOr', edgecolors='none', linewidth=1)
 		
-		#im = ax.imshow(np.flip(lmbd[i,:,:],axis=0), cmap='cividis', aspect='auto')
 
 		ax.set_ylabel(r'$ \mathbf{n}_{z} $', fontsize=20)
 		ax.set_xlabel(r'$\ \mathbf{x} \ (\mathrm{km})$', fontsize=20)
@@ -1463,7 +1465,7 @@ if save_u_der == 1:
 	u_x = np.where(u_x < u_x_min, u_x_min, u_x)
 
 
-	for i in range(l-1, l, 1): # (l-1, l, 1), ind_plot
+	for i in range(l-2, l, 1): # (l-1, l, 1), ind_plot
 
 		# FIGURE FOR U_Z.
 		fig = plt.figure(dpi=600, figsize=(6,4))
@@ -1525,6 +1527,109 @@ if save_u_der == 1:
 
 
 
+
+if save_w == 1:
+
+	# Number of x ticks.
+	n_ticks = 5
+	x_ticks = np.linspace(0, n, n_ticks)
+	n_z     = np.shape(w)[1]
+	z_ticks = int(0.2 * n_z + 1)
+
+	# n_z-0.5 to avoid half of grid cell in black when plotting.
+	y_ticks  = np.linspace(0, n_z-0.5, z_ticks, dtype=int)
+	y_labels = np.linspace(0, n_z, z_ticks, dtype=int)
+
+	# Var limits.
+	#var_min = np.round(1e-6 * np.nanmin(visc), 0)
+	#var_max = np.round(1e-6 * np.nanmax(visc), 0)
+	#u_min = np.nanmin(u)
+	#u_max = np.nanmax(u)
+
+	#u_x_min = np.nanmin(u_x[s[0]-1])
+	#u_x_max = np.nanmax(u_x[s[0]-1])
+	"""u_min = 1.0
+	u_max = 1.0e3"""
+
+	w_min = -5.0
+	w_max = 0.0
+
+	#cb_ticks_u   = np.linspace(u_min, u_max, 6)
+	#cb_ticks_u_z = np.round(np.linspace(u_z_min, u_z_max, 6), 4)
+
+	ind_plot = np.array([0, int(0.5*s[0]), s[0]-1])
+	
+	for i in range(l-2, l, 1): # (l-1, l, 1), ind_plot
+
+		# Update x_labels as domain extension changes in each iteration.
+		x_labels  = np.linspace(0, L[i], n_ticks, dtype=int)
+		
+
+		# FIGURE FOR U_X.
+		fig = plt.figure(dpi=600, figsize=(6,4))
+		plt.rcParams['text.usetex'] = True
+		ax  = fig.add_subplot(111)
+
+		# Flip theta matrix so that the plot is not upside down.
+		#im = ax.imshow(np.flip(np.abs(w[i,:,:]),axis=0), vmin=w_min, vmax=w_max,\
+		# 				 norm='log', cmap='viridis', aspect='auto')
+  
+		cmap = plt.get_cmap("cividis") #RdYlBu, Spectral, rainbow, jet, turbo
+		reversed_cmap = cmap.reversed()
+
+		
+		#im = ax.imshow(np.flip((cabs(u[i,:,:]))),axis=0), \
+		# 				cmap=cmap, aspect='auto')
+
+		
+		x = sigma_plot * s[2]
+		y = np.linspace(0.0, s[1], s[1])
+		im = ax.pcolormesh(x, y, np.log10(abs(w[i,:,:])), \
+					 			cmap=cmap, edgecolors='none', linewidth=1)
+
+		# Add a colorbar
+		#fig.colorbar(mesh, ax=ax)
+	
+	
+		ax.set_ylabel(r'$ \mathbf{n}_{z} $', fontsize=20)
+		ax.set_xlabel(r'$\ \mathbf{x} \ (\mathrm{km})$', fontsize=20)
+
+		divider = make_axes_locatable(ax)
+		cax     = divider.append_axes("right", size="5%", pad=0.1)
+		cb      = fig.colorbar(im, cax=cax, extend='neither')
+
+		#cb.set_ticks(cb_ticks_u)
+		#cb.set_ticklabels(list(cb_ticks_u), fontsize=14)
+
+		cb.set_label(r'$ \mathrm{log_{10}} (w) \ ( \mathrm{m / yr})$', \
+					 rotation=90, labelpad=6, fontsize=20)
+
+		"""
+		ax.set_xticks(x_ticks)
+		ax.set_xticklabels(list(x_labels), fontsize=15)
+		
+		ax.set_yticks(y_ticks)
+		ax.set_yticklabels(list(y_labels[::-1]), fontsize=15)
+		"""
+	
+		ax.set_title(r'$i = \ $'+str(i)+r'$, \ t =  \ $'+str(np.round(t[i],2))+r'$ \ yr$', fontsize=16)
+		plt.tight_layout()
+
+		if save_fig == True:
+			##### Frame name ########
+			if i < 10:
+				frame = '000'+str(i)
+			elif i > 9 and i < 100:
+				frame = '00'+str(i)
+			elif i > 99 and i < 1000:
+				frame = '0'+str(i)
+			else:
+				frame = str(i)
+			
+			plt.savefig(path_fig+'flow_line_visc_'+frame+'.png', bbox_inches='tight')
+		
+		plt.show()
+		plt.close(fig)
 
 
 #############################################

@@ -3,12 +3,12 @@
 path:
   nix: /home/dmoreno/scr/nix/                              # Nix path.
   read: /home/dmoreno/nix/data/noise_sigm_ocn.12.0.nc      # File with stochastic bc. 
-  out: /home/dmoreno/nix/test_threads.1/                     # Output path.
+  out: /home/dmoreno/nix/test_therm/                     # Output path.
 
 time:
   t0: 0.0                 # Starting time [yr].
-  tf: 10.0e4              # End time [yr]. 2.0e4, 54.0, 32.0e4, MISMIP-therm: 3.0e4, 90.0e4, Ending time [yr]. EWR: 5.0e3
-  t_eq: 1.0e3             # Equilibration time [yr]. 1.5e3
+  tf: 3.0e4              # End time [yr]. 2.0e4, 54.0, 32.0e4, MISMIP-therm: 3.0e4, 90.0e4, Ending time [yr]. EWR: 5.0e3
+  t_eq: 1.0e3             # Equilibration time [yr]. 1.0e3
   output:
     t_n: 100              # Number of output frames
     out_hr: false         # Allow high resolution output.
@@ -21,7 +21,7 @@ constants:
 
 domain:
   bed_exp: mismip_1       # Domain def, i.e., bedrock geometry applied: exp_1 (MISMIP exp_1) and so on.
-  experiment: constant_A  # Forcing type. As defined in MISMIP: mismip_1, mismip_3_therm...
+  experiment: constant_T_air  # Forcing type. As defined in MISMIP: mismip_1, mismip_3_therm...
   n: 50                  # Number of horizontal points
   n_z: 30                 # Number vertical layers. 10, 15
   grid: even              # Nix grid type.
@@ -41,9 +41,9 @@ dynamics:
   vel_meth: Blatter-Pattyn          # Velocity solver: const, SSA, DIVA, Blatter-Pattyn.
 
 timestep:
-  dt_meth: adapt          # Time-stepping method. fixed, adapt.
+  dt_meth: fixed          # Time-stepping method. fixed, adapt.
   dt_min: 0.05             # Minimum time step [yr]. 0.1, 0.05
-  dt_max: 5.0             # Maximum time step [yr]. 2.0, 5.0
+  dt_max: 2.0             # Maximum time step [yr]. 2.0, 5.0
   t_eq_dt: 2.0e3          # Eq. time until adaptative timestep is applied. 3.0e3
   rel: 0.7                # Relaxation between interations [0,1]. 0.5
 
@@ -66,7 +66,7 @@ boundary_conditions:
     x_varsca: 8.0e4       # Length scale of area where SMB varaibility changing. [m]
     var_mult: 0.25        # Factor by which inland variability is less than max.
   therm:
-    T_air: 243.15         # Prescribed air temperature. 253.15
+    T_air: 263.15         # Prescribed air temperature. 253.15
     w_min: -0.3           # Prescribed surface vertical advection in theta.
     w_max: 0.0            # Prescribed basal vertical advection in theta.
   rate_factor:
@@ -82,7 +82,7 @@ boundary_conditions:
 
 
 thermodynamics:
-  therm: false            # Apply thermodynamic solver at each time step.
+  therm: true            # Apply thermodynamic solver at each time step.
   k: 2.0                  # Thermal conductivity of ice [W / m · ºC].
   G: 0.05                 # Geothermal heat flow [W / m^2] = [J / s · m^2].
   kappa: 1.4e-6           # Thermal diffusivity of ice [m^2/s] --> [m^2/yr].
@@ -108,7 +108,7 @@ friction:
 viscosity:
   n_gln: 3.0             # Glen flow law exponent
   eps: 1.0e-6            # Viscosity regularisation term. SSA/DIVA: 1e-8. Blatter-Pattyn: 1e-6 perfect, eps should decrease for higher res.
-  therm: false           # Temperature-dependent viscosity.
+  therm: true           # Temperature-dependent viscosity.
   t_eq_A_theta: 1.5e3    # Eq. time to start applying Arrhenius dependency.
   A_cnst: 5.0e-26        # Rate factor value in MISMIP_A (constant rate factor) .
   A_act: 4.9e-25         # Threshold rate factor for the two regimes in activation energy [Pa^-3 s^-1] 
@@ -135,8 +135,8 @@ calving:
     T_0: 273.15          # Reference ocean temperature [K].
 
 picard:
-  n_picard: 10           # Max number iter. Good results: 10.
-  tol: 1.0e-4            # Convergence tolerance within Picard iteration. 1.0e-4
+  n_picard: 1           # Max number iter. Good results: 10.
+  tol: 1.0e-2            # Convergence tolerance within Picard iteration. 1.0e-4
   omega_1: 0.125         # Angle predictor. De Smedt et al. (2010) Eq. 10.
   omega_2: 0.95
 
@@ -144,7 +144,7 @@ initialisation:
   H: 10.0                # Ice thickness. [m]
   S: 0.3                 # Surface mass balance. [m/yr]
   u: 1.0                 # Ice velocity. [m/yr]
-  visc_0: 2.0e7          # Viscosity [Pa yr]. 1.0e8
-  theta: 253.15          # Ice temperature [K].
+  visc_0: 1.0e8          # Viscosity [Pa yr]. 1.0e8, 2.0e7
+  theta: 253.15          # Ice temperature [K]. 253.15
   beta: 5.0e3            # Friction coefficient [Pa yr / m].
 

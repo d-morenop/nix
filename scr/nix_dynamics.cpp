@@ -104,13 +104,20 @@ ArrayXXd solver_2D(int n, int n_z, ArrayXd dx, ArrayXd dz, \
 
     // Build initial guess from previous velocity solution u_0.
     // Border should be zero as the solver does not include boundary conditions.
+    
     /*
+    Map<ArrayXXd,RowMajor> x_0(u_0.data(), n,n_z);
     u_0.col(0)     = ArrayXd::Zero(n);
     u_0.col(n_z-1) = ArrayXd::Zero(n);
     u_0.row(0)     = ArrayXd::Zero(n_z);
     u_0.row(n-1)   = ArrayXd::Zero(n_z);
 
     Map<VectorXd> x_0(u_0.data(), n*n_z);*/
+
+    /*u_0 = 0.5 * u_0.reshaped<RowMajor>(n,n_z);
+    Map<VectorXd> x_0(u_0.data(), n*n_z);*/
+
+    //VectorXd x_0 = VectorXd::Constant(n * n_z, 1.0);
     
     // Initialize a triplet list to store non-zero entries.
     typedef Eigen::Triplet<double> T;
@@ -134,6 +141,8 @@ ArrayXXd solver_2D(int n, int n_z, ArrayXd dx, ArrayXd dz, \
     // to calculate the velocities at j = n_z-2. 
     c_z1.col(n_z-2) = 0.0;
 
+    //c_x1.row(n-2) = 0.0;
+
     ArrayXXd alpha = - ( c_x1 + c_x + c_z1 + c_z );
 
     
@@ -144,29 +153,6 @@ ArrayXXd solver_2D(int n, int n_z, ArrayXd dx, ArrayXd dz, \
         {
             // New index.
             int idx = i*n_z + j;
-
-            // Compute coefficients. This works!!    
-            /*double c_x1 = gamma(i) * visc(i+1,j);
-            double c_x  = gamma(i-1) * visc(i,j);
-
-            double c_z1 = dz_2_inv(i) * visc(i,j+1);
-            double c_z  = dz_2_inv(i) * visc(i,j);
-            
-           
-           // From the staggered grid definition, we should not take points at n_z-1 (j+1)
-           // to calculate the velocities at j = n_z-2. 
-           if ( j == n_z-2 )
-           {
-                c_z1 = 0.0;
-           }
-            
-
-            // Add non-zero entries to the triplet list
-            tripletList.push_back(T(idx, idx, - ( c_x1 + c_x + c_z1 + c_z )));
-            tripletList.push_back(T(idx, idx+n_z, c_x1));
-            tripletList.push_back(T(idx, idx-n_z, c_x));
-            tripletList.push_back(T(idx, idx+1, c_z1));
-            tripletList.push_back(T(idx, idx-1, c_z));*/
 
             // Add non-zero entries to the triplet list
             tripletList.push_back(T(idx, idx, alpha(i,j)));
@@ -237,14 +223,17 @@ ArrayXXd solver_2D(int n, int n_z, ArrayXd dx, ArrayXd dz, \
     // Set the triplets in the sparse matrix
     // declares a column-major sparse matrix type of double.
     SparseMatrix<double,RowMajor> A_sparse(n*n_z, n*n_z); 
+    //SparseMatrix<double,ColMajor> A_sparse(n*n_z, n*n_z); 
     
     // Define your sparse matrix A_spare from triplets.
     A_sparse.setFromTriplets(tripletList.begin(), tripletList.end());
 
 
     // Solver.
-    BiCGSTAB<SparseMatrix<double> > solver;
+    BiCGSTAB<SparseMatrix<double,RowMajor> > solver;
+    
     //ConjugateGradient<SparseMatrix<double> > solver;
+    //LeastSquaresConjugateGradient<SparseMatrix<double> > solver;
     //solver.compute(A_sparse);
 
     // Preconditioner. It works as fast as using the previous vel sol as guess x_0.
@@ -262,9 +251,6 @@ ArrayXXd solver_2D(int n, int n_z, ArrayXd dx, ArrayXd dz, \
     solver.setTolerance(tol);
 
     // Solve without guess (assumes x = 0).
-    //Eigen::setNbThreads(12); // Set the number of threads. 4
-    //cout << "Number of Eigen threads: " << Eigen::nbThreads() << " threads.\n";
-
     VectorXd x = solver.solve(b);
 
     // Solve with first guess x_0.
@@ -285,6 +271,7 @@ ArrayXXd solver_2D(int n, int n_z, ArrayXd dx, ArrayXd dz, \
     In row-major order, the elements of a matrix are stored in memory row by row. 
     This means that consecutive elements in the same row are stored next to each other in memory.*/
     Map<Matrix<double,Dynamic,Dynamic,RowMajor>> u(x.data(), n, n_z);
+    //Map<Matrix<double,Dynamic,Dynamic,ColMajor>> u(x.data(), n, n_z);
 
     return u;
 }
@@ -317,6 +304,7 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_u_inv, Arr
     
     // Handy definitions.
     h = bed + H;           // Ice surface elevation.
+
 
     ///////////////////////////////////////
     ///////////////////////////////////////
@@ -384,12 +372,24 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_u_inv, Arr
 
 
         // Grounding line sigma = 1 (x = L). 
-        D = abs( min(0.0, bed(dom.n-1)) );   
+        //D = abs( min(0.0, bed(dom.n-1)) );  
+        
+        // Temperature-dependent rate factor.
+        if ( vis.therm == true )
+        {
+            // Vertically averaged ice rate factor.
+            A_bar = A_theta.rowwise().mean();
+            A_ice = A_bar(dom.n-1);
+        }
+
+        // Hydrostatic boundary condition.
+        u_x_bc = L * A_ice * pow( 0.25 * ( cnst.rho * cnst.g * H(dom.n-1) * \
+                        (1.0 - cnst.rho / cnst.rho_w) ), vis.n_gln);
 
         // Imposed rate factor.
-        if ( vis.therm == false )
+        /*if ( vis.therm == false )
         {
-            u_x_bc = L * A_ice * pow( 0.25 * ( cnst.rho * cnst.g * H(dom.n-1) * \
+            u_x_bc = L * A * pow( 0.25 * ( cnst.rho * cnst.g * H(dom.n-1) * \
                         (1.0 - cnst.rho / cnst.rho_w) ), vis.n_gln);
         }
 
@@ -402,7 +402,7 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_u_inv, Arr
             // Boundary condition.
             u_x_bc = L * A_bar(dom.n-1) * pow( 0.25 * ( cnst.rho * cnst.g * H(dom.n-1) * \
                         (1.0 - cnst.rho / cnst.rho_w) ), vis.n_gln);
-        }
+        }*/
            
         // TRIDIAGONAL SOLVER.
         u_bar = tridiagonal_solver(A, B, C, F, dom.n); 
@@ -490,7 +490,7 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_u_inv, Arr
         // Basal boundary condition (friction).
         ArrayXd alpha = 4.0 * ( u_sol.col(1) - shift(u_sol.col(1),1,dom.n) ) \
                             * abs( shift(bed,-1,dom.n) - bed ) * dx_2_inv + \
-                             0.5 * beta * u.col(0) / visc.col(0);
+                            0.5 * beta * u.col(0) / visc.col(0);
 
         u_sol.col(0) = u_sol.col(1) - dz * alpha;
 
@@ -508,26 +508,24 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_u_inv, Arr
         //u_sol.col(dom.n_z-2) = u_sol.col(dom.n_z-1);
 
         
-
         // Hydrostatic equilibrium with the ocean.
         /*for (int j=0; j<dom.n_z; j++)
         {
-            // Stable.
-            //u_x_bc = dx * A_ice * pow( 0.25 * ( cnst.rho * cnst.g * ( H(dom.n-1) - j * dz(dom.n-1) ) * \
-            //                          (1.0 - cnst.rho / cnst.rho_w) ), vis.n_gln);
-
-            //u_x_bc = dx(dom.n-2) * A_ice * pow( 0.25 * ( cnst.rho * cnst.g * ( H(dom.n-1) - j * dz(dom.n-1) ) * \
+            u_x_bc = dx(dom.n-2) * A_theta(dom.n-1,j) * pow( 0.25 * ( cnst.rho * cnst.g * H(dom.n-1) * \
                                       (1.0 - cnst.rho / cnst.rho_w) ), vis.n_gln);
-            
-            // Same BC regardless of particular vertical layer depth?
-            u_x_bc = dx(dom.n-2) * A_ice * pow( 0.25 * ( cnst.rho * cnst.g * H(dom.n-1) * \
-                                        (1.0 - cnst.rho / cnst.rho_w) ), vis.n_gln);
+                                        
             u_sol(dom.n-1,j) = u_sol(dom.n-2,j) + u_x_bc;
         }*/
 
+
         // Hydrostatic equilibrium with the ocean.
-        // Vector form.
+        // Vector form. Depth averaged is correct since the bounadry condition
+        // does not include vertical derivatives. See MALI ice sheet paper and also
+        // Eq. 6.59 (Greve and Blatter, 2009).
         u_x_bc = dx(dom.n-2) * A_ice * pow( 0.25 * ( cnst.rho * cnst.g * H(dom.n-1) * \
+                                        (1.0 - cnst.rho / cnst.rho_w) ), vis.n_gln);
+
+        //u_x_bc = dx(dom.n-2) * A_theta(dom.n-1,0) * pow( 0.25 * ( cnst.rho * cnst.g * H(dom.n-1) * \
                                         (1.0 - cnst.rho / cnst.rho_w) ), vis.n_gln);
         u_sol.row(dom.n-1) = u_sol.row(dom.n-2) + u_x_bc;
 
@@ -553,25 +551,52 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_u_inv, Arr
 
 // Vertical velocity calculation.
 ArrayXXd f_w(ArrayXd u_bar_x, ArrayXd H, ArrayXd dz, ArrayXd b_melt, ArrayXd u_bar, \
-             ArrayXd bed, ArrayXd ds, double L, DomainParams& dom)
+             ArrayXd bed, ArrayXXd u, ArrayXXd u_x, ArrayXd ds, double L, \
+             DomainParams& dom, DynamicsParams& dyn)
 {
     ArrayXXd w(dom.n, dom.n_z);
     ArrayXd dx_inv = 1.0 / ( ds * L );
 
     // Evaluate bedrock geometry gradient.
-    ArrayXd bed_x(dom.n), w_b(dom.n);
+    /*ArrayXd bed_x(dom.n), w_b(dom.n);
     for (int i=0; i<dom.n-1; i++)
     { 
         // Forward derivative (just to be consistent with surface gradient in vel solver).
         bed_x(i) = dx_inv(i) * ( bed(i+1) - bed(i) );
-    }
+    }*/
 
-    // Boundary: grounding line.
+    ArrayXd bed_x = dx_inv * ( shift(bed,-1,dom.n) - bed );
+
+    // Boundaries
+    bed_x(0)       = ( bed(1) - bed(0) ) * dx_inv(0);
     bed_x(dom.n-1) = ( bed(dom.n-1) - bed(dom.n-2) ) * dx_inv(dom.n-2);
+
+    // Create 2D velocity array for dimensions consistency.
+    if ( dyn.vel_meth == "SSA" || dyn.vel_meth == "DIVA" )
+    {
+        u_x = u_bar_x.replicate(1, dom.n_z);
+    }
+    
 
     // Vertical velocity at the base is basal melt plus sliding term (u_bar if SSA or DIVA; u in BP).
     // Eq. 5 in In-Woo Park et al. (2024): https://tc.copernicus.org/articles/18/1139/2024/tc-18-1139-2024.html
-    w_b = u_bar * bed_x - b_melt;
+    /*ArrayXd w_b = u_bar * bed_x - b_melt;
+
+    // For the SSA and DIVA. H(i) = n_z * dz(i) --> w.col(j) = u_bar_x * H_norm * ( j / dom.n_z )
+    // Ideally, the BP model should consider u_x and not u_bar_x, but it gives numerical issues now.
+    ArrayXd H_norm = H / dom.n_z;
+    for (int j=0; j<dom.n_z; j++)
+    { 
+        // Include basal melting b_melt. Eq. 4, In-Woo Park et al. (2024).
+        w.col(j) = w_b - u_bar_x * H_norm * j;
+    }*/
+
+
+
+    // THIS IS THE NECESSARY CALCULATION FOR THE BLATTER-PATTYN MODEL.
+    // HOWEVER, THERE ARE STILL SOME ISSUES WITH THE DERIVATIVES.
+    ArrayXd w_b = u.col(0) * bed_x - b_melt;
+    //ArrayXd w_b = abs(u.col(0)) * bed_x - b_melt;
 
     // For the SSA and DIVA. H(i) = n_z * dz(i) --> w.col(j) = u_bar_x * H_norm * ( j / dom.n_z )
     // Add contribution from basal melt in [m / yr].
@@ -579,8 +604,12 @@ ArrayXXd f_w(ArrayXd u_bar_x, ArrayXd H, ArrayXd dz, ArrayXd b_melt, ArrayXd u_b
     for (int j=0; j<dom.n_z; j++)
     { 
         // Include basal melting b_melt. Eq. 4, In-Woo Park et al. (2024).
-        w.col(j) = w_b - u_bar_x * H_norm * j;
+        w.col(j) = w_b - u_x.col(j) * H_norm * j;
+        //w.col(j) = w_b - abs(u_x.col(j)) * H_norm * j;
     }
+
+    // Vertical velocity defined in H-grid.
+    //w.row(0) = w.row(2);
 
 
     // For now, test in (n-1) and (n-2) with the same vertical velocity profile??
@@ -588,12 +617,18 @@ ArrayXXd f_w(ArrayXd u_bar_x, ArrayXd H, ArrayXd dz, ArrayXd b_melt, ArrayXd u_b
     //w.row(dom.n-1) = w.row(dom.n-2);
 
     // Ensure negative values to be consisten with vertical adv discretisation.
-    //w = - abs(w);
     w = (w > 0.0).select(0.0, w);
+    //w = (w > -1.0e-1).select(-1.0e-1, w);
+
+
+    // Test for BP.
+    //w = ArrayXXd::Zero(dom.n, dom.n_z);
+
+    /*for (int j=1; j<dom.n_z; j++)
+    {
+        w.col(j) = - 0.1 * j / dom.n_z;
+    }*/
     
-    
-    // Currently assume an evenly-spaced vertical coordinate dz(x).
-    //w.row(i) = w.row(i) * H(i);
 
     return w;
 }

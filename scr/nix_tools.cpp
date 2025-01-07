@@ -23,7 +23,7 @@ ArrayXd shift(ArrayXd array, int shift, int n)
 
 ArrayXXd shift_2D(ArrayXXd x, int shift_x, int shift_z) 
 {
-    int n = x.rows();    // Number of rows
+    int n   = x.rows();    // Number of rows
     int n_z = x.cols(); 
     
     ArrayXXd result(n,n_z);

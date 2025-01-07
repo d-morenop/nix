@@ -3,17 +3,16 @@
 // NIX TIMESTEP MODULE.
 
 Array2d f_dt(double L, double t, double dt, double u_bar_max, \
-            double ds_min,double error, TimestepParams& tmstep, \
-            TimeParams& tm, PicardParams& picard)
+            double w_min, double dz_min, double ds_min, double error, \
+            TimestepParams& tmstep, TimeParams& tm, PicardParams& picard, ThermodynamicsParams& thrm)
 {
     // Local variables.
     Array2d out;
-    double dt_tilde, dt_CFL;
+    double dt_tilde, dt_CFL, dt_CFL_w, dt_CFL_min;
 
     // Factor 0.5 is faster since it yields fewer Picard's iterations.
     dt_CFL   = 0.5 * ds_min * L / u_bar_max;
-    //dt_CFL_w = 0.5 * dz_min / abs(w_max);
-
+    
 
     // Smallest timestep for equilibration.
     if ( t < tmstep.t_eq_dt )
@@ -50,18 +49,24 @@ Array2d f_dt(double L, double t, double dt, double u_bar_max, \
             dt = tmstep.rel * dt + (1.0 - tmstep.rel) * dt_tilde;
 
             // If thermodynamic solver is applied, consider stability in explicit temperature solution.
-            /*if ( thrm.therm == true )
-            {tm
+            if ( thrm.therm == true )
+            {  
+                // Note that w < 0 by definition.
+                dt_CFL_w = 0.5 * dz_min / abs(w_min);
                 dt_CFL_min = min(dt_CFL, dt_CFL_w);
+
+                /*cout << " \n dt_CFL_w = " << dt_CFL_w;
+                cout << " \n dt_CFL = "   << dt_CFL;
+                cout << " \n dz_min   = " << dz_min;
+                cout << " \n dt       = " << dt;*/
             }
             else
             {
                 dt_CFL_min = dt_CFL;
-            }*/
+            }
             
             // Ensure Courant-Friedrichs-Lewis condition is met (in both directions if necessary).
-            dt = min(dt, dt_CFL);
-            //dt = min(tmstep.dt_max, dt_CFL);
+            dt = min(dt, dt_CFL_min);
         }
     }
 

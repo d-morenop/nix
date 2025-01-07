@@ -55,7 +55,7 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
             // Calculate temperature-dependent rate factor if thermodynamics is switched on.
             // Arrhenius law A(T,p) equivalent to A(T').
             // Eq. 4.15 and 6.54 (Greve and Blatter, 2009).
-            for (int i=0; i<dom.n; i++)
+            /*for (int i=0; i<dom.n; i++)
             {
                 for (int j=0; j<dom.n_z; j++)
                 {
@@ -69,11 +69,11 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
                         A_theta(i,j) = vis.A_0_2 * exp(- vis.Q_act_2 / (vis.R * theta(i,j)) );
                     }
                 }
-            }
+            }*/
 
             // Avoid unnecessary loops.
-            //A_theta = (theta < thrm.theta_act).select(A_0(0) * exp(- Q_act(0) / (R * theta) ), A_theta);
-            //A_theta = (theta >= thrm.theta_act).select(A_0(1) * exp(- Q_act(1) / (R * theta) ), A_theta);
+            A_theta = (theta < thrm.theta_act).select(vis.A_0_1 * exp(- vis.Q_act_1 / (vis.R * theta) ), A_theta);
+            A_theta = (theta >= thrm.theta_act).select(vis.A_0_2 * exp(- vis.Q_act_2 / (vis.R * theta) ), A_theta);
 
         }
 
@@ -162,19 +162,8 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
             j_trans = j_mat.transpose();
             tau_mat = tau_b.replicate(1, dom.n_z);
 
-            // Compute u_z using the given formula (element-wise operations)
-            /*cout << "\n Col j_mat = " << j_mat.cols();
-            cout << "\n Row j_mat = " << j_mat.rows();
-
-            cout << "\n j_mat = " << j_trans;
-
-            cout << "\n Col dz_mat = " << dz_mat.cols();
-            cout << "\n Row dz_mat = " << dz_mat.rows();*/
-
             //u_z = dz_mat;
             u_z = tau_mat * ( H_mat - j_trans * dz_mat ) / (visc * H_mat);
-
-
 
 
             // Strain rate and regularization term to avoid division by 0. 
@@ -205,14 +194,13 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
             }*/
 
             ArrayXXd dz_inv_mat = dz_inv.replicate(1, dom.n_z);
-            ArrayXXd dx_inv_mat = dx_sym_inv.replicate(1, dom.n_z);
+            ArrayXXd dx_inv_mat = dx_inv.replicate(1, dom.n_z);
 
 
             // Centred (evenly-spaced grid in the z axis).
             // There is no uneven grid in the vertical dimension for now.
             //u_z = 0.5 * ( shift_2D(u,0,-1) - shift_2D(u,0,1) ) * dz_inv_mat;
             //u_z = ( u - shift_2D(u,0,1) ) * dz_inv_mat; 
-            
             
             u_z = ( shift_2D(u,0,-1) - u ) * dz_inv_mat; // GOOD!
 
@@ -231,7 +219,9 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
 
 
             // No need for factor 0.5 as it is contained in dx_sym_inv spacing.
-            u_x = ( shift_2D(u,-1,0) - shift_2D(u,1,0) ) * dx_inv_mat;
+            //u_x = ( shift_2D(u,-1,0) - shift_2D(u,1,0) ) * dx_inv_mat;
+            u_x = ( shift_2D(u,-1,0) - u ) * dx_inv_mat;
+            //u_x = 0.5 * ( u - shift_2D(u,1,0) ) * dx_inv_mat;
 
             // Boundaries.
             // Two-point derivative.
@@ -252,12 +242,13 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
             //u_z.col(0) = 0.5 * ( u.col(0) - 4.0 * u.col(1) + 3.0 * u.col(2) ) * dz_inv(0);
             u_z.col(0) = 0.5 * ( u.col(0) - 4.0 * u.col(1) + 3.0 * u.col(2) ) * dz_inv;
 
-        
-
-
-            //u_x.row(dom.n-1)   = 0.5 * ( u.row(dom.n-1) - 4.0 * u.row(dom.n-2) + 3.0 * u.row(dom.n-3) ) * dx_inv(dom.n-2);
+    
             //u_z.col(dom.n_z-1) = 0.5 * ( u.col(dom.n_z-1) - 4.0 * u.col(dom.n_z-2) + 3.0 * u.col(dom.n_z-3) ) * dz_inv(dom.n-1);
+            
+            // Test.
+            //u_x.row(dom.n-1)   = 0.3333 * ( 4.0 * u.row(dom.n-1) - 3.0 * u.row(dom.n-2) - u.row(dom.n-3) ) * dx_inv(dom.n-2);
             u_x.row(dom.n-1)   = ( u.row(dom.n-1) - u.row(dom.n-2) ) * dx_inv(dom.n-2);
+            //u_x.row(dom.n-1) = u_x.row(dom.n-2);
             
             
             u_z.col(dom.n_z-1) = ( u.col(dom.n_z-1) - u.col(dom.n_z-2) ) * dz_inv;            
@@ -278,8 +269,21 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
             // Try symmetry of ice divide. Vel derivatives are evaluated on the H-grid.
             u_x.row(0) = u_x.row(2);
             //u_z.row(0) = u_z.row(2);
-            
+            //u_z.col(0) = u_z.col(1);
 
+            //u_z.row(dom.n-1) = u_z.row(dom.n-2);
+            /*for (int j=0; j<dom.n_z-1; j++)
+            {
+                u_z(dom.n-1,j) = ( u(dom.n-1,j+1) - u(dom.n-1,j) ) * dz_inv(dom.n-2);
+            }*/
+
+            //cout << "\n u_z.row(dom.n-2) = " << u_z.row(dom.n-2);
+            //cout << "\n u_z.row(dom.n-1) = " << u_z.row(dom.n-1);
+
+            // Set to zero below threshold to avoid numerical issues in vertical velocity w.
+            // Helps for a thinner ice divide!
+            //u_x = (u_x <= 1.0e-5).select(0.0, u_x); // 1.0e-4
+            
             // Strain rate and regularization term to avoid division by 0. 
             strain_2d = pow(u_x,2) + 0.25 * pow(u_z,2) + vis.eps;
             //strain_2d = (strain_2d < 1.0e-7).select(1.0e-7, strain_2d);
@@ -293,7 +297,16 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
             // Vertically-averaged viscosity.
             visc_bar = visc.rowwise().mean();
 
+
+            
+
         }
+
+
+        u_bar_x = ( shift(u_bar,-1,dom.n) - u_bar ) * dx_inv;
+
+        u_bar_x(0)       = ( u_bar(1) - u_bar(0) ) * dx_inv(0);
+        u_bar_x(dom.n-1) = ( u_bar(dom.n-1) - u_bar(dom.n-2) ) * dx_inv(dom.n-2);   
 
     }
 
