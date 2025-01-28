@@ -201,88 +201,55 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
             // There is no uneven grid in the vertical dimension for now.
             //u_z = 0.5 * ( shift_2D(u,0,-1) - shift_2D(u,0,1) ) * dz_inv_mat;
             //u_z = ( u - shift_2D(u,0,1) ) * dz_inv_mat; 
-            
+
+            // DERIVATIVES ARE TRICKY AND CAN YIELD NUMERICAL INSTABILITIES AT HIGH RESOLUTIONS.
+            // U_X IS ESSENTIAL SINCE VERTICAL VELOCITIES W ARE CALCULATED FROM IT AND
+            // IT EVENTUALLY AFFECT THERMODYNAMICS AND VISC VIA VERTICAL ADVECTION.
             u_z = ( shift_2D(u,0,-1) - u ) * dz_inv_mat; // GOOD!
-
-
-            /*for (int i=1; i<dom.n-1; i++)
-            {
-                // Centred with unevenly-spaced grid.
-                u_x.row(i) = ( u.row(i+1) - u.row(i-1) ) * dx_sym_inv(i);
-                
-                // Forwards.
-                //u_x.row(i) = ( u.row(i+1) - u.row(i) ) * dx_inv(i);
-
-                // Try backwards instead. It works.
-                //u_x.row(i) = ( u.row(i) - u.row(i-1) ) * dx_inv(i-1);
-            }*/
+            //u_z = 0.5 * ( shift_2D(u,0,-1) - shift_2D(u,0,1) ) * dz_inv_mat; // 
 
 
             // No need for factor 0.5 as it is contained in dx_sym_inv spacing.
-            //u_x = ( shift_2D(u,-1,0) - shift_2D(u,1,0) ) * dx_inv_mat;
-            u_x = ( shift_2D(u,-1,0) - u ) * dx_inv_mat;
+            //u_x = 0.5 * ( shift_2D(u,-1,0) - shift_2D(u,1,0) ) * dx_inv_mat;
+            u_x = ( shift_2D(u,-1,0) - u ) * dx_inv_mat;  // Stable and working.
             //u_x = 0.5 * ( u - shift_2D(u,1,0) ) * dx_inv_mat;
 
-            // Boundaries.
-            // Two-point derivative.
-            
-            //u_x.row(0) = ( u.row(1) - u.row(0) ) * dx_inv(0);
-            //u_z.col(0) = ( u.col(1) - u.col(0) ) * dz_inv(0);
-            /*
-            u_x.row(dom.n-1)   = ( u.row(dom.n-1) - u.row(dom.n-2) ) * dx_inv(dom.n-2);
-            u_z.col(dom.n_z-1) = ( u.col(dom.n_z-1) - u.col(dom.n_z-2) ) * dz_inv(dom.n_z-1);
-            */
 
             // Three-point derivative.
             // MIT.
             // du/dz = 0.5 * ( 3.0 * u(dom.n_z-1) - 4.0 * u(dom.n_z-2) + 1.0 * u(dom.n_z-3) ) 
-            //u_x.row(0) = 0.5 * ( u.row(0) - 4.0 * u.row(1) + 3.0 * u.row(2) ) * dx_inv(0);
-            
-            //u_z.col(0) = ( u.col(1) - u.col(0) ) * dz_inv(0);
-            //u_z.col(0) = 0.5 * ( u.col(0) - 4.0 * u.col(1) + 3.0 * u.col(2) ) * dz_inv(0);
-            u_z.col(0) = 0.5 * ( u.col(0) - 4.0 * u.col(1) + 3.0 * u.col(2) ) * dz_inv;
+            u_z.col(0) = 0.5 * ( u.col(0) - 4.0 * u.col(1) + 3.0 * u.col(2) ) * dz_inv; // It works!
+            //u_z.col(0) = ( u.col(1) - u.col(0) ) * dz_inv; // It does not work.
 
-    
-            //u_z.col(dom.n_z-1) = 0.5 * ( u.col(dom.n_z-1) - 4.0 * u.col(dom.n_z-2) + 3.0 * u.col(dom.n_z-3) ) * dz_inv(dom.n-1);
-            
             // Test.
-            //u_x.row(dom.n-1)   = 0.3333 * ( 4.0 * u.row(dom.n-1) - 3.0 * u.row(dom.n-2) - u.row(dom.n-3) ) * dx_inv(dom.n-2);
             u_x.row(dom.n-1)   = ( u.row(dom.n-1) - u.row(dom.n-2) ) * dx_inv(dom.n-2);
-            //u_x.row(dom.n-1) = u_x.row(dom.n-2);
-            
             
             u_z.col(dom.n_z-1) = ( u.col(dom.n_z-1) - u.col(dom.n_z-2) ) * dz_inv;            
             //u_z.col(dom.n_z-1) = 0.5 * ( u.col(dom.n_z-3) - 4.0 * u.col(dom.n_z-2) + 3.0 * u.col(dom.n_z-1) ) * dz_inv;
             
             
-            // Try Vieli and Payne assymetric differences.
-            // Vieli 1 (Eq. B12).
-            // du/dz = ( 4.0 * u(dom.n_z-1) - 3.0 * u(dom.n_z-2) - 1.0 * u(dom.n_z-3) ) / 3.0
-            /*
-            u_x.row(0) = ( 4.0 * u.row(0) - 3.0 * u.row(1) - u.row(2) ) / 3.0;
-            u_z.col(0) = ( 4.0 * u.col(0) - 3.0 * u.col(1) - u.col(2) ) / 3.0;
 
-            u_x.row(dom.n-1)   = ( 4.0 * u.row(dom.n-1) - 3.0 * u.row(dom.n-2) - u.row(dom.n-3) ) / 3.0;
-            u_z.col(dom.n_z-1) = ( 4.0 * u.col(dom.n_z-1) - 3.0 * u.col(dom.n_z-2) - u.col(dom.n_z-3) ) / 3.0;
-            */
+            // Try normal derivative.
+            //u_x.row(0)   = ( u.row(1) - u.row(0) ) * dx_inv(0); // It works!!!
+            u_x.row(0) = u_x.row(2); // It works.
+            u_z.row(0) = u_z.row(2);
 
-            // Try symmetry of ice divide. Vel derivatives are evaluated on the H-grid.
-            u_x.row(0) = u_x.row(2);
-            //u_z.row(0) = u_z.row(2);
-            //u_z.col(0) = u_z.col(1);
 
-            //u_z.row(dom.n-1) = u_z.row(dom.n-2);
-            /*for (int j=0; j<dom.n_z-1; j++)
-            {
-                u_z(dom.n-1,j) = ( u(dom.n-1,j+1) - u(dom.n-1,j) ) * dz_inv(dom.n-2);
-            }*/
+            // Smooth derivative fields forstability.
+            ArrayXXd u_x_smooth = ( shift_2D(u_x,1,0) + u_x + shift_2D(u_x,-1,0) ) / 3.0 ;
+            u_x.block(1,1,dom.n-2,dom.n_z-2) = u_x_smooth.block(1,1,dom.n-2,dom.n_z-2);
 
-            //cout << "\n u_z.row(dom.n-2) = " << u_z.row(dom.n-2);
-            //cout << "\n u_z.row(dom.n-1) = " << u_z.row(dom.n-1);
+            //ArrayXXd u_z_smooth = ( shift_2D(u_z,0,1) + u_z + shift_2D(u_z,0,-1) ) / 3.0; // Working. Smooth along vertical direction.
+            ArrayXXd u_z_smooth = ( shift_2D(u_z,1,0) + u_z + shift_2D(u_z,-1,0) ) / 3.0 ; // Smooth along horizontal direction.
+            u_z.block(1,1,dom.n-2,dom.n_z-2) = u_z_smooth.block(1,1,dom.n-2,dom.n_z-2);
+
 
             // Set to zero below threshold to avoid numerical issues in vertical velocity w.
-            // Helps for a thinner ice divide!
-            //u_x = (u_x <= 1.0e-5).select(0.0, u_x); // 1.0e-4
+            // NECESSARY FOR STABILITY IN VISCOSITY!!!
+            double u_x_min = 1.0e-3;  // 1.0e-3
+            double u_z_min = 1.0e-2;      // 0.01 works well
+            u_x = (u_x <= u_x_min).select(u_x_min, u_x); // 1.0e-4, 1.0e-3
+            u_z = (u_z <= u_z_min).select(u_z_min, u_z); // 1.0e-2
             
             // Strain rate and regularization term to avoid division by 0. 
             strain_2d = pow(u_x,2) + 0.25 * pow(u_z,2) + vis.eps;
@@ -291,14 +258,15 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
             // Viscosity option dependending on visc_term.
             visc = 0.5 * B_theta * pow(strain_2d, vis.n_exp);
 
+            // TRY STAGERRING TO AVOID INSATBILITIES IN VISCOSITY.
+            //visc = 0.25 * ( shift_2D(visc,1,0) + 2.0 * visc + shift_2D(visc,0,1)  );
+            //visc = 0.25 * ( shift_2D(visc,1,1) + shift_2D(visc,1,0) + visc + shift_2D(visc,0,1)  );
+
             // Viscosity in divide????????????
             visc.row(0) = visc.row(2);
 
             // Vertically-averaged viscosity.
             visc_bar = visc.rowwise().mean();
-
-
-            
 
         }
 

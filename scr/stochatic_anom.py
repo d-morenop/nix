@@ -8,10 +8,10 @@ Created on Wed Dec 28 12:01:22 2022
 This scripts creates frontal ablation and SMB time series with varying degrees
 and types of persistence. Based on Christian et al. (2022). Assumed that dt = 1 year.
 
-The idea is to save the data in a external file that will be read by the flowline 
+The idea is to save the data in a external file that will be read by the Nix 
 model as a boundary condition. 
 
-Note: the flowline time step may be shorter than 1 year (adaptative), we can further 
+Note: Nix time step may be different than 1 year (adaptative), we can further 
 interpolate as the file is read or simpy take the same values within a given time step. 
 
 Netcdf documentation for python:
@@ -114,14 +114,14 @@ def stochastic_noise(dt, sigma, tau):
     # Scales total variance.
     P_0 = 1.0
 
-    # Analytical power spectra from a given auto-correlation.
+    # Analytical power spectra from a given auto-correlation r.
     P = np.sqrt( P_0 / ( 1.0 + r**2 - 2.0 * r * np.cos(2.0 * np.pi * dt * f1) ) )
 
     # Half of the frequencies and length.
     P_freq = P[1:int(np.ceil(0.5 * N))]
     l_freq = len(P_freq)
 
-    # Seed random number generator
+    # Seed random number generator.
     seed(1)
 
     # Create array with random phase.
@@ -153,9 +153,9 @@ def stochastic_noise(dt, sigma, tau):
 # Options.
 read_nc   = False
 save_nc   = True
-overwrite = True
+overwrite = False
 
-plot_time_series = False
+plot_time_series = True
 plot_frames      = False
 save_fig         = False
 

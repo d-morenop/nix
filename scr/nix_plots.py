@@ -20,9 +20,10 @@ from scipy.signal import argrelextrema
 from matplotlib.gridspec import GridSpec
 from PIL import Image
 
-
+# /home/dmoreno/nix/test_therm/n.100_n_z.35_dt_min.0.1_eps.1e-07/
+# /home/dmoreno/nix/test_Eigenthread1/n.200_n_z.50_dt_min.0.1_eps.1e-07
 path_fig        = '/home/dmoreno/nix/test_threads/n.128_dt_min.0.1_eps.1e-05/'
-path_now        = '/home/dmoreno/nix/test_therm/n.100_n_z.35_dt_min.1.0_eps.1e-07/'
+path_now        = '/home/dmoreno/nix/test_Eigenthread12/n.200_n_z.50_dt_min.1.0_eps.1e-07/'
 path_stoch      = '/home/dmoreno/nix/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
@@ -35,10 +36,10 @@ save_domain        = 1
 coloured_domain    = 1
 save_var_frames    = 1
 save_series_frames = 0
-save_theta         = 1
+save_theta         = 0
 save_visc          = 1
 save_u             = 1
-save_w             = 1
+save_w             = 0
 save_u_der         = 1
 time_series_gif    = 0
 save_L             = 0
@@ -1221,7 +1222,8 @@ if save_visc == 1:
 		# We account for potential unevenly-spaced grids.
 		x = sigma_plot * s[2]
 		y = np.linspace(0.0, s[1], s[1])
-		im = ax.pcolormesh(x, y, np.log10(visc[i,:,:]), cmap='plasma', edgecolors='none', linewidth=1)
+		im = ax.pcolormesh(x, y, np.log10(visc[i,:,:]), vmin=4.5, vmax=6.0, \
+					 cmap='plasma', edgecolors='none', linewidth=1)
 		
 	
 		ax.set_ylabel(r'$ \mathbf{n}_{z} $', fontsize=20)

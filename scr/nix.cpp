@@ -48,7 +48,7 @@ int main()
 
 
     // Set Eigen to use multiple threads.
-    int num_threads = 1;
+    int num_threads = 12;
     Eigen::setNbThreads(num_threads);
     std::cout << "Using " << Eigen::nbThreads() << " eigen threads.\n";
 
@@ -232,7 +232,7 @@ int main()
     {
         n_s = 1;
     }
-    if ( exp == "mismip_1" || exp == "mismip_1_therm" )
+    else if ( exp == "mismip_1" || exp == "mismip_1_therm" )
     {
         n_s = 17;
     }
@@ -1182,7 +1182,8 @@ int main()
             
             
             ArrayXXd u_old_1 = u;
-            ArrayXXd visc_old = visc;
+            //ArrayXXd visc_old = visc;
+            //ArrayXd visc_bar_old = visc_bar;
             
             // Implicit solver.
             // If SSA solver ub = u_bar.
@@ -1206,7 +1207,12 @@ int main()
             MatrixXd c_u_1 = u - u_old_1;
             MatrixXd c_u_2 = u_old_1 - u_old_2;
             MatrixXd u_vec = u;
-            error     = c_u_1.norm() / u_vec.norm();
+            //error     = c_u_1.norm() / u_vec.norm();
+            
+            // Test to check if the error definition gives problems!
+            c_u_bar_1 = u_bar - u_bar_old_1;
+            u_bar_vec = u_bar;
+            error     = c_u_bar_1.norm() / u_bar_vec.norm();
             
             // New relaxed Picard iteration. Pattyn (2003). 
             // Necessary to deal with the nonlinear velocity dependence on both viscosity and beta.
@@ -1224,8 +1230,8 @@ int main()
             // De Smedt et al. (2010). Eq. 10.
             if (omega <= omega_1 || c_u_1.norm() == 0.0)
             {
-                mu = 2.5; // De Smedt.
-                //mu = 1.0; // To avoid negative velocities?
+                //mu = 2.5; // De Smedt.
+                mu = 1.0; // To avoid negative velocities?
                 //mu = 0.7; // Daniel
             }
             else if (omega > omega_1 & omega < omega_2)
@@ -1261,6 +1267,9 @@ int main()
             // Allocate variables.
             visc     = visc_all.block(0,0,n,n_z);
             visc_bar = visc_all.col(n_z);
+
+            //visc     = mu * visc + ( 1.0 - mu ) * visc_old;
+            //visc_bar = mu * visc_bar + ( 1.0 - mu ) * visc_bar_old;
 
             // Test relaxing viscosity.
             //double rel = 0.0;

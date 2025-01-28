@@ -3,11 +3,11 @@
 path:
   nix: /home/dmoreno/scr/nix/                              # Nix path.
   read: /home/dmoreno/nix/data/noise_sigm_ocn.12.0.nc      # File with stochastic bc. 
-  out: /home/dmoreno/nix/test_therm/                     # Output path.
+  out: /home/dmoreno/nix/test_Eigenthread12/                     # Output path.
 
 time:
   t0: 0.0                 # Starting time [yr].
-  tf: 3.0e4              # End time [yr]. 2.0e4, 54.0, 32.0e4, MISMIP-therm: 3.0e4, 90.0e4, Ending time [yr]. EWR: 5.0e3
+  tf: 3.0e4              # End time [yr]. 3.0e4, 54.0, 32.0e4, MISMIP-therm: 3.0e4, 90.0e4, Ending time [yr]. EWR: 5.0e3
   t_eq: 1.0e3             # Equilibration time [yr]. 1.0e3
   output:
     t_n: 100              # Number of output frames
@@ -21,7 +21,7 @@ constants:
 
 domain:
   bed_exp: mismip_1       # Domain def, i.e., bedrock geometry applied: exp_1 (MISMIP exp_1) and so on.
-  experiment: constant_T_air  # Forcing type. As defined in MISMIP: mismip_1, mismip_3_therm...
+  experiment: constant_A  # Forcing type. As defined in MISMIP: mismip_1, mismip_3_therm...
   n: 50                  # Number of horizontal points
   n_z: 30                 # Number vertical layers. 10, 15
   grid: even              # Nix grid type.
@@ -82,7 +82,7 @@ boundary_conditions:
 
 
 thermodynamics:
-  therm: true            # Apply thermodynamic solver at each time step.
+  therm: false            # Apply thermodynamic solver at each time step.
   k: 2.0                  # Thermal conductivity of ice [W / m · ºC].
   G: 0.05                 # Geothermal heat flow [W / m^2] = [J / s · m^2].
   kappa: 1.4e-6           # Thermal diffusivity of ice [m^2/s] --> [m^2/yr].
@@ -108,7 +108,7 @@ friction:
 viscosity:
   n_gln: 3.0             # Glen flow law exponent
   eps: 1.0e-6            # Viscosity regularisation term. SSA/DIVA: 1e-8. Blatter-Pattyn: 1e-6 perfect, eps should decrease for higher res.
-  therm: true           # Temperature-dependent viscosity.
+  therm: false           # Temperature-dependent viscosity.
   t_eq_A_theta: 1.5e3    # Eq. time to start applying Arrhenius dependency.
   A_cnst: 5.0e-26        # Rate factor value in MISMIP_A (constant rate factor) .
   A_act: 4.9e-25         # Threshold rate factor for the two regimes in activation energy [Pa^-3 s^-1] 
@@ -135,7 +135,7 @@ calving:
     T_0: 273.15          # Reference ocean temperature [K].
 
 picard:
-  n_picard: 1           # Max number iter. Good results: 10.
+  n_picard: 5           # Max number iter. Good results: 10.
   tol: 1.0e-2            # Convergence tolerance within Picard iteration. 1.0e-4
   omega_1: 0.125         # Angle predictor. De Smedt et al. (2010) Eq. 10.
   omega_2: 0.95

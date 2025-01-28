@@ -490,9 +490,15 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_u_inv, Arr
         // Basal boundary condition (friction).
         ArrayXd alpha = 4.0 * ( u_sol.col(1) - shift(u_sol.col(1),1,dom.n) ) \
                             * abs( shift(bed,-1,dom.n) - bed ) * dx_2_inv + \
-                            0.5 * beta * u.col(0) / visc.col(0);
+                            0.5 * beta * u.col(0) / visc.col(0); // WORKING
+
+        //ArrayXd alpha = 4.0 * ( u_sol.col(1) - shift(u_sol.col(1),1,dom.n) ) \
+                            * abs( shift(bed,-1,dom.n) - bed ) * dx_2_inv + \
+                            0.5 * beta * u_sol.col(1) / visc.col(1); // WORKING
 
         u_sol.col(0) = u_sol.col(1) - dz * alpha;
+        //u_sol.col(0) = - ( 4.0 * u_sol.col(1) - u_sol.col(2) + 2.0 * dz * alpha ) / 3.0;
+
 
         // Upper boundary condition (free surface).
         // Three-point vertical derivative. As Pattyn (2003).
@@ -502,20 +508,6 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_u_inv, Arr
         // MIT calculator.
         // du/dz = 0.5 * ( 3.0 * u(dom.n_z-1) - 4.0 * u(dom.n_z-2) + 1.0 * u(dom.n_z-3) ) 
         u_sol.col(dom.n_z-1) = ( 4.0 * u_sol.col(dom.n_z-2) - u_sol.col(dom.n_z-3) + 2.0 * alpha_h ) / 3.0;
-
-
-        // Test to avoid velocity differences between u_sol.col(dom.n_z-1) and u_sol.col(dom.n_z-2).
-        //u_sol.col(dom.n_z-2) = u_sol.col(dom.n_z-1);
-
-        
-        // Hydrostatic equilibrium with the ocean.
-        /*for (int j=0; j<dom.n_z; j++)
-        {
-            u_x_bc = dx(dom.n-2) * A_theta(dom.n-1,j) * pow( 0.25 * ( cnst.rho * cnst.g * H(dom.n-1) * \
-                                      (1.0 - cnst.rho / cnst.rho_w) ), vis.n_gln);
-                                        
-            u_sol(dom.n-1,j) = u_sol(dom.n-2,j) + u_x_bc;
-        }*/
 
 
         // Hydrostatic equilibrium with the ocean.
@@ -532,19 +524,25 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_u_inv, Arr
         
         // Ensure positive velocities.
         u_sol = (u_sol < 0.1).select(0.1, u_sol);
+        //u_sol = (u_sol < 0.5).select(0.5, u_sol);
 
         // Symmetry at the ice divide.
         u_sol.row(0) = - u_sol.row(1);
 
         // Vertically averaged velocity from full Blatter-Pattyn solution.
         u_bar = u_sol.rowwise().mean();
+
+        u_bar    = (u_bar < shift(u_bar,1,dom.n) ).select(shift(u_bar,1,dom.n), u_bar);
+        u_bar(0) = - u_bar(1);
+        
         
     }
-    
+
+    // First u_bar point must be positive since it advects ice???
+    //u_bar(0) = abs(u_bar(0)); 
 
     // Allocate solutions.
     out << u_bar, u_sol;
-
     
     return out;
 }
