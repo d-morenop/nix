@@ -6,7 +6,7 @@ module load releases/2023b
 module load SciPy-bundle/2023.11-gfbf-2023b
 module load PyYAML/6.0.1-GCCcore-13.2.0
 
-path=/scratch/ulb/glaciol/dmoreno/nix/
+path=/scratch/ulb/glaciol/dmoreno/nix-iceshelf/nix/
 
 cd $path
 

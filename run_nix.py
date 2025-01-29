@@ -103,7 +103,7 @@ def modify_yaml(file_path, path_modified, yaml_file_name, var_names, data_types,
 # Define variable names and their corresponding values.
 
 # Select desired experiment.
-exp = 'parallel'
+exp = 'nic5'
 
 # OSCILLATIONS STUDY.
 if exp == 'oscillations':
@@ -125,10 +125,27 @@ if exp == 'oscillations':
 # RESOLUTION STUDY.
 elif exp == 'parallel':
 
-    #yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_parallel.yaml"
-    #yaml_file_name = "nix_params_parallel.yaml"
+    yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_parallel.yaml"
+    yaml_file_name = "nix_params_parallel.yaml"
 
-    yaml_file_path = "/scratch/ulb/glaciol/dmoreno/nix/par/nix_params_parallel_ceci.yaml"
+    var_names = ['n', 'n_z', 'dt_min', 'eps']
+
+    values_0 = np.array([50]) # 200, 300
+    values_1 = np.array([25])  # 35
+    values_2 = np.array([1.0]) # 0.1, 0.05
+    values_3 = np.array([1.0e-7]) # 1.0e-4, 1.0e-5, 1.0e-6, 1.0e-7, 1.0e-8, 1.0e-9
+    
+
+    # Data type of each array.
+    data_types = [int, int, float, float]
+
+    values = [values_0, values_1, values_2, values_3]
+
+
+# RESOLUTION STUDY.
+elif exp == 'nic5':
+
+    yaml_file_path = "/scratch/ulb/glaciol/dmoreno/nix-iceshelf/nix/par/nix_params_parallel_ceci.yaml"
     yaml_file_name = "nix_params_parallel_ceci.yaml"
 
     var_names = ['n', 'n_z', 'dt_min', 'eps']
