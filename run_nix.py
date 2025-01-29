@@ -125,13 +125,16 @@ if exp == 'oscillations':
 # RESOLUTION STUDY.
 elif exp == 'parallel':
 
-    yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_parallel.yaml"
-    yaml_file_name = "nix_params_parallel.yaml"
+    #yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_parallel.yaml"
+    #yaml_file_name = "nix_params_parallel.yaml"
+
+    yaml_file_path = "/scratch/ulb/glaciol/dmoreno/nix/par/nix_params_parallel_ceci.yaml"
+    yaml_file_name = "nix_params_parallel_ceci.yaml"
 
     var_names = ['n', 'n_z', 'dt_min', 'eps']
 
-    values_0 = np.array([100]) # 200, 300
-    values_1 = np.array([100])  # 35
+    values_0 = np.array([50]) # 200, 300
+    values_1 = np.array([25])  # 35
     values_2 = np.array([1.0]) # 0.1, 0.05
     values_3 = np.array([1.0e-7]) # 1.0e-4, 1.0e-5, 1.0e-6, 1.0e-7, 1.0e-8, 1.0e-9
     
@@ -142,9 +145,6 @@ elif exp == 'parallel':
     values = [values_0, values_1, values_2, values_3]
 
 
-
-
-    
 
 # RESOLUTION STUDY.
 elif exp == 'resolution':
@@ -368,7 +368,7 @@ for i in range(len(name)):
 
 
     # Compilation configuration. ['local', 'iceberg', 'brigit']
-    config = 'parallel'
+    config = 'nic5'
 
     if config == 'local':
         
@@ -396,10 +396,41 @@ for i in range(len(name)):
     elif config == 'brigit':
         
         # Compiling command.
-        cmd = "g++ -std=c++17 -I/opt/ohpc/pub/libs/gnu8/impi/netcdf/4.6.3/include/ -I/usr/include/eigen3/ -L/opt/ohpc/pub/libs/gnu8/impi/netcdf/4.6.3/lib/ -lnetcdf -o "+path_output+"nix.o "+path_output_scr+"nix.cpp"
+        cmd = "g++ -std=c++17 -I/opt/ohpc/pub/libs/gnu8/impi/netcdf/4.6.3/include/ -I/usr/include/eigen3/ -L/opt/ohpc/pub/libs/gnu8/impi/netcdf/4.6.3/lib/ -lnetcdf -o "+path_modified+"nix.o "+path_output_scr+"nix.cpp"
         
         # In Brigit, we need a submit.sh file to send job to the queue.
         shutil.copyfile(path_nix+'submit.sh', path_modified+'src/submit.sh')
+
+    elif config == 'nic5':
+
+        # In clusters, we need a submit.sh file to send job to the queue.
+        shutil.copyfile(path_nix+'submit_ceci.sh', path_modified+'submit_ceci.sh')
+
+        # Change directory to the current modified one.
+        os.chdir(path_modified)
+
+        # Load all necessary modules before compilation.
+        # Combine all commands into a single shell command.
+        # Each subprocess.run() call starts a new shell process, and environment changes (like loading modules) are not shared between these processes.
+        module_netcdf = "/opt/cecisw/arch/easybuild/2023b/modules/all/netCDF/"
+        module_eigen  = "/opt/cecisw/arch/easybuild/2023b/modules/all/Eigen/"
+        lib_netcdf    = "/opt/cecisw/arch/easybuild/2023b/software/netCDF/4.9.2-gompi-2023b/lib/"
+
+        commands = [
+                    "module --force purge",
+                    "module load releases/2023b",
+                    "module load Eigen/3.4.0-GCCcore-13.2.0",
+                    "module load yaml-cpp",
+                    "module load netCDF/4.9.2-gompi-2023b",
+                    "g++ -std=c++17 -fopenmp -O3 -I"+module_netcdf+" -I"+module_eigen+" -L"+lib_netcdf+" -lnetcdf -o "+path_modified+"nix.o "+path_output_scr+"nix.cpp -lyaml-cpp",
+                    ]
+
+        cmd = " &&\n".join(commands)
+
+        # Compile nix with subprocess.
+        #subprocess.run(cmd, shell=True, check=True, universal_newlines=True)# Compile nix with subprocess.
+        
+        
 
     # Create text file for terminal output. "wb" for unbuffered output.
     f = open(path_modified+"out.txt", "wb")
@@ -409,9 +440,36 @@ for i in range(len(name)):
     print('-> Compiling configuration: ', config)
     print('')
 
-    # Compile nix with subprocess.
-    subprocess.run(cmd, shell=True, check=True, \
-                stdout=f, universal_newlines=True)
+        
+    # Run Nix in background. Note that the solution is stored in nc file.
+    # In Brigit, we need submit.sh to send it to the queue.
+    if config == 'brigit':
+
+        # Compile nix with subprocess.
+        subprocess.run(cmd, shell=True, check=True, \
+                    stdout=f, universal_newlines=True)
+
+
+        # Try changing working directory and then running sbatch there.
+        os.chdir(path_modified)
+        cmd_run = "sbatch submit.sh"
+
+
+    elif config == 'nic5':
+        # Compile nix with subprocess.
+        subprocess.run(cmd, shell=True, check=True, universal_newlines=True)
+
+        # Necessary to change directory to run therein.
+        os.chdir(path_modified)
+        cmd_run = "sbatch submit_ceci.sh"
+
+    elif config == 'parallel' or config == 'iceshelf':
+        # Compile nix with subprocess.
+        subprocess.run(cmd, shell=True, check=True, \
+                    stdout=f, universal_newlines=True)
+
+        cmd_run = path_modified+"nix.o &"
+
 
     print('')
     print('-> Nix compiled.')
@@ -420,26 +478,8 @@ for i in range(len(name)):
     print('')
     print('-> Running Nix.')
     print('')
-        
-    # Run Nix in background. Note that the solution is stored in nc file.
-    # In Brigit, we need submit.sh to send it to the queue.
-    if config == 'brigit':
 
-        # Old version
-        #cmd_run = "sbatch "+path_output+"submit.sh"
-
-        # Try changing working directory and then running sbatch there.
-        os.chdir(path_modified)
-        cmd_run = "sbatch submit.sh"
-        #print('cmd_run = ', cmd_run)
-    else:
-        cmd_run = path_modified+"nix.o &"
-
-
-    # Run Nix model. export OMP_NUM_THREADS=8
-    #p = subprocess.Popen("export OMP_NUM_THREADS=8", shell=True, \
-    #                        stdout=f, universal_newlines=True)
-    
+    # Run Nix model.
     p = subprocess.Popen(cmd_run, shell=True, \
                             stdout=f, universal_newlines=True)
 
