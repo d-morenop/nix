@@ -34,12 +34,12 @@ using namespace std;
 int main()
 {
 
-    omp_set_num_threads(1); // Set the number of threads to 4
+    /*omp_set_num_threads(1); // Set the number of threads to 4
     #pragma omp parallel
     {
         #pragma omp single
         std::cout << "Number of OPM threads: " << omp_get_num_threads() << std::endl;
-    }
+    }*/
 
     // Enable OpenMP if supported by the compiler.
     // Is this needed/ 
@@ -48,7 +48,7 @@ int main()
 
 
     // Set Eigen to use multiple threads.
-    int num_threads = 1;
+    int num_threads = 12;
     Eigen::setNbThreads(num_threads);
     std::cout << "Using " << Eigen::nbThreads() << " eigen threads.\n";
 
@@ -177,6 +177,8 @@ int main()
 
     // Convert char to string and concatenate full path.
     string path = buffer;
+    // Test.
+    //path = "/scratch/ulb/glaciol/dmoreno/nix-iceshelf/nix/output/n.50_n_z.25_dt_min.1.0_eps.1e-07";
     string full_path = path+"/par/"+yaml_name;
 
     cout << "\n full_path = " << full_path;

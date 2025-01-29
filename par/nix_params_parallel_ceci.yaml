@@ -3,12 +3,12 @@
 path:
   nix: /scratch/ulb/glaciol/dmoreno/nix-iceshelf/nix/                              # Nix path.
   read: /home/dmoreno/nix/data/noise_sigm_ocn.12.0.nc      # File with stochastic bc. 
-  out: /scratch/ulb/glaciol/dmoreno/nix-iceshelf/nix/output/                     # Output path.
+  out: /scratch/ulb/glaciol/dmoreno/nix-iceshelf/nix/output/thread.12_tasks.1/                     # Output path.
 
 time:
   t0: 0.0                 # Starting time [yr].
-  tf: 5.0e3              # End time [yr]. 3.0e4, 54.0, 32.0e4, MISMIP-therm: 3.0e4, 90.0e4, Ending time [yr]. EWR: 5.0e3
-  t_eq: 2.0e3             # Equilibration time [yr]. 1.0e3
+  tf: 3.0e3              # End time [yr]. 3.0e4, 54.0, 32.0e4, MISMIP-therm: 3.0e4, 90.0e4, Ending time [yr]. EWR: 5.0e3
+  t_eq: 1.0e3             # Equilibration time [yr]. 1.0e3
   output:
     t_n: 100              # Number of output frames
     out_hr: false         # Allow high resolution output.

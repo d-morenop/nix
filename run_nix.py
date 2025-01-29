@@ -150,8 +150,8 @@ elif exp == 'nic5':
 
     var_names = ['n', 'n_z', 'dt_min', 'eps']
 
-    values_0 = np.array([50]) # 200, 300
-    values_1 = np.array([25])  # 35
+    values_0 = np.array([200]) # 200, 300
+    values_1 = np.array([200])  # 35
     values_2 = np.array([1.0]) # 0.1, 0.05
     values_3 = np.array([1.0e-7]) # 1.0e-4, 1.0e-5, 1.0e-6, 1.0e-7, 1.0e-8, 1.0e-9
     
@@ -433,13 +433,16 @@ for i in range(len(name)):
         module_eigen  = "/opt/cecisw/arch/easybuild/2023b/modules/all/Eigen/"
         lib_netcdf    = "/opt/cecisw/arch/easybuild/2023b/software/netCDF/4.9.2-gompi-2023b/lib/"
 
+        # "g++ -std=c++17 -fopenmp -O3 -I"+module_netcdf+" -I"+module_eigen+" -L"+lib_netcdf+" -lnetcdf -o "+path_modified+"nix.o "+path_output_scr+"nix.cpp -lyaml-cpp",
+        # "g++ -std=c++17 -I"+module_netcdf+" -I"+module_eigen+" -L"+lib_netcdf+" -lnetcdf -o "+path_modified+"nix.o "+path_output_scr+"nix.cpp -lyaml-cpp",
+        # Too agrressive paralelization gives problem in nic5!!! We need: -fopenmp -O1.
         commands = [
                     "module --force purge",
                     "module load releases/2023b",
                     "module load Eigen/3.4.0-GCCcore-13.2.0",
                     "module load yaml-cpp",
                     "module load netCDF/4.9.2-gompi-2023b",
-                    "g++ -std=c++17 -fopenmp -O3 -I"+module_netcdf+" -I"+module_eigen+" -L"+lib_netcdf+" -lnetcdf -o "+path_modified+"nix.o "+path_output_scr+"nix.cpp -lyaml-cpp",
+                    "g++ -std=c++17 -fopenmp -O1 -I"+module_netcdf+" -I"+module_eigen+" -L"+lib_netcdf+" -lnetcdf -o "+path_modified+"nix.o "+path_output_scr+"nix.cpp -lyaml-cpp",
                     ]
 
         cmd = " &&\n".join(commands)
@@ -478,7 +481,9 @@ for i in range(len(name)):
 
         # Necessary to change directory to run therein.
         os.chdir(path_modified)
-        cmd_run = "sbatch submit_ceci.sh"
+        #cmd_run = "sbatch submit_ceci.sh"
+
+        cmd_run = "sbatch --chdir="+path_modified+" submit_ceci.sh"
 
     elif config == 'parallel' or config == 'iceshelf':
         # Compile nix with subprocess.
