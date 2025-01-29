@@ -130,8 +130,8 @@ elif exp == 'parallel':
 
     var_names = ['n', 'n_z', 'dt_min', 'eps']
 
-    values_0 = np.array([200]) # 200, 300
-    values_1 = np.array([50])  # 35
+    values_0 = np.array([100]) # 200, 300
+    values_1 = np.array([100])  # 35
     values_2 = np.array([1.0]) # 0.1, 0.05
     values_3 = np.array([1.0e-7]) # 1.0e-4, 1.0e-5, 1.0e-6, 1.0e-7, 1.0e-8, 1.0e-9
     

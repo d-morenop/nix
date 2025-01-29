@@ -48,7 +48,7 @@ int main()
 
 
     // Set Eigen to use multiple threads.
-    int num_threads = 12;
+    int num_threads = 14;
     Eigen::setNbThreads(num_threads);
     std::cout << "Using " << Eigen::nbThreads() << " eigen threads.\n";
 
@@ -1213,6 +1213,10 @@ int main()
             c_u_bar_1 = u_bar - u_bar_old_1;
             u_bar_vec = u_bar;
             error     = c_u_bar_1.norm() / u_bar_vec.norm();
+
+            /*c_u_bar_1 = visc_bar - visc_bar_old;
+            u_bar_vec = visc_bar;
+            error     = c_u_bar_1.norm() / u_bar_vec.norm();*/
             
             // New relaxed Picard iteration. Pattyn (2003). 
             // Necessary to deal with the nonlinear velocity dependence on both viscosity and beta.

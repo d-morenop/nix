@@ -23,7 +23,7 @@ from PIL import Image
 # /home/dmoreno/nix/test_therm/n.100_n_z.35_dt_min.0.1_eps.1e-07/
 # /home/dmoreno/nix/test_Eigenthread1/n.200_n_z.50_dt_min.0.1_eps.1e-07
 path_fig        = '/home/dmoreno/nix/test_threads/n.128_dt_min.0.1_eps.1e-05/'
-path_now        = '/home/dmoreno/nix/test_Eigenthread12/n.200_n_z.50_dt_min.1.0_eps.1e-07/'
+path_now        = '/home/dmoreno/nix/test_Eigenthread12/n.100_n_z.100_dt_min.1.0_eps.1e-07/'
 path_stoch      = '/home/dmoreno/nix/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 

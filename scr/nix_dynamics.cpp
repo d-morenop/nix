@@ -452,40 +452,7 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_u_inv, Arr
 
         
         // VELOCITY BOUNDARY CONDITIONS.
-        // Eq. 25, Pattyn (2003).
-        /*for (int i=1; i<dom.n-1; i++)
-        {
-            // Derivative from current velocity sol.
-            // Centred differences and changed sign.
-            
-            //cout << "\n i              = " << i;
-            //cout << "\n u_sol(i,1)     = " << u(i,1);
-
-            // Use previous iteration solution to calculate basal friction.
-            double alpha = 4.0 * ( u_sol(i,1) - u_sol(i-1,1) ) * abs( bed(i+1) - bed(i) ) * dx_2_inv(i) + \
-                             0.5 * beta(i) * u(i,0) / visc(i,0);
-
-            u_sol(i,0) = u_sol(i,1) - dz(i) * alpha;
-            u_sol(i,0) = max(1.0, u_sol(i,0));
-            
-            // Three-point vertical derivative. As Pattyn (2003).
-            double alpha_h = dz(i) * 4.0 * ( u_sol(i+1,dom.n_z-2) - u_sol(i,dom.n_z-2) ) *  \
-                                         abs(dhds(i)) * dx_2_inv(i);
-            
-            // MIT calculator.
-            // du/dz = 0.5 * ( 3.0 * u(dom.n_z-1) - 4.0 * u(dom.n_z-2) + 1.0 * u(dom.n_z-3) ) 
-            u_sol(i,dom.n_z-1) = ( 4.0 * u_sol(i,dom.n_z-2) - u_sol(i,dom.n_z-3) + 2.0 * alpha_h ) / 3.0;
-
-            // Vieli 1 (Eq. B13). BEST ONE!
-            // du/dz = ( - 4.0 * u(dom.n_z-1) + 3.0 * u(dom.n_z-2) + 1.0 * u(dom.n_z-3) ) / 3.0
-            //u_sol(i,n_z-1) = ( 4.0 * u_sol(i,n_z-2) + 3.0 * u_sol(i,n_z-3) - 3.0 * alpha_h ) / 4.0;
-
-            // Test to avoid velocity differences between u_sol.col(dom.n_z-1) and u_sol.col(dom.n_z-2).
-            // It works, but too mild effect.
-            //u_sol(i,n_z-2) = 0.25 * ( 4.0 * u_sol(i,n_z-1) - 3.0 * u_sol(i,n_z-3) + 3.0 * alpha_h );
-        }*/
-
-        
+        // Eq. 25, Pattyn (2003).      
         // Vector form.
         // Basal boundary condition (friction).
         ArrayXd alpha = 4.0 * ( u_sol.col(1) - shift(u_sol.col(1),1,dom.n) ) \
