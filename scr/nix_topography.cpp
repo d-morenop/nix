@@ -6,6 +6,7 @@
 // It does not follow the ice sheet, but rather there's a certain 
 // value for each position x.
 
+
 ArrayXd f_bed(double L, ArrayXd sigma, ArrayXd ds, double t, DomainParams dom)
 {
     
@@ -166,7 +167,7 @@ ArrayXd f_smb(ArrayXd sigma, double L, double t, double smb_stoch, \
 
 // First order scheme. New variable sigma.
 ArrayXd f_H(ArrayXd u_bar, ArrayXd H, ArrayXd S, ArrayXd sigma, \
-            double dt, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_sym, \
+            double dt, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_sym, ArrayXd ds_u_inv, \
             double L, double D, double dL_dt, ArrayXd bed, ArrayXd q, \
             double M, double t, DomainParams& dom, TimeParams& tm, AdvectionParams& adv)
 {
@@ -178,6 +179,8 @@ ArrayXd f_H(ArrayXd u_bar, ArrayXd H, ArrayXd S, ArrayXd sigma, \
     dx_inv     = L_inv * ds_inv;
     dx_sym_inv = L_inv * ds_sym;
 
+    ArrayXd dx_u_inv = L_inv * ds_u_inv;
+
     // Solution to the modified advection equation considering a streched coordinate
     // system sigma. Two schemes are available, explicit and implicit, noted as
     // meth = 0, 1 respectively. 
@@ -187,12 +190,21 @@ ArrayXd f_H(ArrayXd u_bar, ArrayXd H, ArrayXd S, ArrayXd sigma, \
     // Explicit scheme. Centred dH in the sigma_L term.
     if ( adv.meth == "explicit" )
     {
-        for (int i=1; i<dom.n-1; i++)
+        /*for (int i=1; i<dom.n-1; i++)
         {
             // Centred in sigma, upwind in flux. Unevenly-spaced horizontal grid.
-            H_now(i) = H(i) + dt * ( sigma(i) * dL_dt * ( H(i+1) - H(i-1) ) * dx_sym_inv(i) + \
+            //H_now(i) = H(i) + dt * ( sigma(i) * dL_dt * ( H(i+1) - H(i-1) ) * dx_sym_inv(i) + \
                                             - dx_inv(i) * ( q(i) - q(i-1) ) + S(i) );
-        }
+
+            // Test uneven velocty grid.
+            //H_now(i) = H(i) + dt * ( sigma(i) * dL_dt * ( H(i+1) - H(i-1) ) * dx_sym_inv(i) + \
+                                            - dx_u_inv(i) * ( q(i) - q(i-1) ) + S(i) );
+
+        }*/
+
+        // Vectorized version.
+        H_now = H + dt * ( sigma * dL_dt * ( shift(H,-1,dom.n) - shift(H,1,dom.n) ) * dx_sym_inv + \
+                                            - dx_u_inv * ( q - shift(q,1,dom.n) ) + S );
         
         // Symmetry at the ice divide (i = 1).
         H_now(0) = H_now(2);
@@ -200,7 +212,11 @@ ArrayXd f_H(ArrayXd u_bar, ArrayXd H, ArrayXd S, ArrayXd sigma, \
         // Lateral boundary: sigma(n-1) = 1.
         // Sub-shelf melt directly on the flux.
         // Note that ds has only (n-1) points.
-        H_now(dom.n-1) = H(dom.n-1) + dt * ( ds_inv(dom.n-2) * L_inv * \
+        //H_now(dom.n-1) = H(dom.n-1) + dt * ( ds_inv(dom.n-2) * L_inv * \
+        //                                ( dL_dt * ( H(dom.n-1) - H(dom.n-2) ) + \
+        //                                    - ( q(dom.n-1) - q(dom.n-2) ) ) + S(dom.n-1) );
+
+        H_now(dom.n-1) = H(dom.n-1) + dt * ( dx_inv(dom.n-2) * \
                                         ( dL_dt * ( H(dom.n-1) - H(dom.n-2) ) + \
                                             - ( q(dom.n-1) - q(dom.n-2) ) ) + S(dom.n-1) );
 

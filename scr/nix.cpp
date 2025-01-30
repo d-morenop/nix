@@ -9,7 +9,6 @@
 #include <netcdf.h>
 #include <chrono>
 #include <yaml-cpp/yaml.h>
-#include <unistd.h>
 
 using namespace Eigen;
 using namespace std;
@@ -33,45 +32,117 @@ using namespace std;
 int main()
 {
 
-    // Specify the path to YAML file.
-    //string yaml_name = "nix_params_ews_therm_T_oce.yaml";
-    string yaml_name = "nix_params_resolution.yaml";
-
-    // Assuming the path won't exceed 4096 characters.
-    char buffer[4096];
-
-    // Read the symbolic link /proc/self/exe, which points to the executable file of the calling process.
-    ssize_t len = readlink("/proc/self/exe", buffer, sizeof(buffer) - 1);
-
-    if (len != -1) 
+    omp_set_num_threads(1); // Set the number of threads to 4
+    #pragma omp parallel
     {
-        // Null-terminate the string.
-        buffer[len] = '\0'; 
-
-        // Extract the directory from the full path.
-        char *last_slash = strrchr(buffer, '/');
-        if (last_slash != nullptr) 
-        {
-            // Null-terminate at the last slash to get the directory
-            *last_slash = '\0'; 
-            //std::cout << "Executable directory: " << buffer << std::endl;
-        } 
-        else 
-        {
-            std::cerr << "Error extracting directory." << std::endl;
-        }
-    } 
-    else 
-    {
-        std::cerr << "Error getting executable path." << std::endl;
+        #pragma omp single
+        std::cout << "Number of OPM threads: " << omp_get_num_threads() << std::endl;
     }
 
-    // Convert char to string and concatenate full path.
-    string path = buffer;
-    string full_path = path+"/par/"+yaml_name;
+    // Enable OpenMP if supported by the compiler.
+    // Is this needed/ 
+    // export OMP_DISPLAY_ENV=TRUE
+    // export OMP_NUM_THREADS=8
 
-    cout << "\n full_path = " << full_path;
+
+    // Set Eigen to use multiple threads.
+    int num_threads = 14;
+    Eigen::setNbThreads(num_threads);
+    std::cout << "Using " << Eigen::nbThreads() << " eigen threads.\n";
+
+    // Example sparse matrix size and number of non-zeros
+    /*int n1 = 1024; // Matrix dimensions
+    int n_z1 = 1024; // Example non-zero density factor
+    SparseMatrix<double, RowMajor> A_sparse(n1 * n_z1, n1 * n_z1);
+
+    // Define the triplets for sparse matrix initialization
+    std::vector<Triplet<double>> tripletList;
+    for (int i = 0; i < n1 * n_z1; ++i) {
+        tripletList.emplace_back(i, i, 4.0); // Diagonal elements
+        if (i + 1 < n1 * n_z1) tripletList.emplace_back(i, i + 1, -1.0); // Off-diagonal
+        if (i - 1 >= 0) tripletList.emplace_back(i, i - 1, -1.0); // Off-diagonal
+    }
+    A_sparse.setFromTriplets(tripletList.begin(), tripletList.end());
+
+    // Define the solver
+    BiCGSTAB<SparseMatrix<double>> solver;
+
+    // Define the preconditioner
+    IncompleteLUT<double> preconditioner;
+    preconditioner.setDroptol(1.0e-4);
+    solver.preconditioner().compute(A_sparse);
+
+    // Compute the solver
+    solver.compute(A_sparse);
+
+    // Solver parameters
+    solver.setMaxIterations(100);
+    solver.setTolerance(1.0e-4);
+
+    // Define the right-hand side vector
+    VectorXd b = VectorXd::Random(n1 * n_z1);
+
+    // Solve the system
+    auto start1 = std::chrono::high_resolution_clock::now();
+    VectorXd x = solver.solve(b);
+    auto end1 = std::chrono::high_resolution_clock::now();
+
+    // Output results
+    std::cout << "Solver completed in " 
+              << std::chrono::duration_cast<std::chrono::milliseconds>(end1 - start1).count() 
+              << " ms.\n";
+    std::cout << "Converged in " << solver.iterations() << " iterations with error " 
+              << solver.error() << ".\n";*/
+
     
+    
+    
+    //Eigen::setNbThreads(12); // Set the number of threads. 4
+    //cout << "Number of Eigen threads: " << Eigen::nbThreads() << " threads.\n";
+
+
+    /*Eigen::MatrixXd A1 = Eigen::MatrixXd::Random(10000, 10000);
+    Eigen::MatrixXd A2 = Eigen::MatrixXd::Random(10000, 10000);
+    Eigen::VectorXd b = Eigen::VectorXd::Random(10000);
+
+
+    // Solve without guess (assumes x = 0).
+    auto start1 = std::chrono::high_resolution_clock::now();
+    MatrixXd W = ( A1 * (A1 + A2) ) * A2; 
+    Eigen::VectorXd x = W.partialPivLu().solve(b);
+    auto end1 = std::chrono::high_resolution_clock::now();
+
+    std::cout << "Matrix solution in "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(end1 - start1).count()
+              << " ms.\n";
+
+
+    //Eigen::setNbThreads(1); // Set the number of threads. 4
+    cout << "Number of Eigen threads: " << Eigen::nbThreads() << " threads.\n";*/
+
+
+
+    /*#ifdef _OPENMP
+    {
+        Eigen::setNbThreads(12); // Set the number of threads. 4
+        cout << "Using Eigen with " << Eigen::nbThreads() << " threads.\n";
+    }
+    #endif*/
+
+    /*omp_set_num_threads(12); // Set the number of threads to 4
+    #pragma omp parallel
+    {
+        #pragma omp single
+        std::cout << "Number of threads: " << omp_get_num_threads() << std::endl;
+    }*/
+
+
+    //Eigen::setNbThreads(8);
+    //std::cout << "Using " << Eigen::nbThreads() << " threads.\n";
+
+    // Specify the path to YAML file.
+    string file_path = "/home/dmoreno/scr/nix/par/nix_params_oscillations.yaml";
+
     // Load the YAML file
     YAML::Node config = YAML::LoadFile(full_path);
 
@@ -102,23 +173,6 @@ int main()
     int n_s;
     double L;
 
-    // Initial position ice sheet depending on bed geometry.
-    if ( bed_exp == "mismip_1" )
-    {
-        L = 694.5e3;
-    }
-    else if ( bed_exp == "mismip_3" )
-    {
-        L = 473.1e3;
-    }
-    else
-    {
-        cout << "\n Bed geometry not recognised. Please, select: mismip_1... ";
-    }
-
-    
-    // Prepare variables for forcing.
-    // BETTER TO USE AN EVEN NUMBER FOR n_s!!
     if ( exp == "mismip_1" || exp == "mismip_1_therm" )
     {
         n_s = 17;
@@ -182,6 +236,7 @@ int main()
     double mu;                              // Relaxation method within Picard iteration. 
     
     int c_picard;                           // Counter of Picard iterations.
+    double speed;
 
     // PREPARE VARIABLES.
     ArrayXd H(n);                        // Ice thickness [m].
@@ -232,6 +287,7 @@ int main()
     ArrayXXd sol_thrm(n,n_z+1);  
     ArrayXXd u(n,n_z);                   // Full velocity u(x,z) [m/yr].  
     ArrayXXd u_old(n,n_z);
+    ArrayXXd u_old_2(n,n_z);
     ArrayXXd u_z(n,n_z);                 // Full vertical vel derivative [1/yr]
     ArrayXXd u_x(n,n_z);                 // Velocity horizontal derivative [1/yr].
     ArrayXXd strain_2d(n,n_z);           // Strain ratefrom DIVA solver.
@@ -250,9 +306,9 @@ int main()
     // Try an unevenly-spaced horizontal grid to allows for fewer point whilst keeping
     // high resolution at the grounding line.
     ArrayXd sigma = ArrayXd::LinSpaced(n, 0.0, 1.0);      // Dimensionless x-coordinates.
-    ArrayXd ds(n-1);
-    ArrayXd ds_inv(n-1);
-    ArrayXd ds_sym(n-1);
+    ArrayXd ds(n);
+    ArrayXd ds_inv(n);
+    ArrayXd ds_sym(n);
     
     //double const n_sigma = 1.0;          // 0.5. Exponent of spacing in horizontal grid (1.0 = evenly-spaced). 
     sigma = pow(sigma, grid_exp);
@@ -263,11 +319,37 @@ int main()
     {
         ds(i) = sigma(i+1) - sigma(i);
     }
+    ds(n-1) = ds(n-2);
 
     ds_inv = 1.0 / ds;
 
+    //////////////////////////////////////////////////////////////////////////
+    // Uneven spacing for staggered u-grid.
+    ArrayXd ds_u(n);
+    ArrayXd ds_u_inv(n);
+    ArrayXd ds_u_sym(n);
+
+    for (int i=0; i<n-2; i++)
+    {
+        //  0.5 * ( sigma(i+2) + sigma(i+1) ) - 0.5 * ( sigma(i+1) + sigma(i) )
+        ds_u(i) = 0.5 * ( sigma(i+2) - sigma(i) );
+    }
+    ds_u(n-2) = sigma(n-1) - sigma(n-2);
+    ds_u(n-1) = ds_u(n-2);
+
+    ds_u_inv = 1.0 / ds_u;
+
     // For symmetric finite differences schemes we sum two consecutive grid spacings.
-    for (int i=1; i<n-1; i++)
+    for (int i=1; i<n; i++)
+    {
+        ds_u_sym(i) = ds_u(i) + ds_u(i-1);
+    }
+    //////////////////////////////////////////////////////////////////////////
+
+    
+
+    // For symmetric finite differences schemes we sum two consecutive grid spacings.
+    for (int i=1; i<n; i++)
     {
         ds_sym(i) = ds(i) + ds(i-1);
     }
@@ -291,12 +373,12 @@ int main()
     u_bar       = ArrayXd::Constant(n, u_0);               // [m / yr]
     u_bar_old_2 = ArrayXd::Constant(n, u_0); 
     u           = ArrayXXd::Constant(n, n_z, u_0);         // [m / yr]
+    u_old_2     = ArrayXXd::Constant(n, n_z, u_0); 
     beta        = ArrayXd::Constant(n, beta_0);             // [Pa yr / m]
     tau_b       = beta * ub;
 
-    // Thermodynamical initial conditions (-25ºC).
-    theta  = ArrayXXd::Constant(n, n_z, theta_0);
-    b_melt = ArrayXd::Zero(n);
+    // Temperature initial conditions (-25ºC).
+    theta = ArrayXXd::Constant(n, n_z, theta_0);
 
     // Intialize ice thickness and SMB.
     H = ArrayXd::Constant(n, H_0); // 10.0
@@ -310,9 +392,21 @@ int main()
     dz = H / n_z;
 
     // Initialize vertical velocity (only x-dependency).
-    // USE MATRIX FROM FLOW INCOMPRESSIBILITY.
-    ArrayXXd w(n,n_z);    
+    if ( nixParams.thrmdyn.adv_w.apply == false )
+    {
+        w = ArrayXd::Zero(n);
+    }
+    else if ( nixParams.thrmdyn.adv_w.apply == true )
+    {
+        //w = ArrayXd::Constant(n_z, 0.6);
+        
+        w = ArrayXd::LinSpaced(n_z, 0.0, 1.0);
+        w = nixParams.thrmdyn.adv_w.w_0 * pow(w, nixParams.thrmdyn.adv_w.w_exp);
 
+        //w = ArrayXd::LinSpaced(n_z, w_min, w_max);
+        // Positive vertical direction defined downwards.
+        w = - w;
+    }
     /////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////
 
@@ -565,29 +659,9 @@ int main()
         T_oce   = T_oce_s(0);
         A       = A_s(0);
         A_theta = ArrayXXd::Constant(n, n_z, A);
-    }
 
+    }   
 
-    // TRANSITION INDICATORS EXPERIMENTS. OCEAN TEMPERATURES FORCING (T_air const).
-    else if ( exp == "ews_schoof" )
-    {
-        // OCEAN TEMPERATURES ANOMALIES FORCING.
-        // Beggining and ending points.
-        T_oce_s << 273.15, 283.15;  // 283.15 is probably too high for the transition indicators (overshooting).
-        T_air_s << 253.15, 233.15; // 253.15, 233.15
-
-
-        // Test no therm.
-        //A_s = ArrayXd::Constant(n_s, 5.0e-25);
-        //A_s = A_s * nixParams.cnst.sec_year;  
-
-        // Initialization.
-        T_air   = T_air_s(0);
-        T_oce   = T_oce_s(0);
-        A       = A_s(0);
-        A_theta = ArrayXXd::Constant(n, n_z, A);
-    }
-    
     // TRANSITION INDICATORS EXPERIMENTS.
     else if ( exp == "ews_christian" )
     {
@@ -614,11 +688,9 @@ int main()
     /////////////////////////////////////////////////////////////////////////////////
 
     // Print spatial and time dimensions.
-    cout << " \n Nix ice-shet model v1.0";
-    cout << " \n Experiment = " << n;
-    cout << " \n n          = " << n;
-    cout << " \n n_sigma    = " << nixParams.dom.grid_exp;
-    cout << " \n tf         = " << tf;
+    cout << " \n n = " << n;
+    cout << " \n n_sigma = " << nixParams.dom.grid_exp;
+    cout << " \n tf = " << tf;
 
     // Call nc read function.
     if ( nixParams.stoch.stoch == true )
@@ -634,7 +706,8 @@ int main()
 
 
     // Wall time for computational speed.
-    auto begin = std::chrono::high_resolution_clock::now();
+    auto begin_0 = std::chrono::high_resolution_clock::now();
+    auto begin = begin_0;
 
     // Counters to write solution.
     int c    = 0;
@@ -682,6 +755,15 @@ int main()
             }
         }
         
+
+        // MISMIP EXPERIMENTS 1, 3 and 3.
+        if ( exp == "constant_A" )
+        {
+            // Ice hardness.
+            A = A_s(0);
+            B = pow(A, (-1 / nixParams.vis.n_gln) );
+
+        }
 
         // MISMIP EXPERIMENTS 1, 3 and 3.
         if ( exp == "mismip_1" || exp == "mismip_3" )
@@ -858,9 +940,9 @@ int main()
         c_picard = 0;
         
         // Implicit velocity solver. Picard iteration for non-linear viscosity and beta.
-        // Loop over the vertical level for Blatter-Pattyn.retval
+        // Loop over the vertical level for Blatter-Pattyn.
         // We solve one tridiagonal solver for each vertical level.
-        while ( error > nixParams.pcrd.tol && c_picard < nixParams.pcrd.n_picard )
+        while ( error > nixParams.pcrd.tol && c_picard < nixParams.pcrd.n )
         {
             // Save previous iteration solution.
             u_bar_old_1 = u_bar;
@@ -877,6 +959,172 @@ int main()
             u_bar  = sol.block(0,0,n,1);
             u      = sol.block(0,1,n,n_z);
 
+                
+                // Update beta with new velocity.
+                fric_all = f_u(u, u_bar, beta, C_bed, visc, H, dz, t, \
+                                    nixParams.dom, nixParams.dyn, \
+                                        nixParams.fric, nixParams.cnst);
+                beta = fric_all.col(0);
+
+                // Update viscosity with new velocity.
+                visc_all = f_visc(theta, u, visc, H, tau_b, u_bar, dz, \
+                                    ds, ds_u, ds_sym, L, t, A, eps, \
+                                        nixParams.dom, nixParams.thrmdyn, \
+                                            nixParams.vis, nixParams.tm, \
+                                                nixParams.dyn, nixParams.init);
+
+
+                // Allocate variables.
+                //ArrayXXd visc_old = visc;
+                visc     = visc_all.block(0,0,n,n_z);
+                visc_bar = visc_all.col(n_z);
+                
+                
+                // Current error (vector class required to compute norm). 
+                // Eq. 12 (De-Smedt et al., 2010).
+                c_u_bar_1 = u_bar - u_bar_old_1;
+                u_bar_vec = u_bar;
+                error     = c_u_bar_1.norm() / u_bar_vec.norm();
+                
+                // New relaxed Picard iteration. Pattyn (2003). 
+                // Necessary to deal with the nonlinear velocity dependence on both viscosity and beta.
+                // Just update beta and visc, not tau_b!
+                // We have previously intialize u_bar_old_2 for t = 0.
+                // Difference between iter (i-1) and (i-2).
+                c_u_bar_2 = u_bar_old_1 - u_bar_old_2;
+                
+                // Angle defined between two consecutive vel solutions.
+                omega = acos( c_u_bar_1.dot(c_u_bar_2) / \
+                                ( c_u_bar_1.norm() * c_u_bar_2.norm() ) );
+                
+
+                // De Smedt et al. (2010). Eq. 10.
+                if (omega <= omega_1 || c_u_bar_1.norm() == 0.0)
+                {
+                    mu = 2.5; // De Smedt.
+                    //mu = 1.0; // To avoid negative velocities?
+                    //mu = 0.7; // Daniel
+                }
+                else if (omega > omega_1 & omega < omega_2)
+                {
+                    mu = 1.0; // De Smedt.
+                    //mu = 0.7; // Daniel
+                }
+                else
+                {
+                    mu = 0.7; // De Smedt.
+                    //mu = 0.5; // Daniel
+                }
+
+                
+                // New velocity guess based on updated mu.
+                u_bar = u_bar_old_1 + mu * c_u_bar_1.array();
+                u     = u_old + mu * ( u - u_old ); 
+
+                //double rel = 0.95; // 0.8 works extremely well.
+                //visc = visc_old * rel + ( 1.0 - rel ) * visc; 
+                //visc     = visc_old + mu * ( visc - visc_old ); 
+                
+                // Update multistep variables.
+                u_bar_old_2 = u_bar_old_1;
+
+                // Update number of iterations.
+                ++c_picard;
+            }
+        
+            ++c_eps;
+        }*/
+
+
+
+
+        // Implicit velocity solver. Picard iteration for non-linear viscosity and beta.
+        // Loop over the vertical level for Blatter-Pattyn.
+        // Picard initialization.
+        error    = 1.0;
+        c_picard = 0;
+
+        //ArrayXd beta_old(n);
+        
+        while ( error > nixParams.pcrd.tol && c_picard < nixParams.pcrd.n_picard )
+        {
+            // Save previous iteration solution.
+            u_bar_old_1 = u_bar;
+            
+            
+            ArrayXXd u_old_1 = u;
+            //ArrayXXd visc_old = visc;
+            //ArrayXd visc_bar_old = visc_bar;
+            
+            // Implicit solver.
+            // If SSA solver ub = u_bar.
+            sol = vel_solver(H, ds, ds_inv, ds_u_inv, dz, visc_bar, bed, L, \
+                                C_bed, t, beta, A, A_theta, visc, u, u_z, \
+                                    nixParams.dyn, nixParams.dom, \
+                                        nixParams.cnst, nixParams.vis);
+            
+            // Allocate variables. sol(n+1,n_z+1)
+            u_bar  = sol.block(0,0,n,1);
+            u      = sol.block(0,1,n,n_z);
+
+            if ( nixParams.dyn.vel_meth == "SSA" || nixParams.dyn.vel_meth == "DIVA" )
+            {
+                u = u_bar.replicate(1, n_z);
+            }
+
+
+            // Current error (vector class required to compute norm). 
+            // Eq. 12 (De-Smedt et al., 2010).
+            MatrixXd c_u_1 = u - u_old_1;
+            MatrixXd c_u_2 = u_old_1 - u_old_2;
+            MatrixXd u_vec = u;
+            //error     = c_u_1.norm() / u_vec.norm();
+            
+            // Test to check if the error definition gives problems!
+            c_u_bar_1 = u_bar - u_bar_old_1;
+            u_bar_vec = u_bar;
+            error     = c_u_bar_1.norm() / u_bar_vec.norm();
+
+            /*c_u_bar_1 = visc_bar - visc_bar_old;
+            u_bar_vec = visc_bar;
+            error     = c_u_bar_1.norm() / u_bar_vec.norm();*/
+            
+            // New relaxed Picard iteration. Pattyn (2003). 
+            // Necessary to deal with the nonlinear velocity dependence on both viscosity and beta.
+            // Just update beta and visc, not tau_b!
+            // We have previously intialize u_bar_old_2 for t = 0.
+            // Difference between iter (i-1) and (i-2).
+            
+            
+            // Angle defined between two consecutive vel solutions.
+            MatrixXd u_dot = c_u_1.array() * c_u_2.array();
+            omega = acos( u_dot.norm() / \
+                            ( c_u_1.norm() * c_u_2.norm() ) );
+            
+
+            // De Smedt et al. (2010). Eq. 10.
+            if (omega <= omega_1 || c_u_1.norm() == 0.0)
+            {
+                //mu = 2.5; // De Smedt.
+                mu = 1.0; // To avoid negative velocities?
+                //mu = 0.7; // Daniel
+            }
+            else if (omega > omega_1 & omega < omega_2)
+            {
+                mu = 1.0; // De Smedt.
+                //mu = 0.7; // Daniel
+                //mu = 0.7;
+            }
+            else
+            {
+                mu = 0.7; // De Smedt.
+                //mu = 0.5; // Daniel
+            }
+            
+            // New velocity guess based on updated mu.
+            u      = u_old_1 + mu * c_u_1.array();
+            u_bar  = u_bar_old_1 + mu * ( u_bar - u_bar_old_1 ); 
+
             
             // Update beta with new velocity.
             fric_all = f_u(u, u_bar, beta, C_bed, visc, H, dz, t, \
@@ -886,7 +1134,7 @@ int main()
 
             // Update viscosity with new velocity.
             visc_all = f_visc(theta, u, visc, H, tau_b, u_bar, dz, \
-                                ds, ds_inv, ds_sym, L, t, A, \
+                                ds, ds_u, ds_sym, L, t, A, \
                                     nixParams.dom, nixParams.thrmdyn, \
                                         nixParams.vis, nixParams.tm, \
                                             nixParams.dyn, nixParams.init);
@@ -894,11 +1142,65 @@ int main()
             // Allocate variables.
             visc     = visc_all.block(0,0,n,n_z);
             visc_bar = visc_all.col(n_z);
+
+            //visc     = mu * visc + ( 1.0 - mu ) * visc_old;
+            //visc_bar = mu * visc_bar + ( 1.0 - mu ) * visc_bar_old;
+
+            // Test relaxing viscosity.
+            //double rel = 0.0;
+            //visc = ( 1.0 - rel ) * visc + rel * visc_old;
+
+            // Execute functions in parallel using OpenMP
+            /*#pragma omp parallel sections
+            {
+                #pragma omp section
+                {
+                    // Implicit solver.
+                    // If SSA solver ub = u_bar.
+                    sol = vel_solver(H, ds, ds_inv, ds_u_inv, dz, visc_bar, bed, L, \
+                                        C_bed, t, beta, A, A_theta, visc, u, u_z, \
+                                            nixParams.dyn, nixParams.dom, \
+                                                nixParams.cnst, nixParams.vis);
+                    
+                    // Allocate variables. sol(n+1,n_z+1)
+                    u_bar  = sol.block(0,0,n,1);
+                    u      = sol.block(0,1,n,n_z);
+
+                    // Update beta with new velocity.
+                    fric_all = f_u(u, u_bar, beta, C_bed, visc, H, dz, t, \
+                                        nixParams.dom, nixParams.dyn, \
+                                            nixParams.fric, nixParams.cnst);
+                    beta = fric_all.col(0);
+                    
+                }
+
+
+                #pragma omp section
+                {
+                    // Update viscosity with new velocity.
+                    visc_all = f_visc(theta, u, visc, H, tau_b, u_bar, dz, \
+                                        ds, ds_u, ds_sym, L, t, A, \
+                                            nixParams.dom, nixParams.thrmdyn, \
+                                                nixParams.vis, nixParams.tm, \
+                                                    nixParams.dyn, nixParams.init);
+
+                    // Allocate variables.
+                    visc     = visc_all.block(0,0,n,n_z);
+                    visc_bar = visc_all.col(n_z);
+                }
+
+            }*/
+
+            /*cout << "\n c_picard =  " << c_picard;
+            cout << "\n u_bar =  " << u_bar;
+            cout << "\n beta =  " << beta;
+            cout << "\n visc_bar =  " << visc_bar;*/
+
             
             
             // Current error (vector class required to compute norm). 
             // Eq. 12 (De-Smedt et al., 2010).
-            c_u_bar_1 = u_bar - u_bar_old_1;
+            /*c_u_bar_1 = u_bar - u_bar_old_1;
             u_bar_vec = u_bar;
             error     = c_u_bar_1.norm() / u_bar_vec.norm();
             
@@ -917,14 +1219,15 @@ int main()
             // De Smedt et al. (2010). Eq. 10.
             if (omega <= omega_1 || c_u_bar_1.norm() == 0.0)
             {
-                mu = 2.5; // De Smedt.
-                //mu = 1.0; // To avoid negative velocities?
+                //mu = 2.5; // De Smedt.
+                mu = 1.0; // To avoid negative velocities?
                 //mu = 0.7; // Daniel
             }
             else if (omega > omega_1 & omega < omega_2)
             {
                 mu = 1.0; // De Smedt.
                 //mu = 0.7; // Daniel
+                //mu = 0.7;
             }
             else
             {
@@ -934,15 +1237,22 @@ int main()
 
             
             // New velocity guess based on updated mu.
-            u_bar = u_bar_old_1 + mu * c_u_bar_1.array();
-            u     = u_old + mu * ( u - u_old ); 
+            u_bar = u_bar_old_1 + mu * c_u_bar_1.array();*/
+
+
+            //u     = u_old + mu * ( u - u_old ); 
+
+            
             
             // Update multistep variables.
             u_bar_old_2 = u_bar_old_1;
+            u_old_2     = u_old_1;
 
             // Update number of iterations.
             ++c_picard;
         }
+        
+        
 
         
         // Allocate variables from converged solution.
@@ -966,8 +1276,8 @@ int main()
             // Save previous iteration solution (before NaN encountered).
             f_write(c, u_bar_old_1, ub, u_bar_x, H, visc_bar, S, tau_b, beta, tau_d, bed, \
                     C_bed, Q_fric, u2_dif_vec, u2_0_vec, L, t, u_x_bc, u2_dif, \
-                    error, dt, c_picard, mu, omega, theta, visc, u_z, u_x, u, w, A, dL_dt, \
-                    F_1, F_2, m_stoch, smb_stoch, A_theta, T_oce_det, T_oce_stoch, T_air, lmbd);
+                    error, dt, c_picard, mu, omega, theta, visc, u_z, u_x, u, A, dL_dt, \
+                    F_1, F_2, m_stoch, smb_stoch, A_theta, T_oce, lmbd);
 
             // Close nc file. 
             if ((retval = nc_close(ncid)))
@@ -990,7 +1300,7 @@ int main()
                     nixParams.cnst, nixParams.tm, nixParams.calv);
         
         // Update grounding line position with new velocity field.
-        L_out = f_L(H, q, S, bed, dt, L, ds, nixParams.dom, nixParams.cnst);
+        L_out = f_L(H, q, S, bed, dt, L, ds, M, nixParams.dom, nixParams.cnst);
         L     = L_out(0);
         dL_dt = L_out(1);
         
@@ -998,15 +1308,25 @@ int main()
         // Write solution with desired output frequency.
         if ( c == 0 || t > a(c) )
         {
+            // Write solution with desired output frequency.
+            // Running time (measures wall time).
+            auto end     = chrono::high_resolution_clock::now();
+            auto elapsed = chrono::duration_cast<chrono::nanoseconds>(end - begin);
+            double speed = 60 * 60 * 1.0e6 * (a(1) - a(0)) / elapsed.count();
+
+            if ( c == 0 )
+            {
+                speed = 0.0;
+                error = 0.0;
+            }
+
             // std::cout is typically buffered by default.
             // By using std::flush or std::endl, you ensure that the data is 
             // immediately written to the output device. 
-            cout << "\n t                 = " << t << std::flush;
-            cout << "\n dt                = " << dt << std::flush;
-            cout << "\n dx_min            = " << 1.0e-3*L*ds(n-2) << std::flush;
-            cout << "\n Picard iterations = " << c_picard << std::flush;
-            //cout << "\n Path:                " << nixParams.path.out << std::flush;
-            //cout << "\n Estimated error:     " << error << std::flush;
+            cout << "\n t =                  " << t << std::flush;
+            cout << "\n dx_min =             " << 1.0e-3*L*ds(n-2) << std::flush;
+            cout << "\n #Picard iterations:  " << c_picard << std::flush;
+            cout << "\n Estimated error:     " << error << std::flush;
             
             //cout << "\n noise_now(0) = " << noise_now(0);
             //cout << " b_melt = " << b_melt;
@@ -1014,39 +1334,47 @@ int main()
             // Write solution in nc.
             // Sub-shelf melting as forcing of MISMIP+thermodynamics.
             //m_stoch = M;
+            
 
             f_write(c, u_bar, ub, u_bar_x, H, visc_bar, S, tau_b, beta, tau_d, bed, \
                     C_bed, Q_fric, u2_dif_vec, u2_0_vec, L, t, u_x_bc, u2_dif, \
-                    error, dt, c_picard, mu, omega, theta, visc, u_z, u_x, u, w, A, dL_dt, \
-                    F_1, F_2, m_stoch, smb_stoch, A_theta, T_oce_det, T_oce_stoch, T_air, lmbd);
+                    error, dt, c_picard, mu, omega, theta, visc, u_z, u_x, u, A, dL_dt, \
+                    F_1, F_2, m_stoch, smb_stoch, A_theta, T_oce, lmbd);
 
             ++c;
         }  
         
 
         // Write solution with high resolution output frequency.
-        if ( out_hr == true && t > a_hr(c_hr) )
+        else if ( out_hr == true && t > a_hr(c_hr) )
         {
-            //cout << "\n t_hr = " << t;
             // Write solution in nc.
             f_write_hr(c_hr, u_bar(n-1), H(n-1), L, t, u_x_bc, u2_dif, \
-                       error, dt, c_picard, mu, omega, A, dL_dt, m_stoch, \
-                       smb_stoch, T_air, T_oce_det, T_oce_stoch);
+                       error, dt, c_picard, mu, omega, A, dL_dt, m_stoch, smb_stoch);
 
             ++c_hr;
-        }  
-        
 
-    
+        }
+
+
+
+        // Ice flux calculation. Flotation thickness H_f.
+        q = f_q(u_bar, H, bed, t, m_stoch, M, nixParams.dom, \
+                    nixParams.cnst, nixParams.tm, nixParams.calv);
+        
+        // Update grounding line position with new velocity field.
+        L_out = f_L(H, q, S, bed, dt, L, ds, nixParams.dom, nixParams.cnst);
+        L     = L_out(0);
+        dL_dt = L_out(1);
+
         // Integrate ice thickness forward in time.
-        H = f_H(u_bar, H, S, sigma, dt, ds, ds_inv, ds_sym, \
-                  L, D, dL_dt, bed, q, M, t, \
+        H = f_H(u_bar, H, S, sigma, dt, ds, ds_inv, ds_sym, ds_u_inv, \
+                L, D, dL_dt, bed, q, M, t, \
                     nixParams.dom, nixParams.tm, nixParams.adv);
         
         // Update vertical discretization.
         dz = H / n_z;
 
-        
 
         // THERMODYNAMICS.
         // Vertical advection is the key to obtain oscillations.
@@ -1060,39 +1388,95 @@ int main()
         // Obtain vertical velocities and integrate Fourier heat equation.
         else if ( nixParams.thrmdyn.therm == true && t >= nixParams.tm.t_eq )
         {
-            // Vertical velocity from incompressibility of ice flow.
-            w = f_w(u_bar_x, H, dz, b_melt, u_bar, bed, ds, L, nixParams.dom);
-
-            // Integrate heat equation and calculate basal melt.
-            sol_thrm = f_theta(theta, ub, H, tau_b, Q_fric, bed, sigma, dz, \
-                                dt, ds, L, T_air, dL_dt, t, w, strain_2d, \
-                                    nixParams.dom, nixParams.thrmdyn, nixParams.dyn, \
-                                        nixParams.bc, nixParams.cnst, nixParams.calv);
-
-            // Allocate variables.
-            theta  = sol_thrm.block(0,0,n,n_z);
-            b_melt = sol_thrm.block(0,n_z,n,1);
+            theta = f_theta(theta, ub, H, tau_b, Q_fric, sigma, dz, \
+                            dt, ds, L, dL_dt, t, w, strain_2d, \
+                            nixParams.dom, nixParams.thrmdyn, nixParams.dyn, nixParams.bc);
 
         }
 
 
         // Update timestep and current time.
-        dt_out = f_dt(L, t, dt, u_bar.maxCoeff(), ds.minCoeff(), error, \
-                        nixParams.tmstep, nixParams.tm, nixParams.pcrd);
+        dt_out = f_dt(L, t, dt, u_bar.maxCoeff(), \
+                        w.minCoeff(), dz.minCoeff(), ds.minCoeff(), error, \
+                            nixParams.tmstep, nixParams.tm, nixParams.pcrd, nixParams.thrmdyn);
         t  = dt_out(0);
         dt = dt_out(1);
+            
+        
+
+        
+        /*#pragma omp parallel sections
+        {
+            #pragma omp section
+            {
+
+                // Ice flux calculation. Flotation thickness H_f.
+                q = f_q(u_bar, H, bed, t, m_stoch, M, nixParams.dom, \
+                            nixParams.cnst, nixParams.tm, nixParams.calv);
+                
+                // Update grounding line position with new velocity field.
+                L_out = f_L(H, q, S, bed, dt, L, ds, nixParams.dom, nixParams.cnst);
+                L     = L_out(0);
+                dL_dt = L_out(1);
+
+                // Integrate ice thickness forward in time.
+                H = f_H(u_bar, H, S, sigma, dt, ds, ds_inv, ds_sym, ds_u_inv, \
+                        L, D, dL_dt, bed, q, M, t, \
+                            nixParams.dom, nixParams.tm, nixParams.adv);
+                
+                // Update vertical discretization.
+                dz = H / n_z;
+
+                // THERMODYNAMICS.
+                // Vertical advection is the key to obtain oscillations.
+                // It provides with a feedback to cool down the ice base and balance frictional heat.
+                if ( nixParams.thrmdyn.therm == false || t < nixParams.tm.t_eq )
+                {
+                    theta = ArrayXXd::Constant(n, n_z, theta_0);
+                }
+
+            
+                // Obtain vertical velocities and integrate Fourier heat equation.
+                else if ( nixParams.thrmdyn.therm == true && t >= nixParams.tm.t_eq )
+                {
+                    // Vertical velocity from incompressibility of ice flow.
+                    w = f_w(u_bar_x, H, dz, b_melt, u_bar, bed, u, u_x, ds, L, \
+                                nixParams.dom, nixParams.dyn);
+
+                    // Integrate heat equation and calculate basal melt.
+                    sol_thrm = f_theta(theta, ub, H, tau_b, Q_fric, bed, sigma, dz, \
+                                        dt, ds, L, T_air, dL_dt, t, w, strain_2d, u, u_bar, \
+                                            nixParams.dom, nixParams.thrmdyn, nixParams.dyn, \
+                                                nixParams.bc, nixParams.cnst, nixParams.calv);
+
+                    // Allocate variables.
+                    theta  = sol_thrm.block(0,0,n,n_z);
+                    b_melt = sol_thrm.block(0,n_z,n,1);
+
+                }
+            }
+
+            #pragma omp section
+            {
+                // Update timestep and current time.
+                dt_out = f_dt(L, t, dt, u_bar.maxCoeff(), \
+                                w.minCoeff(), dz.minCoeff(), ds.minCoeff(), error, \
+                                    nixParams.tmstep, nixParams.tm, nixParams.pcrd, nixParams.thrmdyn);
+                t  = dt_out(0);
+                dt = dt_out(1);
+            }
+        }*/
         
     }
     
 
     // Running time (measures wall time).
     auto end     = chrono::high_resolution_clock::now();
-    auto elapsed = chrono::duration_cast<chrono::nanoseconds>(end - begin);
+    auto elapsed = chrono::duration_cast<chrono::nanoseconds>(end - begin_0);
     
     // Print computational time.
     printf("\n Time measured: %.3f minutes.\n", elapsed.count() * 1e-9 / 60.0);
-    printf("\n Computational speed: %.3f kyr/hr.\n", \
-            60 * 60 * (1.0e-3 * tf) /  (elapsed.count() * 1e-9) );
+    //printf("\n Computational speed: %.3f kyr/hr.\n", speed);
 
     // Close nc files. 
     if ((retval = nc_close(ncid)))

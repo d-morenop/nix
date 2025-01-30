@@ -102,29 +102,72 @@ def modify_yaml(file_path, path_modified, yaml_file_name, var_names, data_types,
 #######################################################################
 # Define variable names and their corresponding values.
 
-# Define default experiments for reproducibility.
-exp = 'resolution'
+# Select desired experiment.
+exp = 'parallel'
 
 # OSCILLATIONS STUDY.
 if exp == 'oscillations':
+
+    yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_oscillations.yaml"
+    yaml_file_name = "nix_params_oscillations.yaml"
+
     var_names = ['S_0', 'C_thw']
 
     values_0 = np.array([0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60])
     values_1 = np.array([0.01, 0.02, 0.03, 0.04])
 
+    # Data type of each array.
+    data_types = [float, float]
+
+    values = [values_0, values_1]
+
+
+# RESOLUTION STUDY.
+elif exp == 'parallel':
+
+    yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_parallel.yaml"
+    yaml_file_name = "nix_params_parallel.yaml"
+
+    var_names = ['n', 'n_z', 'dt_min', 'eps']
+
+    values_0 = np.array([100]) # 200, 300
+    values_1 = np.array([100])  # 35
+    values_2 = np.array([1.0]) # 0.1, 0.05
+    values_3 = np.array([1.0e-7]) # 1.0e-4, 1.0e-5, 1.0e-6, 1.0e-7, 1.0e-8, 1.0e-9
+    
+        print('converted_value = ', converted_value)
+
+        # We have included float() to make sure it is given as a number. float(values[i])
+        if update_value_recursive(data, var_names[i], converted_value):
+            print(f" '{var_names[i]}' = '{converted_value}'.")
+        else:
+            print(f"Could not find '{var_names[i]}' in the dictionary.")
+
+    # Save the updated dictionary.
+    with open(full_path, 'w') as file:
+            yaml.dump(data, file, default_flow_style=False, sort_keys=False)
+
+    # Data type of each array.
+    data_types = [int, int, float, float]
+
+    values = [values_0, values_1, values_2, values_3]
+
+
+
+
+    
 
 # RESOLUTION STUDY.
 elif exp == 'resolution':
-     
+
     yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_resolution.yaml"
     yaml_file_name = "nix_params_resolution.yaml"
 
     var_names = ['n', 'dt_min']
+    #values_0 = np.array([2**4, 2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12, 2**13, 2**14])
 
-    #values_0 = np.array([2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12, 2**13, 2**14])
-    values_0 = np.array([2**5, 2**6, 2**7, 2**8])
-    
-    values_1 = np.array([0.01])
+    values_0 = np.array([1200, 2400]) # [25, 50, 100, 150, 300, 600]
+    values_1 = np.array([0.01]) # 0.01
 
     # Data type of each array.
     data_types = [int, float]
@@ -232,7 +275,8 @@ elif exp == 'ews_schoof_T_oce':
 
     values = [values_0, values_1, values_2, values_3, values_4]
 
-
+else:
+    print('Experiment not recognised.')
 
 
 #######################################################################
@@ -335,7 +379,7 @@ for i in range(len(name)):
 
 
     # Compilation configuration. ['local', 'iceberg', 'brigit']
-    config = 'iceshelf'
+    config = 'parallel'
 
     if config == 'local':
         
@@ -354,6 +398,11 @@ for i in range(len(name)):
 
         # Compiling command. -std=c++17
         cmd = "g++ -std=c++17 -I /usr/include/eigen3/ -o "+path_modified+"nix.o "+path_output_scr+"nix.cpp -lnetcdf -lyaml-cpp"
+
+    elif config == 'parallel':
+        
+        # Compiling command. -std=c++17. -O2
+        cmd = "g++ -std=c++17 -fopenmp -O3 -I /usr/include/eigen3/ -o "+path_modified+"nix.o "+path_output_scr+"nix.cpp -lnetcdf -lyaml-cpp"
 
     elif config == 'brigit':
         
@@ -398,7 +447,10 @@ for i in range(len(name)):
         cmd_run = path_modified+"nix.o &"
 
 
-    # Run Nix model.
+    # Run Nix model. export OMP_NUM_THREADS=8
+    #p = subprocess.Popen("export OMP_NUM_THREADS=8", shell=True, \
+    #                        stdout=f, universal_newlines=True)
+    
     p = subprocess.Popen(cmd_run, shell=True, \
                             stdout=f, universal_newlines=True)
 

@@ -20,53 +20,34 @@ from scipy.signal import argrelextrema
 from matplotlib.gridspec import GridSpec
 from PIL import Image
 
-
-
-path_fig        = '/home/dmoreno/figures/nix/resolution/'
-path_now        = '/home/dmoreno/nix/mismip.therm/T_oce_forcing_long/n.250_n_z.25_T_air.233.15_gamma_T.0.001/'
+# /home/dmoreno/nix/test_therm/n.100_n_z.35_dt_min.0.1_eps.1e-07/
+# /home/dmoreno/nix/test_Eigenthread1/n.200_n_z.50_dt_min.0.1_eps.1e-07
+path_fig        = '/home/dmoreno/nix/test_threads/n.128_dt_min.0.1_eps.1e-05/'
+path_now        = '/home/dmoreno/nix/test_Eigenthread12/n.100_n_z.100_dt_min.1.0_eps.1e-07/'
 path_stoch      = '/home/dmoreno/nix/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
 
-# '/home/dmoreno/nix/mismip.therm/exp-1_T_air_forcing_lapse.rate_ultra_long/n.250_n_z.35/'
-# /home/dmoreno/nix/mismip.therm/T_oce_forcing_long/n.250_n_z.25_T_air.233.15_gamma_T.0.001/
-# /home/dmoreno/nix/mismip.therm/cnst_A.1.0e-26_T_oce_forcing_long_2/n.250_n_z.25
-
-# Entropy:
-# /home/dmoreno/nix/transition_indicators/forcing_T_oce_hr/sigma_T_oce.5.0_T_oce_max.283.15/n.200_n_z.35_T_air.233.15_gamma_T.0.0008_tf_bc.45100.0/'
-
-# /home/dmoreno/nix/transition_indicators/forcing_T_oce_hr/sigma_T_oce.5.0_T_oce_max.283.15/n.200_n_z.35_T_air.233.15_gamma_T.0.0008_tf_bc.45100.0/
-# /home/dmoreno/nix/transition_indicators/forcing_T_oce_hr/T_oce_max.283.15/n.400_n_z.35_T_air.233.15_gamma_T.0.0008_tf_bc.45100.0/
-# /home/dmoreno/nix/mismip.therm/test.issue_long_T/n.250_n_z.25_T_air.218.15/
-# /home/dmoreno/nix/mismip.therm/T_oce_forcing_long/n.250_n_z.25_T_air.233.15_gamma_T.0.001
-# '/home/dmoreno/nix/oscillations/S-C_thw_hr_dt.fixed/S_0.0.10_C_thw.0.10/'
-# '/home/dmoreno/nix/ews/M_rates/smooth/sigma.1.0_A.3.0e-26_yp.176/''
-# /home/dmoreno/flowline/mismip_bp/exp_3/n.100_nz.10/
-
-
-# /home/dmoreno/nix/mismip.therm/exp-1_T_air_forcing_lapse.rate_long_cold/n.250_n_z.35/
-# /home/dmoreno/nix/mismip.therm/T_air_forcing_lapse.rate_long_cold/n.250_n_z.35/
-# /home/dmoreno/nix/mismip.therm/test.issue_long_T_oce_forcing/n.250_n_z.25_T_air.223.15_gamma_T.0.001/
-
 # Select plots to be saved (boolean integer).
-save_series        = 0
-save_series_comp   = 0
+save_series        = 1
+save_series_comp   = 1
 save_shooting      = 0
-save_domain        = 0
-coloured_domain    = 0
-save_var_frames    = 0
+save_domain        = 1
+coloured_domain    = 1
+save_var_frames    = 1
 save_series_frames = 0
 save_theta         = 0
-save_visc          = 0
-save_u             = 0
-save_u_der         = 0
+save_visc          = 1
+save_u             = 1
+save_w             = 0
+save_u_der         = 1
 time_series_gif    = 0
 save_L             = 0
 save_series_2D     = 0
 heat_map_fourier   = 0
 entropy            = 0
-speed              = 1
-save_fig           = True
+plot_speed         = 0
+save_fig           = False
 read_stoch_nc      = False
 bed_smooth         = False
 
@@ -90,21 +71,6 @@ data   = Dataset(nc_SSA, mode='r')
 
 nix_name = list(data.variables.keys())
 var_name = nix_name
-
-# Let us create a dictionary with variable names.
-"""nix_name = ['u_bar', 'ub', 'u_bar_x', 'u_z', 'u', 'H', 'visc_bar', 'tau_b', 'tau_d', \
-				 'L', 'dL_dt', 't', 'b', 'C_bed', 'dudx_bc', \
-				 'BC_error', 'u2_0_vec', 'u2_dif_vec', 'picard_error', \
-				 'c_picard', 'dt', 'mu', 'omega', 'A', 'theta', 'S', \
-				 'm_stoch', 'smb_stoch', 'Q_fric', 'beta', 'visc', 'u_x', 'F_1', 'F_2', \
-				 'A_theta', 'T_oce_det', 'T_oce_stoch', 'lmbd', 'w', 'T_air']
-
-var_name 	  = ['u_bar', 'ub', 'u_bar_x', 'u_z', 'u', 'H', 'visc_bar', 'tau_b', 'tau_d', \
-				 'L', 'dL_dt', 't', 'b', 'C_bed', 'u_x_bc', \
-				 'dif', 'u2_0_vec', 'u2_dif_vec', 'picard_error', \
-				 'c_picard', 'dt', 'mu', 'omega_picard', 'A_s', 'theta', 'S', \
-				 'm_stoch', 'smb_stoch', 'Q_fric', 'beta', 'visc', 'u_x', 'F_1', 'F_2', \
-				 'A_theta', 'T_oce_det', 'T_oce_stoch', 'lmbd', 'w', 'T_air']"""
 
 
 # Dimension.
@@ -133,11 +99,6 @@ s = np.shape(theta)
 # GENEREAL PARAMETERS
 sec_year = 3.154e7
 
-# f_cb
-T       = 50.0       # years  
-omega   = 2.0 * np.pi / T     # Real period is 0.5 * omega due to abs(cos(omega*t))
-x_omega = 5.0e3               # m  
-
 # f_visc_bar
 n_gln = 3
 A     = 4.9e-25               # 4.9e-25 (T=-10ºC) # Pa³ / s (Greve and Blatter, 2009)
@@ -157,8 +118,6 @@ A_0   = 3.985e-13 * sec_year         # [Pa^-3 s^-1]
 #T_air_s = - Q_act / ( R * np.log(A_s / A_0) ) - 273.15
 
 
-#print('A_s = ', A_s)
-#print('T_air_s = ', T_air_s)
 
 def f_bed(x, exp, n):
 	
@@ -383,8 +342,8 @@ if save_series == 1:
 	
 	ax3.plot(t_plot, T_air, linestyle='-', color='purple', marker='None', \
 			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
-	ax5.plot(t_plot, T_oce, linestyle='-', color='darkgreen', marker='None', \
-				 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+	#ax5.plot(t_plot, T_oce, linestyle='-', color='darkgreen', marker='None', \
+	#			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
 
 	#ax3.plot(t_plot, b[:,s[2]-1], linestyle='-', color='purple', marker='None', \
 #			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
@@ -517,22 +476,22 @@ if save_series_comp == 1:
 	plt.rcParams['text.usetex'] = True
 	
 	ax.plot(t_plot[1:n-1], c_picard[1:n-1], linestyle='-', color='darkblue', marker='None', \
-			markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+			markersize=3.0, linewidth=2.0, alpha=1.0, label=r'$u_{b}(x)$') 
 		
-	#ax6.plot(t_plot, visc_bar, linestyle='-', color='purple', marker='None', \
-	#		markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+	ax6.plot(t_plot, speed, linestyle='-', color='purple', marker='None', \
+			markersize=3.0, linewidth=2.0, alpha=1.0, label=r'$u_{b}(x)$') 
 	
 	ax2.plot(t_plot, dt, linestyle='-', color='black', marker='None', \
-			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+			 markersize=3.0, linewidth=2.0, alpha=1.0, label=r'$u_{b}(x)$') 
 
 	ax4.plot(t_plot, np.log10(picard_error), linestyle='-', color='red', marker='None', \
-			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$')
+			 markersize=3.0, linewidth=2.0, alpha=1.0, label=r'$u_{b}(x)$')
 	
-	ax3.plot(t_plot, omega_picard/np.pi, linestyle='-', color='blue', marker='None', \
-			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+	ax3.plot(t_plot, omega/np.pi, linestyle='-', color='blue', marker='None', \
+			 markersize=3.0, linewidth=2.0, alpha=1.0, label=r'$u_{b}(x)$') 
 		
 	ax5.plot(t_plot, mu, linestyle='-', color='black', marker='None', \
-			 markersize=3.0, linewidth=2.5, alpha=1.0, label=r'$u_{b}(x)$') 
+			 markersize=3.0, linewidth=2.0, alpha=1.0, label=r'$u_{b}(x)$') 
 	
 	
 	ax.set_ylabel(r'$N_{\mathrm{pic}}$',fontsize=18)
@@ -540,7 +499,7 @@ if save_series_comp == 1:
 	ax4.set_ylabel(r'$ \mathrm{log}_{10} (\varepsilon) $',fontsize=18)
 	ax3.set_ylabel(r'$ \omega \ (\pi \ \mathrm{rad}) $',fontsize=18)
 	ax5.set_ylabel(r'$ \mu $',fontsize=18)
-	ax6.set_ylabel(r'$ \eta \ (Pa \cdot s) $',fontsize=18)
+	ax6.set_ylabel(r'$ \mathrm{Speed} \ (\mathrm{kyr/hr}) $',fontsize=18)
 	ax3.set_xlabel(r'$\mathrm{Time} \ (kyr)$',fontsize=18)
 	
 	ax.set_xlim(t_plot[0], t_plot[l-1])
@@ -659,7 +618,7 @@ if save_domain == 1:
 	delta_T_oce = False
 	
 	if frames == True:
-		for i in range(4, 5, 1): # range(10, l, 1), (l-1, l, 20)
+		for i in range(l-1, l, 1): # range(10, l, 1), (l-1, l, 20)
 
 			print('Frame = ', i)
 			
@@ -758,7 +717,8 @@ if save_domain == 1:
 				# Constant temperature experiments.
 				#theta[:] = -30.0
 
-				theta_max = 80.0 #80.0
+				#theta_max = 50.0 #80.0
+				theta_max = abs(np.nanmin(theta))
 				theta_min = 0.0
 
 				
@@ -770,11 +730,11 @@ if save_domain == 1:
 				#color_theta = np.flip(u[i,:,:],axis=0)
 
 				# Plot a rectangle.
-				def rect(ax, x, b, y, w, h, c,**kwargs):
+				def rect(ax, x, b, y, dx, h, c,**kwargs):
 					
 					# Varying only in x.
 					if len(c.shape) is 1:
-						rect = plt_lab.Rectangle((x, y), w, h, color=c, ec=c,**kwargs)
+						rect = plt_lab.Rectangle((x, y), dx, h, color=c, ec=c,**kwargs)
 						ax.add_patch(rect)
 					
 					# Varying in x and y.
@@ -788,28 +748,38 @@ if save_domain == 1:
 						dz = np.linspace(0.0,1.0,N+1)
 						hb = dz * h; yl = y - hb
 
-						for i in range(N-1):
+						"""for i in range(N-1):
 							dz_H = hb[i+1]-hb[i]
-							#yl += hb
-							#rect = plt_lab.Rectangle((x, yl), w, hb, 
-							#					color=c[i,:], ec=c[i,:],**kwargs)
 							
 							rect = plt_lab.Rectangle((x, b-hb[i+1]), w, dz_H, 
 												color=c[i,:], ec=c[i,:],**kwargs)
 							ax.add_patch(rect)
-
+							
 						# Plot the uppermost region as len(dz_H)=N+1 but the loop goes to N-1.
 						rect = plt_lab.Rectangle((x, b-hb[N]), w, dz_H, 
+												color=c[N-1,:], ec=c[N-1,:],**kwargs)
+						ax.add_patch(rect)"""
+
+						for i in range(N-1):
+						
+							dz_H = hb[i+1]-hb[i]
+							
+							rect = plt_lab.Rectangle((x, b-hb[i+1]), dx, dz_H, 
+												color=c[i,:], ec=c[i,:],**kwargs)
+							ax.add_patch(rect)
+
+						# Plot the uppermost region as len(dz_H)=N+1 but the loop goes to N-1.
+						rect = plt_lab.Rectangle((x, b-hb[N]), dx, dz_H, 
 												color=c[N-1,:], ec=c[N-1,:],**kwargs)
 						ax.add_patch(rect)
 
 				# Fill a contour between two lines.
-				def rainbow_fill_between(ax, X, Y1, Y2, colors=None, 
+				def rainbow_fill_between(ax, X, Y1, Y2, dxs, colors=None, 
 										cmap=plt.get_cmap("Spectral").reversed(),**kwargs):
 					
 					plt.plot(X,Y1,lw=0)  # Plot so the axes scale correctly
 
-					dx = X[1]-X[0]
+					#dx = X[1]-X[0]
 					N  = X.size
 
 					# Pad a float or int to same size as x.
@@ -849,7 +819,11 @@ if save_domain == 1:
 					#colors = 1.0 - np.array(colors)
 
 					# Create the patch objects.
-					for (color,x,y1,y2) in zip(colors,X,Y1,Y2):
+					"""for (color,x,y1,y2) in zip(colors,X,Y1,Y2):
+						rect(ax,x,y1,y2,dx,y1-y2,color,**kwargs)"""
+
+					# Create the patch objects.
+					for (color,x,y1,y2,dx) in zip(colors,X,Y1,Y2,dxs):
 						rect(ax,x,y1,y2,dx,y1-y2,color,**kwargs)
 
 
@@ -864,8 +838,9 @@ if save_domain == 1:
 				reversed_cmap = cmap.reversed()
 
 				# Plot fill and curves changing in x and y.
+				dx = [ X[i+1]-X[i] for i in range(s[2]-1) ]
 				colors = np.rot90(g,3)
-				rainbow_fill_between(ax, X, Y1, Y2, colors=colors)
+				rainbow_fill_between(ax, X, Y1, Y2, dx, colors=colors)
 
 				# Add a colorbar based on the colormap
 				#cbar_ax = fig.add_axes([1.025, 0.17, 0.045, 0.779]) 
@@ -982,7 +957,7 @@ if save_domain == 1:
 
 if save_var_frames == 1:
 	
-	for i in range(0, l, 1): # (0, l, 10), (l-1, l, 1)
+	for i in range(l-1, l, 1): # (0, l, 10), (l-1, l, 1)
 		
 		#L_plot  = np.linspace(0, L[i], s[2])
 		L_plot = sigma_plot * L[i]
@@ -1142,7 +1117,7 @@ if save_theta == 1:
 
 	cb_ticks = np.round(np.linspace(theta_min, theta_max, 6),1)
 	
-	for i in range(0, l, 1):
+	for i in range(l-2, l, 1):
 
 		# Update x_labels as domain extension changes in each iteration.
 		x_labels  = np.linspace(0, L[i], n_ticks, dtype=int)
@@ -1194,7 +1169,7 @@ if save_theta == 1:
 			else:
 				frame = str(i)
 			
-			plt.savefig(path_fig+'flow_line_theta_'+frame+'.png', bbox_inches='tight')
+			plt.savefig(path_fig+'fnix_theta_'+frame+'.png', bbox_inches='tight')
 		
 		plt.show()
 		plt.close(fig)
@@ -1229,7 +1204,7 @@ if save_visc == 1:
 
 	cb_ticks = np.linspace(var_min, var_max, 6)
 	
-	for i in range(l-1, l, 1):
+	for i in range(l-2, l, 1):
 
 		# Update x_labels as domain extension changes in each iteration.
 		x_labels  = np.linspace(0, L[i], n_ticks, dtype=int)
@@ -1239,9 +1214,17 @@ if save_visc == 1:
 		ax  = fig.add_subplot(111)
 
 		# Flip theta matrix so that the plot is not upside down.
-		im = ax.imshow(np.flip(visc[i,:,:],axis=0), cmap='plasma', norm="log", \
-						vmin=var_min, vmax=var_max, aspect='auto')
+		#im = ax.imshow(np.flip(visc[i,:,:],axis=0), cmap='plasma', norm="log", \
+		#				vmin=var_min, vmax=var_max, aspect='auto')
+		
 		#im = ax.imshow(np.flip(visc[i,:,:],axis=0), cmap='plasma', aspect='auto')
+
+		# We account for potential unevenly-spaced grids.
+		x = sigma_plot * s[2]
+		y = np.linspace(0.0, s[1], s[1])
+		im = ax.pcolormesh(x, y, np.log10(visc[i,:,:]), vmin=4.5, vmax=6.0, \
+					 cmap='plasma', edgecolors='none', linewidth=1)
+		
 	
 		ax.set_ylabel(r'$ \mathbf{n}_{z} $', fontsize=20)
 		ax.set_xlabel(r'$\ \mathbf{x} \ (\mathrm{km})$', fontsize=20)
@@ -1253,7 +1236,7 @@ if save_visc == 1:
 		#cb.set_ticks(cb_ticks)
 		#cb.set_ticklabels(list(cb_ticks), fontsize=14)
 
-		cb.set_label(r'$\eta (x,z) \ (10^{6} \ \mathrm{Pa \cdot s})$', \
+		cb.set_label(r'$ \mathrm{log_{10}} \left ( \eta \right ) \ (\mathrm{Pa \cdot s})$', \
 					 rotation=90, labelpad=6, fontsize=20)
 
 		"""
@@ -1316,7 +1299,7 @@ if save_u == 1:
 
 	ind_plot = np.array([0, int(0.5*s[0]), s[0]-1])
 	
-	for i in range(0, l, 10): # (l-1, l, 1), ind_plot
+	for i in range(l-2, l, 1): # (l-1, l, 1), ind_plot
 
 		# Update x_labels as domain extension changes in each iteration.
 		x_labels  = np.linspace(0, L[i], n_ticks, dtype=int)
@@ -1334,8 +1317,18 @@ if save_u == 1:
 		cmap = plt.get_cmap("viridis") #RdYlBu, Spectral, rainbow, jet, turbo
 		reversed_cmap = cmap.reversed()
 
-		im = ax.imshow(np.flip((w[i,:,:]),axis=0), vmin=w_min, vmax=w_max,\
-		 				cmap=reversed_cmap, aspect='auto')
+		
+		#im = ax.imshow(np.flip((np.log10(abs(u[i,:,:]))),axis=0), \
+		# 				cmap=cmap, aspect='auto')
+
+		
+		x = sigma_plot * s[2]
+		y = np.linspace(0.0, s[1], s[1])
+		im = ax.pcolormesh(x, y, np.log10(abs(u[i,:,:])), \
+					 			cmap=cmap, edgecolors='none', linewidth=1)
+
+		# Add a colorbar
+		#fig.colorbar(mesh, ax=ax)
 	
 	
 		ax.set_ylabel(r'$ \mathbf{n}_{z} $', fontsize=20)
@@ -1348,7 +1341,7 @@ if save_u == 1:
 		#cb.set_ticks(cb_ticks_u)
 		#cb.set_ticklabels(list(cb_ticks_u), fontsize=14)
 
-		cb.set_label(r'$ w (x,z) \ ( \mathrm{m / yr})$', \
+		cb.set_label(r'$ \mathrm{log_{10}} (u) \ ( \mathrm{m / yr})$', \
 					 rotation=90, labelpad=6, fontsize=20)
 
 		"""
@@ -1401,7 +1394,7 @@ if save_u_der == 1:
 
 	ind_plot = np.array([0, int(0.5*s[0]), s[0]-1])
 	
-	for i in range(l-1, l, 1): # (l-1, l, 1), ind_plot
+	for i in range(l-2, l, 1): # (l-1, l, 1), ind_plot
 
 		# FIGURE FOR U_Z.
 		fig = plt.figure(dpi=600, figsize=(6,4))
@@ -1409,10 +1402,17 @@ if save_u_der == 1:
 		ax  = fig.add_subplot(111)
 
 		# Flip theta matrix so that the plot is not upside down.
-		im = ax.imshow(np.flip(u_z[i,:,:],axis=0), norm='log', cmap='PuOr', \
-						vmin=u_z_min, vmax=u_z_max, aspect='auto')
+		#im = ax.imshow(np.flip(u_z[i,:,:],axis=0), cmap='PuOr', \
+	#					vmin=u_z_min, vmax=u_z_max, aspect='auto')
 		
-		#im = ax.imshow(np.flip(lmbd[i,:,:],axis=0), cmap='cividis', aspect='auto')
+		#im = ax.imshow(np.flip(u_z[i,:,:],axis=0), cmap='PuOr', aspect='auto')
+
+		# We account for potential unevenly-spaced grids.
+		x = sigma_plot * s[2]
+		y = np.linspace(0.0, s[1], s[1])
+		im = ax.pcolormesh(x, y, np.log10(u_z[i,:,:]), cmap='PuOr', edgecolors='none', linewidth=1)
+		#im = ax.pcolormesh(x, y, u_z[i,:,:], cmap='PuOr', edgecolors='none', linewidth=1)
+		
 
 		ax.set_ylabel(r'$ \mathbf{n}_{z} $', fontsize=20)
 		ax.set_xlabel(r'$\ \mathbf{x} \ (\mathrm{km})$', fontsize=20)
@@ -1427,7 +1427,7 @@ if save_u_der == 1:
 		#cb.set_label(r'$ u_{z} (x,z) \ ( \mathrm{1 / yr})$', \
 		#			 rotation=90, labelpad=6, fontsize=20)
 
-		cb.set_label(r'$ u_{z} (x,z) \ ( \mathrm{1 / yr})$', \
+		cb.set_label(r'$ \mathrm{log_{10}} \left ( u_{z} \right )  \ ( \mathrm{1 / yr})$', \
 					 rotation=90, labelpad=6, fontsize=20)
 		"""
 		ax.set_xticks(x_ticks)
@@ -1467,7 +1467,7 @@ if save_u_der == 1:
 	u_x = np.where(u_x < u_x_min, u_x_min, u_x)
 
 
-	for i in range(l-1, l, 1): # (l-1, l, 1), ind_plot
+	for i in range(l-2, l, 1): # (l-1, l, 1), ind_plot
 
 		# FIGURE FOR U_Z.
 		fig = plt.figure(dpi=600, figsize=(6,4))
@@ -1475,10 +1475,15 @@ if save_u_der == 1:
 		ax  = fig.add_subplot(111)
 
 		# Flip theta matrix so that the plot is not upside down.
-		im = ax.imshow(np.flip(u_x[i,:,:],axis=0), norm='log', cmap='Spectral', \
-						vmin=u_x_min, vmax=u_x_max, aspect='auto')
+		#im = ax.imshow(np.flip(u_x[i,:,:],axis=0), norm='log', cmap='Spectral', \
+		#				vmin=u_x_min, vmax=u_x_max, aspect='auto')
 		
 		#im = ax.imshow(np.flip(lmbd[i,:,:],axis=0), cmap='cividis', aspect='auto')
+
+		x = sigma_plot * s[2]
+		y = np.linspace(0.0, s[1], s[1])
+		im = ax.pcolormesh(x, y, np.log10(u_x[i,:,:]), cmap='Spectral', edgecolors='none', linewidth=1)
+		
 
 		ax.set_ylabel(r'$ \mathbf{n}_{z} $', fontsize=20)
 		ax.set_xlabel(r'$\ \mathbf{x} \ (\mathrm{km})$', fontsize=20)
@@ -1493,7 +1498,7 @@ if save_u_der == 1:
 		#cb.set_label(r'$ u_{z} (x,z) \ ( \mathrm{1 / yr})$', \
 		#			 rotation=90, labelpad=6, fontsize=20)
 
-		cb.set_label(r'$ u_{x} (x,z) \ ( \mathrm{1 / yr})$', \
+		cb.set_label(r'$ \mathrm{log_{10}} \left ( u_{x} \right ) \ ( \mathrm{1 / yr})$', \
 					rotation=90, labelpad=6, fontsize=20)
 		"""
 		ax.set_xticks(x_ticks)
@@ -1524,6 +1529,109 @@ if save_u_der == 1:
 
 
 
+
+if save_w == 1:
+
+	# Number of x ticks.
+	n_ticks = 5
+	x_ticks = np.linspace(0, n, n_ticks)
+	n_z     = np.shape(w)[1]
+	z_ticks = int(0.2 * n_z + 1)
+
+	# n_z-0.5 to avoid half of grid cell in black when plotting.
+	y_ticks  = np.linspace(0, n_z-0.5, z_ticks, dtype=int)
+	y_labels = np.linspace(0, n_z, z_ticks, dtype=int)
+
+	# Var limits.
+	#var_min = np.round(1e-6 * np.nanmin(visc), 0)
+	#var_max = np.round(1e-6 * np.nanmax(visc), 0)
+	#u_min = np.nanmin(u)
+	#u_max = np.nanmax(u)
+
+	#u_x_min = np.nanmin(u_x[s[0]-1])
+	#u_x_max = np.nanmax(u_x[s[0]-1])
+	"""u_min = 1.0
+	u_max = 1.0e3"""
+
+	w_min = -5.0
+	w_max = 0.0
+
+	#cb_ticks_u   = np.linspace(u_min, u_max, 6)
+	#cb_ticks_u_z = np.round(np.linspace(u_z_min, u_z_max, 6), 4)
+
+	ind_plot = np.array([0, int(0.5*s[0]), s[0]-1])
+	
+	for i in range(l-2, l, 1): # (l-1, l, 1), ind_plot
+
+		# Update x_labels as domain extension changes in each iteration.
+		x_labels  = np.linspace(0, L[i], n_ticks, dtype=int)
+		
+
+		# FIGURE FOR U_X.
+		fig = plt.figure(dpi=600, figsize=(6,4))
+		plt.rcParams['text.usetex'] = True
+		ax  = fig.add_subplot(111)
+
+		# Flip theta matrix so that the plot is not upside down.
+		#im = ax.imshow(np.flip(np.abs(w[i,:,:]),axis=0), vmin=w_min, vmax=w_max,\
+		# 				 norm='log', cmap='viridis', aspect='auto')
+  
+		cmap = plt.get_cmap("cividis") #RdYlBu, Spectral, rainbow, jet, turbo
+		reversed_cmap = cmap.reversed()
+
+		
+		#im = ax.imshow(np.flip((cabs(u[i,:,:]))),axis=0), \
+		# 				cmap=cmap, aspect='auto')
+
+		
+		x = sigma_plot * s[2]
+		y = np.linspace(0.0, s[1], s[1])
+		im = ax.pcolormesh(x, y, np.log10(abs(w[i,:,:])), \
+					 			cmap=cmap, edgecolors='none', linewidth=1)
+
+		# Add a colorbar
+		#fig.colorbar(mesh, ax=ax)
+	
+	
+		ax.set_ylabel(r'$ \mathbf{n}_{z} $', fontsize=20)
+		ax.set_xlabel(r'$\ \mathbf{x} \ (\mathrm{km})$', fontsize=20)
+
+		divider = make_axes_locatable(ax)
+		cax     = divider.append_axes("right", size="5%", pad=0.1)
+		cb      = fig.colorbar(im, cax=cax, extend='neither')
+
+		#cb.set_ticks(cb_ticks_u)
+		#cb.set_ticklabels(list(cb_ticks_u), fontsize=14)
+
+		cb.set_label(r'$ \mathrm{log_{10}} (w) \ ( \mathrm{m / yr})$', \
+					 rotation=90, labelpad=6, fontsize=20)
+
+		"""
+		ax.set_xticks(x_ticks)
+		ax.set_xticklabels(list(x_labels), fontsize=15)
+		
+		ax.set_yticks(y_ticks)
+		ax.set_yticklabels(list(y_labels[::-1]), fontsize=15)
+		"""
+	
+		ax.set_title(r'$i = \ $'+str(i)+r'$, \ t =  \ $'+str(np.round(t[i],2))+r'$ \ yr$', fontsize=16)
+		plt.tight_layout()
+
+		if save_fig == True:
+			##### Frame name ########
+			if i < 10:
+				frame = '000'+str(i)
+			elif i > 9 and i < 100:
+				frame = '00'+str(i)
+			elif i > 99 and i < 1000:
+				frame = '0'+str(i)
+			else:
+				frame = str(i)
+			
+			plt.savefig(path_fig+'flow_line_visc_'+frame+'.png', bbox_inches='tight')
+		
+		plt.show()
+		plt.close(fig)
 
 
 #############################################
@@ -2489,22 +2597,25 @@ if entropy == 1:
 	plt.close(fig)
 
 
-if speed == 1:
+if plot_speed == 1:
 
 	# Parent folder.
-	parent_folder = '/home/dmoreno/nix/resolution_new/'
-
-	var  = ['speed']
+	parent_folder = '/home/dmoreno/nix/resolution_parallel/'
+	folder_BP = '/home/dmoreno/nix/resolution_parallel_BP/'
 
 	# List all subfolders in the parent folder
 	subfolders = [f.path for f in os.scandir(parent_folder) if f.is_dir()]
 	subfolders.sort()
+
+	subfolders_BP = [f.path for f in os.scandir(folder_BP) if f.is_dir()]
+	subfolders_BP.sort()
 
 	l = len(subfolders)
 	l_half = int(0.5*l)
 
 	speed = []
 	speed_mean = np.empty(l)
+	speed_mean_BP = np.empty(7)
 
 
 	fig = plt.figure(dpi=600, figsize=(6,4))
@@ -2533,10 +2644,49 @@ if speed == 1:
 		   					linewidth=1.0, markersize=2, label=subfolders[i])
 	
 	
+	
+	
+	for i in range(7):
+
+		print('Exp = ', subfolders_BP[i])
+		
+		# Define the path to the netCDF file in the current subfolder
+		path_nc = os.path.join(get_datadir(), subfolders_BP[i], 'nix.nc')
+
+		# Check if the file exists before attempting to open it
+		if os.path.exists(path_nc):
+			
+			# Open the netCDF file
+			data = Dataset(path_nc, mode='r')
+
+			speed = data.variables['speed'][:]
+
+			speed_mean_BP[i] = np.mean(speed[11:99])
+
+
+
+	# Load extent to include resolution axis.
+	L = data.variables['L'][:]
+	n_s = np.array([2**4, 2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12, 2**13])
+	
+	dx = np.empty(10)
+	for i in range(10):
+		
+		a = np.linspace(0.0, 1.0, n_s[i])**0.25
+		if i < 7:
+			n_round = 1
+		else:
+			n_round = 2
+		dx[i] = np.round(1.0e-3 * L[s[1]-1] * ( a[n_s[i]-1] - a[n_s[i]-2] ), n_round)
+
+
+	#dx = np.round(1.0e-3 * L[s[1]-1] / n, 1)
+
+
+
 	ax.set_title(r'$S$', fontsize=16)
 	plt.tight_layout()
 
-	#plt.savefig(path_fig+'entropy_flux_time_series.png', bbox_inches='tight')
 
 	plt.show()
 	plt.close(fig)
@@ -2546,7 +2696,7 @@ if speed == 1:
 	#n = np.array([2**4, 2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12, 2**13])
 
 
-	fig = plt.figure(dpi=600, figsize=(6,4))
+	fig = plt.figure(dpi=600, figsize=(6,5))
 	plt.rcParams['text.usetex'] = True
 	ax  = fig.add_subplot(111)
 
@@ -2556,17 +2706,27 @@ if speed == 1:
 
 	ax.plot(speed_mean[0,:], 'red', marker='o', linestyle='--', \
 		   					linewidth=1.0, markersize=6, label='$ \mathrm{DIVA} $')
+	
+	ax.plot(speed_mean_BP[:], 'darkgreen', marker='o', linestyle='--', \
+		   					linewidth=1.0, markersize=6, label='$ \mathrm{Blatter-Pattyn} $')
 
 	#ax.set_yscale('log')
-	ax.set_yscale('log')
+	
+
+	
+
+	secax = ax.secondary_xaxis(-0.2)  # Secondary axis offset below main x-axis
+	secax.set_xticks([0,1,2,3,4,5,6,7,8,9])  # Match ticks with primary axis
+	secax.set_xticklabels([f'${value}$' for value in dx], fontsize=13)
+	secax.set_xlabel(r' $ \Delta x \ (\mathrm{km}) 	$ ', fontsize=20)
 
 	ax.set_xticks([0,1,2,3,4,5,6,7,8,9])
 	ax.set_xticklabels(['$2^{4}$', '$2^{5}$', '$2^{6}$', '$2^{7}$', \
 					    '$2^{8}$', '$2^{9}$', '$2^{10}$', '$2^{11}$', '$2^{12}$', '$2^{13}$',], fontsize=15)
 
-	ax.set_yticks([1,10,10**2,10**3,10**4,10**5])
-	ax.set_yticklabels(['$10^{0}$','$10^{1}$', '$10^{2}$', '$10^{3}$', '$10^{4}$', \
-					    '$10^{5}$'], fontsize=15)
+	ax.set_yticks([10**1, 10**3, 10**5, 10**7])
+	ax.set_yticklabels(['$10^{1}$',' $10^{3}$', '$10^{5}$', '$10^{7}$'], fontsize=13)
+
 
 	#ax.set_title(r'$ \mathrm{Speed} $', fontsize=16)
 
@@ -2580,11 +2740,15 @@ if speed == 1:
 	ax.set_xlabel(r'$ n $', fontsize=20)
 	ax.set_ylabel(r'$ \mathrm{Speed} \ (\mathrm{kyr/hr})$', fontsize=20)
 
-	ax.set_xlim(0,l_half-1)
-	ax.set_ylim(1.0, 1.0e5)
+	ax.set_xlim(-0.1,l_half-1+0.1)
+	ax.set_ylim(7, 1.0e7)
+
+	
+	ax.grid(visible=True, which='major', linestyle=':', linewidth=0.5)
+	ax.set_yscale('log')
 
 
-	plt.savefig(path_fig+'nix_resolution.png', bbox_inches='tight')
+	plt.savefig(path_fig+'nix_speed.png', bbox_inches='tight')
 
 	plt.show()
 	plt.close(fig)
