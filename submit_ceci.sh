@@ -4,8 +4,8 @@
 #SBATCH --job-name=Nix
 #SBATCH -o nix.out
 #SBATCH -e nix.err
-#SBATCH --nodes=1
-#SBATCH --cpus-per-task=1    # Allocate 12 CPUs for a single task. Eigen parallelizes within a single process. 
+#SBATCH --nodes=1            # 1
+#SBATCH --cpus-per-task=4    # Allocate 12 CPUs for a single task. Eigen parallelizes within a single process. 
 #SBATCH --ntasks=1            # Must be 1 for Eigen.
 #SBATCH --mem-per-cpu=2500    # 2.5Gb.
 #SBATCH --partition=batch

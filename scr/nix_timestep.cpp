@@ -28,6 +28,12 @@ Array2d f_dt(double L, double t, double dt, double u_bar_max, \
         {
             dt = tmstep.dt_min;
             //dt = 1.0;
+            if ( dt > dt_CFL )
+            {
+                cout << " \n Fixed timestep larger than CFL condition.";
+                cout << " \n dt_fixed = "   << dt;
+                cout << " \n dt_CFL   = "   << dt_CFL;
+            }
         }
         
         // Idea: adaptative timestep from Picard error.

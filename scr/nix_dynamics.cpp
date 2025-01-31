@@ -127,7 +127,7 @@ ArrayXXd solver_2D(int n, int n_z, ArrayXd dx, ArrayXd dz, \
     // 5 unkowns in a n*n_z array.
     tripletList.reserve(5 * (n-2) * (n_z-2));  
 
-    // Handy definitions.
+    // Original discretization.
     ArrayXXd gamma_mat = gamma.replicate(1, n_z);
     ArrayXXd dz_2_mat  = dz_2_inv.replicate(1, n_z);
  
@@ -136,6 +136,33 @@ ArrayXXd solver_2D(int n, int n_z, ArrayXd dx, ArrayXd dz, \
 
     ArrayXXd c_z1 = dz_2_mat * shift_2D(visc,0,-1); //(i,j+1);
     ArrayXXd c_z  = dz_2_mat * visc;
+
+
+    //////////////////////////////////////////////////////////////////////////////////////////////
+    // New discretizations.
+    // Average visc on x.
+    /*ArrayXXd gamma_mat = gamma.replicate(1, n_z);
+    ArrayXXd dz_2_mat  = dz_2_inv.replicate(1, n_z);
+ 
+    ArrayXXd c_x1 = gamma_mat * 0.5 * ( shift_2D(visc,-1,0)+ visc );
+    ArrayXXd c_x  = shift_2D(gamma_mat,1,0) * 0.5 * ( visc + shift_2D(visc,1,0) );
+
+    ArrayXXd c_z1 = dz_2_mat * shift_2D(visc,0,-1); //(i,j+1);
+    ArrayXXd c_z  = dz_2_mat * visc;*/
+
+
+    /*ArrayXXd gamma_mat = gamma.replicate(1, n_z);
+    ArrayXXd dz_2_mat  = dz_2_inv.replicate(1, n_z);
+ 
+    ArrayXXd c_x1 = gamma_mat * shift_2D(visc,-1,0);
+    ArrayXXd c_x  = shift_2D(gamma_mat,1,0) * visc;
+
+    ArrayXXd c_z1 = dz_2_mat * 0.5 * ( shift_2D(visc,0,-1) + visc ); //(i,j+1);
+    ArrayXXd c_z  = dz_2_mat * 0.5 * ( visc + shift_2D(visc,0,1) );*/
+
+
+    //////////////////////////////////////////////////////////////////////////////////////////////
+
 
     // From the staggered grid definition, we should not take points at n_z-1 (j+1)
     // to calculate the velocities at j = n_z-2. 
@@ -245,8 +272,8 @@ ArrayXXd solver_2D(int n, int n_z, ArrayXd dx, ArrayXd dz, \
     
 
     // Set tolerance and maximum number of iterations.
-    int maxIter = 100;                   // 100, 50
-    double tol = 1.0e-3;                // 1.0e-3, 1.0e-2
+    int maxIter = 1000;                   // 1000, 100, 50. Working: 100.
+    double tol = 1.0e-6;                // Currently:  Working: 1.0e-3. 1.0e-6
     solver.setMaxIterations(maxIter);
     solver.setTolerance(tol);
 
@@ -487,6 +514,11 @@ ArrayXXd vel_solver(ArrayXd H, ArrayXd ds, ArrayXd ds_inv, ArrayXd ds_u_inv, Arr
         //u_x_bc = dx(dom.n-2) * A_theta(dom.n-1,0) * pow( 0.25 * ( cnst.rho * cnst.g * H(dom.n-1) * \
                                         (1.0 - cnst.rho / cnst.rho_w) ), vis.n_gln);
         u_sol.row(dom.n-1) = u_sol.row(dom.n-2) + u_x_bc;
+
+
+        // TRY SMOOTHING VELOCITY!
+        ArrayXXd u_smooth = ( shift_2D(u,1,0) + u + shift_2D(u,-1,0) ) / 3.0 ; // Smooth along horizontal direction.
+        u.block(1,1,dom.n-2,dom.n_z-2) = u_smooth.block(1,1,dom.n-2,dom.n_z-2);
 
         
         // Ensure positive velocities.

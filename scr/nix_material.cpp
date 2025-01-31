@@ -236,18 +236,20 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
 
 
             // Smooth derivative fields forstability.
-            ArrayXXd u_x_smooth = ( shift_2D(u_x,1,0) + u_x + shift_2D(u_x,-1,0) ) / 3.0 ;
+            //ArrayXXd u_x_smooth = ( shift_2D(u_x,1,0) + u_x + shift_2D(u_x,-1,0) ) / 3.0 ;
+            ArrayXXd u_x_smooth = 0.2 * ( shift_2D(u_x,1,0) + u_x + shift_2D(u_x,-1,0) + shift_2D(u_x,0,1) +  shift_2D(u_x,0,-1) ) ; 
             u_x.block(1,1,dom.n-2,dom.n_z-2) = u_x_smooth.block(1,1,dom.n-2,dom.n_z-2);
 
-            //ArrayXXd u_z_smooth = ( shift_2D(u_z,0,1) + u_z + shift_2D(u_z,0,-1) ) / 3.0; // Working. Smooth along vertical direction.
-            ArrayXXd u_z_smooth = ( shift_2D(u_z,1,0) + u_z + shift_2D(u_z,-1,0) ) / 3.0 ; // Smooth along horizontal direction.
+            //ArrayXXd u_z_smooth = ( shift_2D(u_z,1,0) + u_z + shift_2D(u_z,-1,0) ) / 3.0 ; // Smooth along horizontal direction. It works.
+            ArrayXXd u_z_smooth = 0.2 * ( shift_2D(u_z,1,0) + u_z + shift_2D(u_z,-1,0) + shift_2D(u_z,0,1) +  shift_2D(u_z,0,-1) ) ; 
+            //ArrayXXd u_z_smooth = ( shift_2D(u_z,0,1) + u_z + shift_2D(u_z,0,-1) ) / 3.0 ; // Smooth along vertical direction. It crashes.
             u_z.block(1,1,dom.n-2,dom.n_z-2) = u_z_smooth.block(1,1,dom.n-2,dom.n_z-2);
 
 
             // Set to zero below threshold to avoid numerical issues in vertical velocity w.
             // NECESSARY FOR STABILITY IN VISCOSITY!!!
-            double u_x_min = 1.0e-3;  // 1.0e-3
-            double u_z_min = 1.0e-2;      // 0.01 works well
+            double u_x_min = 1.0e-3;  // 1.0e-3 (better), 1.0e-4
+            double u_z_min = 1.0e-2;      // 1.0e-2 works well
             u_x = (u_x <= u_x_min).select(u_x_min, u_x); // 1.0e-4, 1.0e-3
             u_z = (u_z <= u_z_min).select(u_z_min, u_z); // 1.0e-2
             
@@ -264,6 +266,10 @@ ArrayXXd f_visc(ArrayXXd theta, ArrayXXd u, ArrayXXd visc, ArrayXd H, ArrayXd ta
 
             // Viscosity in divide????????????
             visc.row(0) = visc.row(2);
+
+            // Test with smooth viscosity.
+            //ArrayXXd visc_smooth = 0.2 * ( shift_2D(visc,1,0) + visc + shift_2D(visc,-1,0) + shift_2D(visc,0,1) +  shift_2D(visc,0,-1) ) ; 
+            //visc.block(1,1,dom.n-2,dom.n_z-2) = visc_smooth.block(1,1,dom.n-2,dom.n_z-2);
 
             // Vertically-averaged viscosity.
             visc_bar = visc.rowwise().mean();

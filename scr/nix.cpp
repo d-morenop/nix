@@ -38,7 +38,7 @@ int main()
     #pragma omp parallel
     {
         #pragma omp single
-        std::cout << "Number of OPM threads: " << omp_get_num_threads() << std::endl;
+        std::cout << "Number of OPM threads: " << omp_get_num_threads() < std::endl;
     }*/
 
     // Enable OpenMP if supported by the compiler.
@@ -48,7 +48,7 @@ int main()
 
 
     // Set Eigen to use multiple threads.
-    int num_threads = 12;
+    int num_threads = 4;
     Eigen::setNbThreads(num_threads);
     std::cout << "Using " << Eigen::nbThreads() << " eigen threads.\n";
 
@@ -1416,7 +1416,7 @@ int main()
             ERR(retval);
             printf("\n *** %s file has been successfully written \n", nixParams.path.out.c_str());
                 
-            // Abort flowline.
+            // Abort Nix.
             return 0;
         }
         

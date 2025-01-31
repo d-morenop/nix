@@ -145,13 +145,13 @@ elif exp == 'parallel':
 # RESOLUTION STUDY.
 elif exp == 'nic5':
 
-    yaml_file_path = "/scratch/ulb/glaciol/dmoreno/nix-iceshelf/nix/par/nix_params_parallel_ceci.yaml"
+    yaml_file_path = "/scratch/ulb/glaciol/dmoreno/nix/par/nix_params_parallel_ceci.yaml"
     yaml_file_name = "nix_params_parallel_ceci.yaml"
 
     var_names = ['n', 'n_z', 'dt_min', 'eps']
 
-    values_0 = np.array([200]) # 200, 300
-    values_1 = np.array([200])  # 35
+    values_0 = np.array([300]) # 200, 300
+    values_1 = np.array([300])  # 35
     values_2 = np.array([1.0]) # 0.1, 0.05
     values_3 = np.array([1.0e-7]) # 1.0e-4, 1.0e-5, 1.0e-6, 1.0e-7, 1.0e-8, 1.0e-9
     
