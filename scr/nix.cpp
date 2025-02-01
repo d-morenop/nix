@@ -48,7 +48,7 @@ int main()
 
 
     // Set Eigen to use multiple threads.
-    int num_threads = 4;
+    int num_threads = 10;
     Eigen::setNbThreads(num_threads);
     std::cout << "Using " << Eigen::nbThreads() << " eigen threads.\n";
 

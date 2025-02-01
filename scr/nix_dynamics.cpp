@@ -272,6 +272,7 @@ ArrayXXd solver_2D(int n, int n_z, ArrayXd dx, ArrayXd dz, \
     
 
     // Set tolerance and maximum number of iterations.
+    // THIS VALUE IS CRITICAL TO AVOID NUMERICAL INSTABILITIES!!!
     int maxIter = 1000;                   // 1000, 100, 50. Working: 100.
     double tol = 1.0e-6;                // Currently:  Working: 1.0e-3. 1.0e-6
     solver.setMaxIterations(maxIter);
