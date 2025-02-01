@@ -22,8 +22,8 @@ from PIL import Image
 
 # /home/dmoreno/nix/test_therm/n.100_n_z.35_dt_min.0.1_eps.1e-07/
 # /home/dmoreno/nix/test_Eigenthread1/n.200_n_z.50_dt_min.0.1_eps.1e-07
-path_fig        = '/home/dmoreno/nix/test_threads/n.128_dt_min.0.1_eps.1e-05/'
-path_now        = '/home/dmoreno/nix/test_Eigenthread12/n.100_n_z.100_dt_min.1.0_eps.1e-07/'
+path_fig        = '/home/daniel/nix/test_threads/n.128_dt_min.0.1_eps.1e-05/'
+path_now        = '/home/daniel/models/nix/output/test_lim_u_x.1e-3/n.100_n_z.100_dt_min.0.1_eps.1e-07/'
 path_stoch      = '/home/dmoreno/nix/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
@@ -33,7 +33,7 @@ save_series        = 1
 save_series_comp   = 1
 save_shooting      = 0
 save_domain        = 1
-coloured_domain    = 1
+coloured_domain    = 0
 save_var_frames    = 1
 save_series_frames = 0
 save_theta         = 0
@@ -47,6 +47,7 @@ save_series_2D     = 0
 heat_map_fourier   = 0
 entropy            = 0
 plot_speed         = 0
+plot_threads       = 0
 save_fig           = False
 read_stoch_nc      = False
 bed_smooth         = False
@@ -618,7 +619,7 @@ if save_domain == 1:
 	delta_T_oce = False
 	
 	if frames == True:
-		for i in range(l-1, l, 1): # range(10, l, 1), (l-1, l, 20)
+		for i in range(l-2, l, 1): # range(10, l, 1), (l-1, l, 20)
 
 			print('Frame = ', i)
 			
@@ -957,7 +958,7 @@ if save_domain == 1:
 
 if save_var_frames == 1:
 	
-	for i in range(l-1, l, 1): # (0, l, 10), (l-1, l, 1)
+	for i in range(l-2, l, 1): # (0, l, 10), (l-1, l, 1)
 		
 		#L_plot  = np.linspace(0, L[i], s[2])
 		L_plot = sigma_plot * L[i]
@@ -1222,7 +1223,7 @@ if save_visc == 1:
 		# We account for potential unevenly-spaced grids.
 		x = sigma_plot * s[2]
 		y = np.linspace(0.0, s[1], s[1])
-		im = ax.pcolormesh(x, y, np.log10(visc[i,:,:]), vmin=4.5, vmax=6.0, \
+		im = ax.pcolormesh(x, y, np.log10(visc[i,:,:]), vmin=4.5, vmax=7.0, \
 					 cmap='plasma', edgecolors='none', linewidth=1)
 		
 	
@@ -2752,3 +2753,127 @@ if plot_speed == 1:
 
 	plt.show()
 	plt.close(fig)
+
+
+
+if plot_threads == 1:
+
+	# Parent folder.
+	parent_folder = '/home/dmoreno/nix/resolution_parallel/'
+	folder_BP = '/home/dmoreno/nix/resolution_parallel_BP/'
+
+	# List all subfolders in the parent folder
+	subfolders = [f.path for f in os.scandir(parent_folder) if f.is_dir()]
+	subfolders.sort()
+
+	l = len(subfolders)
+	l_half = int(0.5*l)
+
+	speed = []
+	speed_mean = np.empty(l)
+
+	n_0 = 0 
+	n_f = 99
+
+
+	fig = plt.figure(dpi=600, figsize=(6,4))
+	plt.rcParams['text.usetex'] = True
+	ax  = fig.add_subplot(111)
+
+	# Loop through each subfolder.
+	for i in range(l):
+
+		print('Exp = ', subfolders[i])
+		
+		# Define the path to the netCDF file in the current subfolder
+		path_nc = os.path.join(get_datadir(), subfolders[i], 'nix.nc')
+
+		# Check if the file exists before attempting to open it
+		if os.path.exists(path_nc):
+			
+			# Open the netCDF file
+			data = Dataset(path_nc, mode='r')
+
+			speed = data.variables['speed'][:]
+
+			speed_mean[i] = np.mean(speed[n_0:n_f])
+
+			ax.plot(speed, 'blue', marker='o', linestyle='--', \
+		   					linewidth=1.0, markersize=2, label=subfolders[i])
+	
+
+
+
+	# Load extent to include resolution axis.
+	"""L = data.variables['L'][:]
+	n_s = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 16, 32, 64])
+	
+	dx = np.empty(10)
+	for i in range(10):
+		
+		a = np.linspace(0.0, 1.0, n_s[i])**0.25
+		if i < 7:
+			n_round = 1
+		else:
+			n_round = 2
+		dx[i] = np.round(1.0e-3 * L[s[1]-1] * ( a[n_s[i]-1] - a[n_s[i]-2] ), n_round)"""
+
+
+
+
+	ax.set_title(r'$S$', fontsize=16)
+	plt.tight_layout()
+
+
+	plt.show()
+	plt.close(fig)
+
+	# Reshape speed.
+	speed_mean = np.reshape(speed_mean, [2,l_half])
+	#n = np.array([2**4, 2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12, 2**13])
+
+
+	fig = plt.figure(dpi=600, figsize=(6,5))
+	plt.rcParams['text.usetex'] = True
+	ax  = fig.add_subplot(111)
+
+
+	
+	ax.plot(speed_mean_BP[:], 'darkgreen', marker='o', linestyle='--', \
+		   					linewidth=1.0, markersize=6, label='$ \mathrm{Blatter-Pattyn} $')
+
+	#ax.set_yscale('log')
+	
+
+	ax.set_xticks([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 16, 32, 64])
+	ax.set_xticklabels(['$1$', '$2$', '$3$', '$4$', \
+					    '$5$', '$6$', '$7$', '$8$', '$9$', '$10$',\
+						'$16$', '$32$', '$64$'], fontsize=15)
+
+	"""ax.set_yticks([10**1, 10**3, 10**5, 10**7])
+	ax.set_yticklabels(['$10^{1}$',' $10^{3}$', '$10^{5}$', '$10^{7}$'], fontsize=13)"""
+
+	#ax.set_title(r'$ \mathrm{Speed} $', fontsize=16)
+
+	ax.legend(loc='best', ncol = 1, frameon = True, framealpha = 1.0, \
+	 		  fontsize = 12, fancybox = True)
+
+
+	plt.tight_layout()	
+
+
+	ax.set_xlabel(r'$ \mathrm{Threads} $', fontsize=20)
+	ax.set_ylabel(r'$ \mathrm{Speed} \ (\mathrm{kyr/hr})$', fontsize=20)
+
+	"""ax.set_xlim(-0.1,l_half-1+0.1)
+	ax.set_ylim(7, 1.0e7)"""
+
+	ax.grid(visible=True, which='major', linestyle=':', linewidth=0.5)
+	ax.set_yscale('log')
+
+
+	plt.savefig(path_fig+'nix_speed.png', bbox_inches='tight')
+
+	plt.show()
+	plt.close(fig)
+
