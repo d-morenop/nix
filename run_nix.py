@@ -150,9 +150,9 @@ elif exp == 'nic5':
 
     var_names = ['n', 'n_z', 'dt_min', 'eps']
 
-    values_0 = np.array([500]) # 300, 500, 300
-    values_1 = np.array([200])  # 35, 200
-    values_2 = np.array([1.0]) # 0.1, 0.05
+    values_0 = np.array([10000]) # 300, 500, 300, 4000
+    values_1 = np.array([1000])  # 35, 200, 3000
+    values_2 = np.array([2.0]) # 0.1, 0.05
     values_3 = np.array([1.0e-7]) # 1.0e-4, 1.0e-5, 1.0e-6, 1.0e-7, 1.0e-8, 1.0e-9
     
 
@@ -442,7 +442,7 @@ for i in range(len(name)):
                     "module load Eigen/3.4.0-GCCcore-13.2.0",
                     "module load yaml-cpp",
                     "module load netCDF/4.9.2-gompi-2023b",
-                    "g++ -std=c++17 -fopenmp -O1 -I"+module_netcdf+" -I"+module_eigen+" -L"+lib_netcdf+" -lnetcdf -o "+path_modified+"nix.o "+path_output_scr+"nix.cpp -lyaml-cpp",
+                    "g++ -std=c++17 -fopenmp -O1 -I"+module_netcdf+" -I"+module_eigen+" -L"+lib_netcdf+" -lnetcdf -o "+path_modified+"nix.o "+path_output_scr+"nix_solver.cpp -lyaml-cpp",
                     ]
 
         cmd = " &&\n".join(commands)
