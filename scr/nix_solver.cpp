@@ -300,7 +300,7 @@ int main()
     // Set tolerance and maximum number of iterations.
     // THIS VALUE IS CRITICAL TO AVOID NUMERICAL INSTABILITIES!!!
     int maxIter = 1000;                   // 1000. Working: 10000. 1000000
-    double tol  = 1.0e-6;                // Currently:  Working: 1.0e-8, 1.0e-10
+    double tol  = 1.0e-3;                // Currently:  Working: 1.0e-8, 1.0e-10
     solver.setMaxIterations(maxIter);
     solver.setTolerance(tol);
 
