@@ -7,7 +7,7 @@
 #SBATCH --nodes=1            # 1
 #SBATCH --cpus-per-task=1    # Allocate 12 CPUs for a single task. Eigen parallelizes within a single process. 
 #SBATCH --ntasks=1            # Must be 1 for Eigen.
-#SBATCH --mem-per-cpu=9000    # 2500, 2.5Gb. Strong scaling: 64000. Weak: 10000. Divide the memory per CPU so that the total amount remains constant.
+#SBATCH --mem-per-cpu=10000    # 2500, 2.5Gb. Strong scaling: 64000. Weak: 10000. Divide the memory per CPU so that the total amount remains constant.
 #SBATCH --partition=batch
 
 

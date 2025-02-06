@@ -103,7 +103,7 @@ def modify_yaml(file_path, path_modified, yaml_file_name, var_names, data_types,
 # Define variable names and their corresponding values.
 
 # Select desired experiment.
-exp = 'nic5'
+exp = 'lemaitre4'
 
 # OSCILLATIONS STUDY.
 if exp == 'oscillations':
@@ -146,7 +146,7 @@ elif exp == 'parallel':
 elif exp == 'nic5':
 
     yaml_file_path = "/scratch/ulb/glaciol/dmoreno/nix/par/nix_params_parallel_ceci.yaml"
-    yaml_file_name = "nix_params_parallel_ceci.yaml"
+    yaml_file_name = "nix_params_parallel_nic5.yaml"
 
     var_names = ['n', 'n_z', 'dt_min', 'eps']
 
@@ -161,6 +161,26 @@ elif exp == 'nic5':
 
     values = [values_0, values_1, values_2, values_3]
 
+
+
+# RESOLUTION STUDY.
+elif exp == 'lemaitre4':
+
+    yaml_file_path = "/home/ulb/glaciol/dmoreno/nix/par/nix_params_parallel_lemaitre4.yaml"
+    yaml_file_name = "nix_params_parallel_lemaitre4.yaml"
+
+    var_names = ['n', 'n_z', 'dt_min', 'eps']
+
+    values_0 = np.array([10000]) # 300, 500, 300, 4000
+    values_1 = np.array([10000])  # 35, 200, 3000
+    values_2 = np.array([2.0]) # 0.1, 0.05
+    values_3 = np.array([1.0e-7]) # 1.0e-4, 1.0e-5, 1.0e-6, 1.0e-7, 1.0e-8, 1.0e-9
+    
+
+    # Data type of each array.
+    data_types = [int, int, float, float]
+
+    values = [values_0, values_1, values_2, values_3]
 
 
 # RESOLUTION STUDY.
@@ -421,7 +441,7 @@ for i in range(len(name)):
     elif config == 'nic5':
 
         # In clusters, we need a submit.sh file to send job to the queue.
-        shutil.copyfile(path_nix+'submit_ceci.sh', path_modified+'submit_ceci.sh')
+        shutil.copyfile(path_nix+'submit_nic5.sh', path_modified+'submit_nic5.sh')
 
         # Change directory to the current modified one.
         os.chdir(path_modified)
@@ -447,10 +467,38 @@ for i in range(len(name)):
 
         cmd = " &&\n".join(commands)
 
-        # Compile nix with subprocess.
-        #subprocess.run(cmd, shell=True, check=True, universal_newlines=True)# Compile nix with subprocess.
-        
-        
+
+        elif config == 'lemaitre4':
+
+            # In clusters, we need a submit.sh file to send job to the queue.
+            shutil.copyfile(path_nix+'submit_lemaitre4.sh', path_modified+'submit_lemaitre4.sh')
+
+            # Change directory to the current modified one.
+            os.chdir(path_modified)
+
+            # Load all necessary modules before compilation.
+            # Combine all commands into a single shell command.
+            # Each subprocess.run() call starts a new shell process, and environment changes (like loading modules) are not shared between these processes.
+            # THIS NEEDS TO BE UPDATED FOR LEMAITRE4!!!!
+            module_netcdf = "/opt/cecisw/arch/easybuild/2023b/modules/all/netCDF/"
+            module_eigen  = "/opt/cecisw/arch/easybuild/2023b/modules/all/Eigen/"
+            lib_netcdf    = "/opt/cecisw/arch/easybuild/2023b/software/netCDF/4.9.2-gompi-2023b/lib/"
+
+            # "g++ -std=c++17 -fopenmp -O3 -I"+module_netcdf+" -I"+module_eigen+" -L"+lib_netcdf+" -lnetcdf -o "+path_modified+"nix.o "+path_output_scr+"nix.cpp -lyaml-cpp",
+            # "g++ -std=c++17 -I"+module_netcdf+" -I"+module_eigen+" -L"+lib_netcdf+" -lnetcdf -o "+path_modified+"nix.o "+path_output_scr+"nix.cpp -lyaml-cpp",
+            # Too agrressive paralelization gives problem in nic5!!! We need: -fopenmp -O1.
+            commands = [
+                        "module --force purge",
+                        "module load releases/2023b",
+                        "module load Eigen/3.4.0-GCCcore-13.2.0",
+                        "module load yaml-cpp",
+                        "module load netCDF/4.9.2-gompi-2023b",
+                        "g++ -std=c++17 -fopenmp -O1 -I"+module_netcdf+" -I"+module_eigen+" -L"+lib_netcdf+" -lnetcdf -o "+path_modified+"nix.o "+path_output_scr+"nix_solver.cpp -lyaml-cpp",
+                        ]
+
+            cmd = " &&\n".join(commands)
+
+            
 
     # Create text file for terminal output. "wb" for unbuffered output.
     f = open(path_modified+"out.txt", "wb")
