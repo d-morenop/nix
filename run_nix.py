@@ -103,7 +103,7 @@ def modify_yaml(file_path, path_modified, yaml_file_name, var_names, data_types,
 # Define variable names and their corresponding values.
 
 # Select desired experiment.
-exp = 'lemaitre4'
+exp = 'nic5'
 
 # OSCILLATIONS STUDY.
 if exp == 'oscillations':
@@ -145,7 +145,7 @@ elif exp == 'parallel':
 # RESOLUTION STUDY.
 elif exp == 'nic5':
 
-    yaml_file_path = "/scratch/ulb/glaciol/dmoreno/nix/par/nix_params_parallel_ceci.yaml"
+    yaml_file_path = "/scratch/ulb/glaciol/dmoreno/nix/par/nix_params_parallel_nic5.yaml"
     yaml_file_name = "nix_params_parallel_nic5.yaml"
 
     var_names = ['n', 'n_z', 'dt_min', 'eps']
@@ -468,35 +468,35 @@ for i in range(len(name)):
         cmd = " &&\n".join(commands)
 
 
-        elif config == 'lemaitre4':
+    elif config == 'lemaitre4':
 
-            # In clusters, we need a submit.sh file to send job to the queue.
-            shutil.copyfile(path_nix+'submit_lemaitre4.sh', path_modified+'submit_lemaitre4.sh')
+        # In clusters, we need a submit.sh file to send job to the queue.
+        shutil.copyfile(path_nix+'submit_lemaitre4.sh', path_modified+'submit_lemaitre4.sh')
 
-            # Change directory to the current modified one.
-            os.chdir(path_modified)
+        # Change directory to the current modified one.
+        os.chdir(path_modified)
 
-            # Load all necessary modules before compilation.
-            # Combine all commands into a single shell command.
-            # Each subprocess.run() call starts a new shell process, and environment changes (like loading modules) are not shared between these processes.
-            # THIS NEEDS TO BE UPDATED FOR LEMAITRE4!!!!
-            module_netcdf = "/opt/cecisw/arch/easybuild/2023b/modules/all/netCDF/"
-            module_eigen  = "/opt/cecisw/arch/easybuild/2023b/modules/all/Eigen/"
-            lib_netcdf    = "/opt/cecisw/arch/easybuild/2023b/software/netCDF/4.9.2-gompi-2023b/lib/"
+        # Load all necessary modules before compilation.
+        # Combine all commands into a single shell command.
+        # Each subprocess.run() call starts a new shell process, and environment changes (like loading modules) are not shared between these processes.
+        # THIS NEEDS TO BE UPDATED FOR LEMAITRE4!!!!
+        module_netcdf = "/opt/cecisw/arch/easybuild/2023b/modules/all/netCDF/"
+        module_eigen  = "/opt/cecisw/arch/easybuild/2023b/modules/all/Eigen/"
+        lib_netcdf    = "/opt/cecisw/arch/easybuild/2023b/software/netCDF/4.9.2-gompi-2023b/lib/"
 
-            # "g++ -std=c++17 -fopenmp -O3 -I"+module_netcdf+" -I"+module_eigen+" -L"+lib_netcdf+" -lnetcdf -o "+path_modified+"nix.o "+path_output_scr+"nix.cpp -lyaml-cpp",
-            # "g++ -std=c++17 -I"+module_netcdf+" -I"+module_eigen+" -L"+lib_netcdf+" -lnetcdf -o "+path_modified+"nix.o "+path_output_scr+"nix.cpp -lyaml-cpp",
-            # Too agrressive paralelization gives problem in nic5!!! We need: -fopenmp -O1.
-            commands = [
-                        "module --force purge",
-                        "module load releases/2023b",
-                        "module load Eigen/3.4.0-GCCcore-13.2.0",
-                        "module load yaml-cpp",
-                        "module load netCDF/4.9.2-gompi-2023b",
-                        "g++ -std=c++17 -fopenmp -O1 -I"+module_netcdf+" -I"+module_eigen+" -L"+lib_netcdf+" -lnetcdf -o "+path_modified+"nix.o "+path_output_scr+"nix_solver.cpp -lyaml-cpp",
-                        ]
+        # "g++ -std=c++17 -fopenmp -O3 -I"+module_netcdf+" -I"+module_eigen+" -L"+lib_netcdf+" -lnetcdf -o "+path_modified+"nix.o "+path_output_scr+"nix.cpp -lyaml-cpp",
+        # "g++ -std=c++17 -I"+module_netcdf+" -I"+module_eigen+" -L"+lib_netcdf+" -lnetcdf -o "+path_modified+"nix.o "+path_output_scr+"nix.cpp -lyaml-cpp",
+        # Too agrressive paralelization gives problem in nic5!!! We need: -fopenmp -O1.
+        commands = [
+                    "module --force purge",
+                    "module load releases/2023b",
+                    "module load Eigen/3.4.0-GCCcore-13.2.0",
+                    "module load yaml-cpp",
+                    "module load netCDF/4.9.2-gompi-2023b",
+                    "g++ -std=c++17 -fopenmp -O1 -I"+module_netcdf+" -I"+module_eigen+" -L"+lib_netcdf+" -lnetcdf -o "+path_modified+"nix.o "+path_output_scr+"nix_solver.cpp -lyaml-cpp",
+                    ]
 
-            cmd = " &&\n".join(commands)
+        cmd = " &&\n".join(commands)
 
             
 
