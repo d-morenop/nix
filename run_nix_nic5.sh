@@ -10,5 +10,5 @@ path=/scratch/ulb/glaciol/dmoreno/nix/
 
 cd $path
 
-# Call python to execute run_nix.py. python or python3?
+# Call python to execute run_nix.py. python or python3.
 python3 run_nix.py

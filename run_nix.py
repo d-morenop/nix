@@ -150,8 +150,8 @@ elif exp == 'nic5':
 
     var_names = ['n', 'n_z', 'dt_min', 'eps']
 
-    values_0 = np.array([10000]) # 300, 500, 300, 4000
-    values_1 = np.array([10000])  # 35, 200, 3000
+    values_0 = np.array([5000]) # 5000, 300, 500, 300, 4000
+    values_1 = np.array([5000])  # 5000, 35, 200, 3000
     values_2 = np.array([2.0]) # 0.1, 0.05
     values_3 = np.array([1.0e-7]) # 1.0e-4, 1.0e-5, 1.0e-6, 1.0e-7, 1.0e-8, 1.0e-9
     
@@ -462,7 +462,7 @@ for i in range(len(name)):
                     "module load Eigen/3.4.0-GCCcore-13.2.0",
                     "module load yaml-cpp",
                     "module load netCDF/4.9.2-gompi-2023b",
-                    "g++ -std=c++17 -fopenmp -O1 -I"+module_netcdf+" -I"+module_eigen+" -L"+lib_netcdf+" -lnetcdf -o "+path_modified+"nix.o "+path_output_scr+"nix_solver.cpp -lyaml-cpp",
+                    "g++ -std=c++17 -fopenmp -O3 -I"+module_netcdf+" -I"+module_eigen+" -L"+lib_netcdf+" -lnetcdf -o "+path_modified+"nix.o "+path_output_scr+"nix_solver_omp.cpp -lyaml-cpp",
                     ]
 
         cmd = " &&\n".join(commands)
@@ -531,7 +531,18 @@ for i in range(len(name)):
         os.chdir(path_modified)
         #cmd_run = "sbatch submit_ceci.sh"
 
-        cmd_run = "sbatch --chdir="+path_modified+" submit_ceci.sh"
+        cmd_run = "sbatch --chdir="+path_modified+" submit_nic5.sh"
+
+    elif config == 'lemaitre4':
+        # Compile nix with subprocess.
+        subprocess.run(cmd, shell=True, check=True, universal_newlines=True)
+
+        # Necessary to change directory to run therein.
+        os.chdir(path_modified)
+        #cmd_run = "sbatch submit_ceci.sh"
+
+        cmd_run = "sbatch --chdir="+path_modified+" submit_lemaitre4.sh"
+
 
     elif config == 'parallel' or config == 'iceshelf':
         # Compile nix with subprocess.

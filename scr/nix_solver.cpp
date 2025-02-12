@@ -48,13 +48,13 @@ int main()
 
 
     // Set Eigen to use multiple threads.
-    int num_threads = 1;
+    int num_threads = 32;
     Eigen::setNbThreads(num_threads);
     std::cout << "Using " << Eigen::nbThreads() << " eigen threads.\n";
 
 
     // Specify the path to YAML file.
-    string yaml_name = "nix_params_parallel_ceci.yaml";
+    string yaml_name = "nix_params_parallel_nic5.yaml";
     //string yaml_name = "nix_params_mismip_therm_T_oce.yaml";
 
     // Assuming the path won't exceed 4096 characters.
