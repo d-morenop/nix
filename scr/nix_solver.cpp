@@ -48,13 +48,13 @@ int main()
 
 
     // Set Eigen to use multiple threads.
-    int num_threads = 1;
+    int num_threads = 7;
     Eigen::setNbThreads(num_threads);
     std::cout << "Using " << Eigen::nbThreads() << " eigen threads.\n";
 
 
     // Specify the path to YAML file.
-    string yaml_name = "nix_params_parallel_ceci.yaml";
+    string yaml_name = "nix_params_parallel.yaml";
     //string yaml_name = "nix_params_mismip_therm_T_oce.yaml";
 
     // Assuming the path won't exceed 4096 characters.
@@ -89,7 +89,6 @@ int main()
     // Convert char to string and concatenate full path.
     string path = buffer;
     // Test.
-    //path = "/scratch/ulb/glaciol/dmoreno/nix-iceshelf/nix/output/n.50_n_z.25_dt_min.1.0_eps.1e-07";
     string full_path = path+"/par/"+yaml_name;
 
     cout << "\n full_path = " << full_path;
@@ -176,6 +175,12 @@ int main()
         cout << "\n Experiment forcing not recognised. Please, select: mismip_1... ";
     }
 
+
+    // Print spatial and time dimensions.
+    cout << " \n Nix ice-shet model v1.0";
+    cout << " \n Experiment = " << exp;
+    cout << " \n n          = " << n;
+    cout << " \n n_z        = " << n_z;
 
 
     // Normalised horizontal dimension.
@@ -299,8 +304,8 @@ int main()
 
     // Set tolerance and maximum number of iterations.
     // THIS VALUE IS CRITICAL TO AVOID NUMERICAL INSTABILITIES!!!
-    int maxIter = 1000;                   // 1000. Working: 10000. 1000000
-    double tol  = 1.0e-6;                // Currently:  Working: 1.0e-8, 1.0e-10
+    int maxIter = 1000;                   // 1000. Working: 1000
+    double tol  = 1.0e-3;                // Currently:  Working: 1.0e-3
     solver.setMaxIterations(maxIter);
     solver.setTolerance(tol);
 
@@ -312,6 +317,9 @@ int main()
     auto end     = chrono::high_resolution_clock::now();
     auto elapsed = chrono::duration_cast<chrono::nanoseconds>(end - begin);
     //double speed = 60 * 60 * 1.0e6 * (a(1) - a(0)) / elapsed.count();
+
+    std::cout << "\n Iterations: " << solver.iterations() << std::endl;
+    std::cout << "\n Error:      " << solver.error() << std::endl;
 
     // Print computational time.
     printf("\n Time measured: %.3f ms.\n", elapsed.count() * 1e-6);
