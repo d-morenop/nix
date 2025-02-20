@@ -5,9 +5,9 @@
 #SBATCH -o nix.out
 #SBATCH -e nix.err
 #SBATCH --nodes=1            # 1
-#SBATCH --cpus-per-task=1    # Allocate 12 CPUs for a single task. Eigen parallelizes within a single process. 
+#SBATCH --cpus-per-task=32    # Allocate 12 CPUs for a single task. Eigen parallelizes within a single process. 
 #SBATCH --ntasks=1            # Must be 1 for Eigen.
-#SBATCH --mem-per-cpu=10000    # 2500, 2.5Gb. Strong scaling: 32000. Weak: 10000. Divide the memory per CPU so that the total amount remains constant.
+#SBATCH --mem-per-cpu=2000    # 2500, 2.5Gb. Strong scaling: 32000. Weak: 10000. Divide the memory per CPU so that the total amount remains constant.
 #SBATCH --partition=batch
 
 # For n = 1e4 and n_z = 1e4, the neccesary memory is 28903368K (29GB, so set 30GB). $ sstat [jobid] --format=JobID,MaxRSS,AveRSS

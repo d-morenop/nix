@@ -150,8 +150,8 @@ elif exp == 'nic5':
 
     var_names = ['n', 'n_z', 'dt_min', 'eps']
 
-    values_0 = np.array([5000]) # 5000, 300, 500, 300, 4000
-    values_1 = np.array([5000])  # 5000, 35, 200, 3000
+    values_0 = np.array([15000]) # 5000, 300, 500, 300, 4000
+    values_1 = np.array([10000])  # 5000, 35, 200, 3000
     values_2 = np.array([2.0]) # 0.1, 0.05
     values_3 = np.array([1.0e-7]) # 1.0e-4, 1.0e-5, 1.0e-6, 1.0e-7, 1.0e-8, 1.0e-9
     
