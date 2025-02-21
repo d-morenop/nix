@@ -2601,7 +2601,7 @@ if entropy == 1:
 if plot_speed == 1:
 
 	# Parent folder.
-	parent_folder = '/home/dmoreno/nix/resolution_parallel/'
+	parent_folder = '/home/daniel/models/nix/output/convergence/BP/n_z.20/'
 	folder_BP = '/home/dmoreno/nix/resolution_parallel_BP/'
 
 	# List all subfolders in the parent folder
@@ -2911,6 +2911,7 @@ if plot_threads == 1:
 		speed = np.array([[116810.884, 70679.042, 74566.387, 66190.345, 74883.568, 66016.395],
 						  [585366.552, 478912.882, 387956.703, 348779.358, 354893.250, 396817.365],
 						  [4303215.799, 3610587.675, 3270008.347, 2822071.597, 3596687.926, 3017841.411],
+						  [49539824.381, 33445243.324, 38035264.049, 26535200.611, 25399862.805, 21336509.172],
 							 
 						  [79446.996, 81670.945, 72106.104, 58022.668, 71215.729, 70007.399],
 						  [368431.456, 387024.196, 350111.448, 260081.742, 626659.125, 305218.821],
@@ -2919,7 +2920,8 @@ if plot_threads == 1:
 							 
 						   [101437.157, 122521.154, 84747.968, 65121.645, 64081.633, 64252.246],
 						   [489917.390, 669731.459, 326668.104, 351710.768, 378176.390, 297850.967],
-						   [4776107.210, 4884423.270, 2992992.762, 3561996.779, 3087553.888, 2791148.320]])
+						   [4776107.210, 4884423.270, 2992992.762, 3561996.779, 3087553.888, 2791148.320],
+						   [42187024.351, 45311782.408, 40988513.644, 33231396.209, 38325691.225, 29261489.475]])
 
 		l = np.shape(speed)[0]
 		efficiency = []
@@ -2939,13 +2941,13 @@ if plot_threads == 1:
 
 
 
-	colours = ['darkgreen', 'blue', 'red', 
+	colours = ['darkgreen', 'blue', 'red', 'black',
 			   'darkgreen', 'blue', 'red', 'black',
-			   'darkgreen', 'blue', 'red']
+			   'darkgreen', 'blue', 'red', 'black']
 
-	lines = [':', ':', ':',
+	lines = [':', ':', ':', ':',
 			'--', '--', '--', '--', 
-			'-', '-', '-',]
+			'-', '-', '-', '-']
 
 
 	for i in range(0, l, 1):
@@ -2967,17 +2969,17 @@ if plot_threads == 1:
 	ax2.plot(np.nan, color=colours[2], marker='o', linestyle='None', \
 								linewidth=1.0, markersize=6, label='$ N=10^3 $')
 
-	ax2.plot(np.nan, color=colours[6], marker='o', linestyle='None', \
+	ax2.plot(np.nan, color=colours[3], marker='o', linestyle='None', \
 								linewidth=1.0, markersize=6, label='$ N=10^4 $')
 
 
 	ax2.plot(np.nan, color='black', marker='None', linestyle=lines[0], \
 								linewidth=1.0, markersize=6, label='$ \mathrm{O1} $')
 
-	ax2.plot(np.nan, color='black', marker='None', linestyle=lines[3], \
+	ax2.plot(np.nan, color='black', marker='None', linestyle=lines[4], \
 								linewidth=1.0, markersize=6, label='$ \mathrm{O2} $')
 
-	ax2.plot(np.nan, color='black', marker='None', linestyle=lines[7], \
+	ax2.plot(np.nan, color='black', marker='None', linestyle=lines[8], \
 								linewidth=1.0, markersize=6, label='$ \mathrm{O3} $')
 
 	ax1.set_xticks([0,1,2,3,4,5])
@@ -2985,8 +2987,8 @@ if plot_threads == 1:
 	ax1.set_xticklabels([])
 	ax2.set_xticklabels(['$2^0$', '$2^1$', '$2^2$', '$2^3$', '$2^4$', '$2^5$'], fontsize=15)
 
-	ax1.set_yticks([0.5, 1.0, 1.5, 2.0])
-	ax1.set_yticklabels(['$0.5$', '$1.0$', '$1.5$', '$2.0$'], fontsize=13)
+	ax1.set_yticks([0.5, 1.0, 1.5, 2.0, 2.5])
+	ax1.set_yticklabels(['$0.5$', '$1.0$', '$1.5$', '$2.0$', '$2.5$'], fontsize=13)
 
 	ax2.set_yticks([0, 25, 50, 75, 100])
 	ax2.set_yticklabels(['$0$', '$25$', '$50$', '$75$', '$100$'], fontsize=13)
