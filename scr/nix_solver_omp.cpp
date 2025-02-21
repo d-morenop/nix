@@ -37,7 +37,21 @@ VectorXd f_sol(vector<Eigen::Triplet<double>> triplets, VectorXd b, int N, int m
     SparseMatrix<double,RowMajor> A(N, N);
     A.setFromTriplets(triplets.begin(), triplets.end());
     solver.compute(A);
+
+    /*IncompleteLUT<double> preconditioner;
+    preconditioner.setDroptol(1.0e-4); // 1.0e-4. Set ILU preconditioner parameters
+    solver.preconditioner().compute(A);*/
+
+    // Set up ILU preconditioner
+    /*IncompleteLUT<double> preconditioner;
+    preconditioner.setDroptol(1.0e-4);
+    preconditioner.compute(A);
+    solver.preconditioner() = preconditioner;*/
+
     VectorXd x = solver.solve(b.segment(0, N));
+
+    cout << "Number of iterations:  " << solver.iterations() << endl;
+    cout << "Estimated error:       " << solver.error() << endl;
 
     return x;
 }
@@ -67,7 +81,7 @@ int main()
 
 
     // Set Eigen to use multiple threads.
-    int num_threads = 1;
+    int num_threads = 32;
     Eigen::setNbThreads(num_threads);
     std::cout << "Using " << Eigen::nbThreads() << " eigen threads.\n";
 
@@ -312,8 +326,8 @@ int main()
     
     // Set tolerance and maximum number of iterations.
     // THIS VALUE IS CRITICAL TO AVOID NUMERICAL INSTABILITIES!!!
-    int maxIter = 100;                   // 1000. Working: 10000. 1000000
-    double tol  = 1.0e-3;                // Currently:  Working: 1.0e-8, 1.0e-10
+    int maxIter = 1e4;                   // 100, 500, 1000. Working: 10000. 1000000
+    double tol  = 1.0e-10;                // 1.0e-3, Currently:  Working: 1.0e-8, 1.0e-10
     
     
 
@@ -322,7 +336,7 @@ int main()
 
     if ( omp_threads == 1 )
     {
-        // Solve the sparse problem for each partition (sub-matrix).
+        // Solve the sparse problem.
         VectorXd x = f_sol(tripletList, b, N, maxIter, tol);
     }
 
@@ -340,52 +354,109 @@ int main()
         std::vector<std::vector<Eigen::Triplet<double>>> triplet_subsections(partitions.size(), 
                                                                             std::vector<Eigen::Triplet<double>>());
 
-        // Dive the triplets that contains the priginal sparse matrix in smaller partitions.
-        // The total number of partitions equates the number of parallel threads.
-        for (const auto& triplet : tripletList) 
+
+        // Select parallel allocation of triplets.                                                                        
+        int opt = 0;
+        
+        if ( opt == 1 )
         {
-            // Determine which subsection the row belongs to
-            int row_section = std::distance(partitions.begin(), 
-                std::upper_bound(partitions.begin(), partitions.end(), triplet.row())) - 1;
-
-            // Determine which subsection the column belongs to
-            int col_section = std::distance(partitions.begin(), 
-                std::upper_bound(partitions.begin(), partitions.end(), triplet.col())) - 1;
-
-            // Ensure that the triplet goes into the correct subsection (only square blocks are stored)
-            if (row_section == col_section) 
+            // Dive the triplets that contains the priginal sparse matrix in smaller partitions.
+            // The total number of partitions equates the number of parallel threads.
+            for (const auto& triplet : tripletList) 
             {
-                //cout << "row_section: " << row_section << endl;
+                // Determine which subsection the row belongs to
+                int row_section = std::distance(partitions.begin(), 
+                    std::upper_bound(partitions.begin(), partitions.end(), triplet.row())) - 1;
 
-                triplet_subsections[row_section].push_back(
-                    Eigen::Triplet<double>(
-                        triplet.row() - partitions[row_section], 
-                        triplet.col() - partitions[col_section], 
-                        triplet.value()
-                    )
-                );
-            }
-        }
+                // Determine which subsection the column belongs to
+                int col_section = std::distance(partitions.begin(), 
+                    std::upper_bound(partitions.begin(), partitions.end(), triplet.col())) - 1;
 
-        // Create parallel region to run the partitions of the matrix in parallel.
-        #pragma omp parallel
-        {
-            // Only one thread is creating all the additional threads (avoids overhead).
-            #pragma omp single
-            {
-                std::vector<VectorXd> x_subsections(triplet_subsections.size());
-
-                // Loop over all partitions to create one thread per partition.
-                for (size_t i = 0; i < triplet_subsections.size(); ++i) 
+                // Ensure that the triplet goes into the correct subsection (only square blocks are stored)
+                if (row_section == col_section) 
                 {
-                    #pragma omp task firstprivate(i)
+                    //cout << "row_section: " << row_section << endl;
+
+                    triplet_subsections[row_section].push_back(
+                        Eigen::Triplet<double>(
+                            triplet.row() - partitions[row_section], 
+                            triplet.col() - partitions[col_section], 
+                            triplet.value()
+                        )
+                    );
+                }
+            }
+
+            // Create parallel region to run the partitions of the matrix in parallel.
+            #pragma omp parallel
+            {
+                // Only one thread is creating all the additional threads (avoids overhead).
+                #pragma omp single
+                {
+                    std::vector<VectorXd> x_subsections(triplet_subsections.size());
+
+                    // Loop over all partitions to create one thread per partition.
+                    for (size_t i = 0; i < triplet_subsections.size(); ++i) 
                     {
-                        // Solve the sparse problem for each partition (sub-matrix).
-                        x_subsections[i] = f_sol(triplet_subsections[i], b, partitions[1], maxIter, tol);
+                        #pragma omp task firstprivate(i)
+                        {
+                            // Solve the sparse problem for each partition (sub-matrix).
+                            x_subsections[i] = f_sol(triplet_subsections[i], b, partitions[1], maxIter, tol);
+                        }
                     }
                 }
             }
         }
+
+        else
+        {
+            #pragma omp parallel
+            {
+                std::vector<std::vector<Eigen::Triplet<double>>> local_triplet_subsections(num_threads);
+
+                #pragma omp for nowait
+                for (size_t i = 0; i < tripletList.size(); ++i) 
+                {
+                    const auto& triplet = tripletList[i];
+
+                    int row_section = std::distance(partitions.begin(), 
+                        std::upper_bound(partitions.begin(), partitions.end(), triplet.row())) - 1;
+
+                    int col_section = std::distance(partitions.begin(), 
+                        std::upper_bound(partitions.begin(), partitions.end(), triplet.col())) - 1;
+
+                    if (row_section == col_section) 
+                    {
+                        local_triplet_subsections[row_section].push_back(
+                            Eigen::Triplet<double>(
+                                triplet.row() - partitions[row_section], 
+                                triplet.col() - partitions[col_section], 
+                                triplet.value()
+                            )
+                        );
+                    }
+                }
+
+                // Merge local triplets into global triplet_subsections safely
+                #pragma omp critical
+                {
+                    for (int j = 0; j < num_threads; ++j) {
+                        triplet_subsections[j].insert(
+                            triplet_subsections[j].end(), 
+                            local_triplet_subsections[j].begin(), 
+                            local_triplet_subsections[j].end()
+                        );
+                    }
+                }
+            }
+        }
+
+        
+
+
+
+
+        
     }
     
 
@@ -815,10 +886,13 @@ int main()
     auto elapsed = chrono::duration_cast<chrono::nanoseconds>(end - begin);
     auto elapsed_parallel = chrono::duration_cast<chrono::nanoseconds>(end - begin_parallel);
 
+
     // Print computational time.
     printf("\n Time measured         : %.3f ms.\n", elapsed.count() * 1e-6);
     printf("\n Time measured in potential parallel region: %.3f ms.\n", elapsed_parallel.count() * 1e-6);
-    printf("\n Fraction of execution time that can benefit from paralelization, p = %.3f \n", elapsed_parallel.count() / elapsed.count());
+
+    double p = elapsed_parallel.count() / elapsed.count();
+    printf("\n Fraction of execution time that can benefit from paralelization, p = %.3f \n", p);
 
     return 0;
     /////////////////////////////////////////////////////////////////////////////////////////////

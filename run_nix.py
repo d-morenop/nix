@@ -103,7 +103,7 @@ def modify_yaml(file_path, path_modified, yaml_file_name, var_names, data_types,
 # Define variable names and their corresponding values.
 
 # Select desired experiment.
-exp = 'nic5'
+exp = 'parallel'
 
 # OSCILLATIONS STUDY.
 if exp == 'oscillations':
@@ -130,8 +130,8 @@ elif exp == 'parallel':
 
     var_names = ['n', 'n_z', 'dt_min', 'eps']
 
-    values_0 = np.array([50]) # 200, 300
-    values_1 = np.array([25])  # 35
+    values_0 = np.array([10000]) # 200, 300
+    values_1 = np.array([10000])  # 35
     values_2 = np.array([1.0]) # 0.1, 0.05
     values_3 = np.array([1.0e-7]) # 1.0e-4, 1.0e-5, 1.0e-6, 1.0e-7, 1.0e-8, 1.0e-9
     
@@ -150,8 +150,8 @@ elif exp == 'nic5':
 
     var_names = ['n', 'n_z', 'dt_min', 'eps']
 
-    values_0 = np.array([5000]) # 5000, 300, 500, 300, 4000
-    values_1 = np.array([5000])  # 5000, 35, 200, 3000
+    values_0 = np.array([15000]) # 5000, 300, 500, 300, 4000
+    values_1 = np.array([10000])  # 5000, 35, 200, 3000
     values_2 = np.array([2.0]) # 0.1, 0.05
     values_3 = np.array([1.0e-7]) # 1.0e-4, 1.0e-5, 1.0e-6, 1.0e-7, 1.0e-8, 1.0e-9
     
@@ -405,7 +405,7 @@ for i in range(len(name)):
 
 
     # Compilation configuration. ['local', 'iceberg', 'brigit']
-    config = 'nic5'
+    config = 'parallel'
 
     if config == 'local':
         
@@ -428,7 +428,7 @@ for i in range(len(name)):
     elif config == 'parallel':
         
         # Compiling command. -std=c++17. -O2
-        cmd = "g++ -std=c++17 -fopenmp -O3 -I /usr/include/eigen3/ -o "+path_modified+"nix.o "+path_output_scr+"nix.cpp -lnetcdf -lyaml-cpp"
+        cmd = "g++ -std=c++17 -fopenmp -O3 -I /usr/include/eigen3/ -o "+path_modified+"nix.o "+path_output_scr+"nix_solver.cpp -lnetcdf -lyaml-cpp"
 
     elif config == 'brigit':
         

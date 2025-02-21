@@ -3,7 +3,7 @@
 path:
   nix: /scratch/ulb/glaciol/dmoreno/nix/                              # Nix path.
   read: /home/dmoreno/nix/data/noise_sigm_ocn.12.0.nc      # File with stochastic bc. 
-  out: /scratch/ulb/glaciol/dmoreno/nix/output/test_omp/threads.01/                    # Output path. thread.4_tasks.1_nodes.1_long_u_x.1e-4_dt
+  out: /scratch/ulb/glaciol/dmoreno/nix/output/test_eigen/big/O3/iter.1e4/threads.32/                    # Output path. thread.4_tasks.1_nodes.1_long_u_x.1e-4_dt
 
 time:
   t0: 0.0                 # Starting time [yr].

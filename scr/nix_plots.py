@@ -22,8 +22,8 @@ from PIL import Image
 
 # /home/dmoreno/nix/test_therm/n.100_n_z.35_dt_min.0.1_eps.1e-07/
 # /home/dmoreno/nix/test_Eigenthread1/n.200_n_z.50_dt_min.0.1_eps.1e-07
-path_fig        = '/home/daniel/figures/nix/resolution/'
-path_now        = '/home/daniel/models/nix/output/weak_scaling/threads.01_n.1000_n_z.10_dt_min.0.2_eps.1e-07/'
+path_fig        = '/home/dmoreno/figures/nix/resolution/'
+path_now        = '/home/dmoreno/nix/resolution_parallel/SSA_n.0016_dt_min.0.01/'
 path_stoch      = '/home/dmoreno/nix/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
@@ -47,8 +47,9 @@ save_series_2D     = 0
 heat_map_fourier   = 0
 entropy            = 0
 plot_speed         = 0
-plot_threads       = 1
-save_fig           = True
+plot_threads       = 0
+plot_convergence   = 1
+save_fig           = False
 read_stoch_nc      = False
 bed_smooth         = False
 
@@ -2602,7 +2603,7 @@ if plot_speed == 1:
 
 	# Parent folder.
 	parent_folder = '/home/daniel/models/nix/output/convergence/BP/n_z.20/'
-	folder_BP = '/home/dmoreno/nix/resolution_parallel_BP/'
+	folder_BP     = '/home/dmoreno/nix/resolution_parallel_BP/'
 
 	# List all subfolders in the parent folder
 	subfolders = [f.path for f in os.scandir(parent_folder) if f.is_dir()]
@@ -2614,9 +2615,12 @@ if plot_speed == 1:
 	l = len(subfolders)
 	l_half = int(0.5*l)
 
-	speed = []
-	speed_mean = np.empty(l)
+	speed         = []
+	speed_mean    = np.empty(l)
 	speed_mean_BP = np.empty(7)
+
+	L_plot    = np.empty(l)
+	L_plot_BP = np.empty(7)
 
 
 	fig = plt.figure(dpi=600, figsize=(6,4))
@@ -2637,8 +2641,8 @@ if plot_speed == 1:
 			# Open the netCDF file
 			data = Dataset(path_nc, mode='r')
 
-			speed  = data.variables['speed'][:]
-			L_plot = data.variables['L'][99]
+			speed     = data.variables['speed'][:]
+			L_plot[i] = data.variables['L'][90]
 
 			speed_mean[i] = np.mean(speed[11:99])
 
@@ -2661,8 +2665,8 @@ if plot_speed == 1:
 			# Open the netCDF file
 			data = Dataset(path_nc, mode='r')
 
-			speed     = data.variables['speed'][:]
-			L_plot_BP = data.variables['L'][99]
+			speed        = data.variables['speed'][:]
+			L_plot_BP[i] = data.variables['L'][90]
 
 			speed_mean_BP[i] = np.mean(speed[11:99])
 
@@ -2760,8 +2764,73 @@ if plot_speed == 1:
 
 
 
+if plot_convergence == 1:
+
+	# Parent folder.
+	folder     = '/home/dmoreno/nix/convergence/BP/n_z.20/'
+	folder_BP  = '/home/dmoreno/nix/resolution_parallel_BP/'
+
+	# List all subfolders in the parent folder
+	subfolders = [f.path for f in os.scandir(folder) if f.is_dir()]
+	subfolders.sort()
+
+	"""subfolders_BP = [f.path for f in os.scandir(folder_BP) if f.is_dir()]
+	subfolders_BP.sort()"""
+
+	l = len(subfolders)
+	l_half = int(0.5*l)
+
+	u_plot    = np.empty(l)
+	L_plot    = np.empty(l)
 
 
+	fig = plt.figure(dpi=600, figsize=(6,4))
+	plt.rcParams['text.usetex'] = True
+	ax  = fig.add_subplot(111)
+
+	# Loop through each subfolder.
+	for i in range(l):
+
+		print('Exp = ', subfolders[i])
+		
+		# Define the path to the netCDF file in the current subfolder
+		path_nc = os.path.join(get_datadir(), subfolders[i], 'nix.nc')
+
+		# Check if the file exists before attempting to open it
+		if os.path.exists(path_nc):
+			
+			# Open the netCDF file
+			data = Dataset(path_nc, mode='r')
+
+			u = data.variables['u'][:]
+			s = np.shape(u)
+
+			L     = data.variables['L'][:]
+
+			u_plot[i] = np.mean(u[s[0]-1,:,s[1]-1])
+			L_plot[i] = L[s[0]-1]
+
+			ax.plot(speed, 'blue', marker='o', linestyle='--', \
+		   					linewidth=1.0, markersize=2, label=subfolders[i])
+	
+
+
+	n_s = np.array([2**4, 2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12, 2**13])
+	
+	dx = np.empty(10)
+	for i in range(10):
+		
+		a = np.linspace(0.0, 1.0, n_s[i])**0.25
+		if i < 7:
+			n_round = 1
+		else:
+			n_round = 2
+		dx[i] = np.round(1.0e-3 * L[s[1]-1] * ( a[n_s[i]-1] - a[n_s[i]-2] ), n_round)
+
+
+
+	#u_plot = np.reshape(u_plot, [2,l_half])
+	#L_plot = np.reshape(L_plot, [2,l_half])
 
 
 
@@ -2770,11 +2839,14 @@ if plot_speed == 1:
 	ax  = fig.add_subplot(111)
 
 
-	ax.plot(L_plot, 'red', marker='o', linestyle='--', \
+	ax.plot(u_plot, 'red', marker='o', linestyle='--', \
 		   					linewidth=1.0, markersize=6, label='$ \mathrm{DIVA} $')
 	
-	ax.plot(L_plot_BP, 'darkgreen', marker='o', linestyle='--', \
-		   					linewidth=1.0, markersize=6, label='$ \mathrm{Blatter-Pattyn} $')
+	"""ax.plot(u_plot[1,:], 'blue', marker='o', linestyle='--', \
+		   					linewidth=1.0, markersize=6, label='$ \mathrm{SSA} $')
+	
+	ax.plot(u_plot[0,:], 'red', marker='o', linestyle='--', \
+		   					linewidth=1.0, markersize=6, label='$ \mathrm{DIVA} $')"""
 
 	#ax.set_yscale('log')
 	
