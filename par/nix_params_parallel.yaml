@@ -3,7 +3,7 @@
 path:
   nix: /home/dmoreno/scr/nix/                              # Nix path.
   read: /home/dmoreno/nix/data/noise_sigm_ocn.12.0.nc      # File with stochastic bc. 
-  out: /home/dmoreno/nix/test_Eigenthread12/                     # Output path.
+  out: /home/dmoreno/nix/convergence/BP/                     # Output path.
 
 time:
   t0: 0.0                 # Starting time [yr].

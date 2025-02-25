@@ -22,8 +22,8 @@ from PIL import Image
 
 # /home/dmoreno/nix/test_therm/n.100_n_z.35_dt_min.0.1_eps.1e-07/
 # /home/dmoreno/nix/test_Eigenthread1/n.200_n_z.50_dt_min.0.1_eps.1e-07
-path_fig        = '/home/daniel/figures/nix/resolution/'
-path_now        = '/home/daniel/models/nix/output/weak_scaling/threads.01_n.1000_n_z.10_dt_min.0.2_eps.1e-07/'
+path_fig        = '/home/daniel/figures/'
+path_now        = '/home/daniel/models/nix/output/convergence/BP/n_z.20/n.0016_n_z.20_dt_min.0.1/'
 path_stoch      = '/home/dmoreno/nix/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
@@ -47,8 +47,9 @@ save_series_2D     = 0
 heat_map_fourier   = 0
 entropy            = 0
 plot_speed         = 0
-plot_threads       = 1
-save_fig           = True
+plot_threads       = 0
+plot_convergence   = 1
+save_fig           = False
 read_stoch_nc      = False
 bed_smooth         = False
 
@@ -2601,8 +2602,8 @@ if entropy == 1:
 if plot_speed == 1:
 
 	# Parent folder.
-	parent_folder = '/home/dmoreno/nix/resolution_parallel/'
-	folder_BP = '/home/dmoreno/nix/resolution_parallel_BP/'
+	parent_folder = '/home/daniel/models/nix/output/convergence/BP/n_z.20/'
+	folder_BP     = '/home/dmoreno/nix/resolution_parallel_BP/'
 
 	# List all subfolders in the parent folder
 	subfolders = [f.path for f in os.scandir(parent_folder) if f.is_dir()]
@@ -2614,9 +2615,12 @@ if plot_speed == 1:
 	l = len(subfolders)
 	l_half = int(0.5*l)
 
-	speed = []
-	speed_mean = np.empty(l)
+	speed         = []
+	speed_mean    = np.empty(l)
 	speed_mean_BP = np.empty(7)
+
+	L_plot    = np.empty(l)
+	L_plot_BP = np.empty(7)
 
 
 	fig = plt.figure(dpi=600, figsize=(6,4))
@@ -2637,8 +2641,8 @@ if plot_speed == 1:
 			# Open the netCDF file
 			data = Dataset(path_nc, mode='r')
 
-			speed  = data.variables['speed'][:]
-			L_plot = data.variables['L'][99]
+			speed     = data.variables['speed'][:]
+			L_plot[i] = data.variables['L'][90]
 
 			speed_mean[i] = np.mean(speed[11:99])
 
@@ -2661,8 +2665,8 @@ if plot_speed == 1:
 			# Open the netCDF file
 			data = Dataset(path_nc, mode='r')
 
-			speed     = data.variables['speed'][:]
-			L_plot_BP = data.variables['L'][99]
+			speed        = data.variables['speed'][:]
+			L_plot_BP[i] = data.variables['L'][90]
 
 			speed_mean_BP[i] = np.mean(speed[11:99])
 
@@ -2760,8 +2764,79 @@ if plot_speed == 1:
 
 
 
+if plot_convergence == 1:
+
+	# Parent folder.
+	folder     = '/home/daniel/models/nix/output/convergence/BP/n_z.20/'
+	folder_BP  = '/home/dmoreno/nix/resolution_parallel_BP/'
+
+	# List all subfolders in the parent folder
+	subfolders = [f.path for f in os.scandir(folder) if f.is_dir()]
+	subfolders.sort()
+
+	"""subfolders_BP = [f.path for f in os.scandir(folder_BP) if f.is_dir()]
+	subfolders_BP.sort()"""
+
+	l = len(subfolders)
+	l_half = int(0.5*l)
+
+	u_plot    = np.empty(l)
+	L_plot    = np.empty(l)
 
 
+	fig = plt.figure(dpi=600, figsize=(6,4))
+	plt.rcParams['text.usetex'] = True
+	ax  = fig.add_subplot(111)
+
+	# Loop through each subfolder.
+	for i in range(l):
+
+		print('Exp = ', subfolders[i])
+		
+		# Define the path to the netCDF file in the current subfolder
+		path_nc = os.path.join(get_datadir(), subfolders[i], 'nix.nc')
+
+		# Check if the file exists before attempting to open it
+		if os.path.exists(path_nc):
+			
+			# Open the netCDF file
+			data = Dataset(path_nc, mode='r')
+
+			u = data.variables['u'][:]
+			u_bar = data.variables['u_bar'][:]
+			H = data.variables['H'][:]
+			s = np.shape(u)
+
+			L     = data.variables['L'][:]
+
+			q = u_bar * H
+
+			#u_plot[i] = np.mean(u[s[0]-1,:,s[2]-1])
+			#L_plot[i] = L[s[0]-1]
+			L_plot[i] = q[s[0]-1,s[2]-1]
+			u_plot[i] = u_bar[s[0]-1,s[2]-1]
+
+			ax.plot(speed, 'blue', marker='o', linestyle='--', \
+		   					linewidth=1.0, markersize=2, label=subfolders[i])
+	
+
+
+	n_s = np.array([2**4, 2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12, 2**13])
+	
+	dx = np.empty(10)
+	for i in range(10):
+		
+		a = np.linspace(0.0, 1.0, n_s[i])**0.25
+		if i < 7:
+			n_round = 1
+		else:
+			n_round = 2
+		dx[i] = np.round(1.0e-3 * L[s[1]-1] * ( a[n_s[i]-1] - a[n_s[i]-2] ), n_round)
+
+
+
+	#u_plot = np.reshape(u_plot, [2,l_half])
+	#L_plot = np.reshape(L_plot, [2,l_half])
 
 
 
@@ -2770,13 +2845,15 @@ if plot_speed == 1:
 	ax  = fig.add_subplot(111)
 
 
-	ax.plot(L_plot, 'red', marker='o', linestyle='--', \
+	ax.plot(u_plot, 'red', marker='o', linestyle='--', \
 		   					linewidth=1.0, markersize=6, label='$ \mathrm{DIVA} $')
 	
-	ax.plot(L_plot_BP, 'darkgreen', marker='o', linestyle='--', \
-		   					linewidth=1.0, markersize=6, label='$ \mathrm{Blatter-Pattyn} $')
+	"""ax.plot(u_plot[1,:], 'blue', marker='o', linestyle='--', \
+		   					linewidth=1.0, markersize=6, label='$ \mathrm{SSA} $')
+	
+	ax.plot(u_plot[0,:], 'red', marker='o', linestyle='--', \
+		   					linewidth=1.0, markersize=6, label='$ \mathrm{DIVA} $')"""
 
-	#ax.set_yscale('log')
 	
 
 	secax = ax.secondary_xaxis(-0.2)  # Secondary axis offset below main x-axis
@@ -2788,8 +2865,8 @@ if plot_speed == 1:
 	ax.set_xticklabels(['$2^{4}$', '$2^{5}$', '$2^{6}$', '$2^{7}$', \
 					    '$2^{8}$', '$2^{9}$', '$2^{10}$', '$2^{11}$', '$2^{12}$', '$2^{13}$',], fontsize=15)
 
-	ax.set_yticks([10**1, 10**3, 10**5, 10**7])
-	ax.set_yticklabels(['$10^{1}$',' $10^{3}$', '$10^{5}$', '$10^{7}$'], fontsize=13)
+	"""ax.set_yticks([10**1, 10**3, 10**5, 10**7])
+	ax.set_yticklabels(['$10^{1}$',' $10^{3}$', '$10^{5}$', '$10^{7}$'], fontsize=13)"""
 
 
 	#ax.set_title(r'$ \mathrm{Speed} $', fontsize=16)
@@ -2809,7 +2886,7 @@ if plot_speed == 1:
 
 	
 	ax.grid(visible=True, which='major', linestyle=':', linewidth=0.5)
-	ax.set_yscale('log')
+	#ax.set_yscale('log')
 
 
 	plt.savefig(path_fig+'nix_speed.png', bbox_inches='tight')
@@ -2911,6 +2988,7 @@ if plot_threads == 1:
 		speed = np.array([[116810.884, 70679.042, 74566.387, 66190.345, 74883.568, 66016.395],
 						  [585366.552, 478912.882, 387956.703, 348779.358, 354893.250, 396817.365],
 						  [4303215.799, 3610587.675, 3270008.347, 2822071.597, 3596687.926, 3017841.411],
+						  [49539824.381, 33445243.324, 38035264.049, 26535200.611, 25399862.805, 21336509.172],
 							 
 						  [79446.996, 81670.945, 72106.104, 58022.668, 71215.729, 70007.399],
 						  [368431.456, 387024.196, 350111.448, 260081.742, 626659.125, 305218.821],
@@ -2919,7 +2997,8 @@ if plot_threads == 1:
 							 
 						   [101437.157, 122521.154, 84747.968, 65121.645, 64081.633, 64252.246],
 						   [489917.390, 669731.459, 326668.104, 351710.768, 378176.390, 297850.967],
-						   [4776107.210, 4884423.270, 2992992.762, 3561996.779, 3087553.888, 2791148.320]])
+						   [4776107.210, 4884423.270, 2992992.762, 3561996.779, 3087553.888, 2791148.320],
+						   [42187024.351, 45311782.408, 40988513.644, 33231396.209, 38325691.225, 29261489.475]])
 
 		l = np.shape(speed)[0]
 		efficiency = []
@@ -2939,13 +3018,13 @@ if plot_threads == 1:
 
 
 
-	colours = ['darkgreen', 'blue', 'red', 
+	colours = ['darkgreen', 'blue', 'red', 'black',
 			   'darkgreen', 'blue', 'red', 'black',
-			   'darkgreen', 'blue', 'red']
+			   'darkgreen', 'blue', 'red', 'black']
 
-	lines = [':', ':', ':',
+	lines = [':', ':', ':', ':',
 			'--', '--', '--', '--', 
-			'-', '-', '-',]
+			'-', '-', '-', '-']
 
 
 	for i in range(0, l, 1):
@@ -2967,17 +3046,17 @@ if plot_threads == 1:
 	ax2.plot(np.nan, color=colours[2], marker='o', linestyle='None', \
 								linewidth=1.0, markersize=6, label='$ N=10^3 $')
 
-	ax2.plot(np.nan, color=colours[6], marker='o', linestyle='None', \
+	ax2.plot(np.nan, color=colours[3], marker='o', linestyle='None', \
 								linewidth=1.0, markersize=6, label='$ N=10^4 $')
 
 
 	ax2.plot(np.nan, color='black', marker='None', linestyle=lines[0], \
 								linewidth=1.0, markersize=6, label='$ \mathrm{O1} $')
 
-	ax2.plot(np.nan, color='black', marker='None', linestyle=lines[3], \
+	ax2.plot(np.nan, color='black', marker='None', linestyle=lines[4], \
 								linewidth=1.0, markersize=6, label='$ \mathrm{O2} $')
 
-	ax2.plot(np.nan, color='black', marker='None', linestyle=lines[7], \
+	ax2.plot(np.nan, color='black', marker='None', linestyle=lines[8], \
 								linewidth=1.0, markersize=6, label='$ \mathrm{O3} $')
 
 	ax1.set_xticks([0,1,2,3,4,5])
@@ -2985,8 +3064,8 @@ if plot_threads == 1:
 	ax1.set_xticklabels([])
 	ax2.set_xticklabels(['$2^0$', '$2^1$', '$2^2$', '$2^3$', '$2^4$', '$2^5$'], fontsize=15)
 
-	ax1.set_yticks([0.5, 1.0, 1.5, 2.0])
-	ax1.set_yticklabels(['$0.5$', '$1.0$', '$1.5$', '$2.0$'], fontsize=13)
+	ax1.set_yticks([0.5, 1.0, 1.5, 2.0, 2.5])
+	ax1.set_yticklabels(['$0.5$', '$1.0$', '$1.5$', '$2.0$', '$2.5$'], fontsize=13)
 
 	ax2.set_yticks([0, 25, 50, 75, 100])
 	ax2.set_yticklabels(['$0$', '$25$', '$50$', '$75$', '$100$'], fontsize=13)
