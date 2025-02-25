@@ -34,12 +34,13 @@ using namespace std;
 int main()
 {
 
-    /*omp_set_num_threads(1); // Set the number of threads to 4
+    int omp_threads = 1;
+    omp_set_num_threads(omp_threads); // Set the number of threads to 4
     #pragma omp parallel
     {
         #pragma omp single
-        std::cout << "Number of OPM threads: " << omp_get_num_threads() < std::endl;
-    }*/
+        std::cout << "Number of OPM threads: " << omp_get_num_threads() << std::endl;
+    }
 
     // Enable OpenMP if supported by the compiler.
     // Is this needed/ 
@@ -48,7 +49,7 @@ int main()
 
 
     // Set Eigen to use multiple threads.
-    int num_threads = 1;
+    int num_threads = 8;
     Eigen::setNbThreads(num_threads);
     std::cout << "Using " << Eigen::nbThreads() << " eigen threads.\n";
 
@@ -318,7 +319,6 @@ int main()
     ArrayXd u_bar_old_2(n);  
     ArrayXd u2_0_vec(n);                 // Ranged sampled of u2_0 for a certain iteration.
     ArrayXd u2_dif_vec(n);               // Difference with analytical BC.
-    //ArrayXd w(n);                        // Synthetic vertical velocity.
     ArrayXd F_1(n);                      // Integral for DIVA solver (Arthern et al., 2015)
     ArrayXd F_2(n);                      // Integral for DIVA solver (Arthern et al., 2015)
     ArrayXd b_melt(n);                    // Basal melt [m/yr]
@@ -344,7 +344,7 @@ int main()
     ArrayXd T_oce_s(n_s);                // Ocean temperature forcing.   
 
     // MATRICES.
-    /*ArrayXXd sol(n,n_z+1);               // Matrix output. sol(2*n+1,2*n_z+1);
+    ArrayXXd sol(n,n_z+1);               // Matrix output. sol(2*n+1,2*n_z+1);
     ArrayXXd sol_thrm(n,n_z+1);  
     ArrayXXd u(n,n_z);                   // Full velocity u(x,z) [m/yr].  
     ArrayXXd u_old(n,n_z);
@@ -357,12 +357,8 @@ int main()
     ArrayXXd theta(n,n_z);               // Temperature field [K].
     ArrayXXd A_theta(n,n_z);             // Temperature dependent ice rate factor [Pa^-3 yr^-1]
     ArrayXXd fric_all(n,4);              // Basal friction output.(n,n_z+3)
-    ArrayXXd lmbd(n,n_z);                // Matrix with stress vertical derivatives d(visc du/dz)/dz. */
+    ArrayXXd lmbd(n,n_z);                // Matrix with stress vertical derivatives d(visc du/dz)/dz. 
 
-
-    ArrayXXd visc(n,n_z);                // Ice viscosity [Pa·s]. 
-    ArrayXXd theta(n,n_z);               // Temperature field [K].
-    ArrayXXd A_theta(n,n_z);             // Temperature dependent ice rate factor [Pa^-3 yr^-1]
     
     // Function outputs.
     Array2d L_out;                    // Grounding line function output.
@@ -435,13 +431,13 @@ int main()
 
 
     // Implicit initialization.
-    /*ub          = ArrayXd::Constant(n, u_0);               // [m / yr] 
+    ub          = ArrayXd::Constant(n, u_0);               // [m / yr] 
     u_bar       = ArrayXd::Constant(n, u_0);               // [m / yr]
     u_bar_old_2 = ArrayXd::Constant(n, u_0); 
     u           = ArrayXXd::Constant(n, n_z, u_0);         // [m / yr]
     u_old_2     = ArrayXXd::Constant(n, n_z, u_0); 
     beta        = ArrayXd::Constant(n, beta_0);             // [Pa yr / m]
-    tau_b       = beta * ub;*/
+    tau_b       = beta * ub;
 
 
 

@@ -186,19 +186,28 @@ elif exp == 'lemaitre4':
 # RESOLUTION STUDY.
 elif exp == 'resolution':
 
-    yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_resolution.yaml"
-    yaml_file_name = "nix_params_resolution.yaml"
+    #yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_resolution.yaml"
+    #yaml_file_name = "nix_params_resolution.yaml"
 
-    var_names = ['n', 'dt_min']
+    yaml_file_path = "/scratch/ulb/glaciol/dmoreno/nix/par/nix_params_parallel_nic5.yaml"
+    yaml_file_name = "nix_params_parallel_nic5.yaml"
+
+    var_names = ['n', 'n_z', 'dt_min']
     #values_0 = np.array([2**4, 2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12, 2**13, 2**14])
 
-    values_0 = np.array([1200, 2400]) # [25, 50, 100, 150, 300, 600]
-    values_1 = np.array([0.01]) # 0.01
+    values_0 = np.array([3000, 2**12, 5000, 6000, 7000, 2**13, 9000, 10000, 2**14]) # [25, 50, 100, 150, 300, 600]
+    values_1 = np.array([10]) # 0.01
+    values_2 = np.array([0.05, 0.01]) # 0.1
+
+
+    """values_0 = np.array([2**4]) # [25, 50, 100, 150, 300, 600]
+    values_1 = np.array([10]) # 0.01
+    values_2 = np.array([0.1]) # 0.01"""
 
     # Data type of each array.
-    data_types = [int, float]
+    data_types = [int, int, float]
 
-    values = [values_0, values_1]
+    values = [values_0, values_1, values_2]
 
 
 # MISMIP_3 WITH ICE RATE FACTOR CONSTANT AND T_OCE FORCING.
@@ -457,13 +466,14 @@ for i in range(len(name)):
         # "g++ -std=c++17 -fopenmp -O3 -I"+module_netcdf+" -I"+module_eigen+" -L"+lib_netcdf+" -lnetcdf -o "+path_modified+"nix.o "+path_output_scr+"nix.cpp -lyaml-cpp",
         # "g++ -std=c++17 -I"+module_netcdf+" -I"+module_eigen+" -L"+lib_netcdf+" -lnetcdf -o "+path_modified+"nix.o "+path_output_scr+"nix.cpp -lyaml-cpp",
         # Too agrressive paralelization gives problem in nic5!!! We need: -fopenmp -O1.
+        # Compile: nix_solver_omp.cpp to test linear solver alone.
         commands = [
                     "module --force purge",
                     "module load releases/2023b",
                     "module load Eigen/3.4.0-GCCcore-13.2.0",
                     "module load yaml-cpp",
                     "module load netCDF/4.9.2-gompi-2023b",
-                    "g++ -std=c++17 -fopenmp -O3 -I"+module_netcdf+" -I"+module_eigen+" -L"+lib_netcdf+" -lnetcdf -o "+path_modified+"nix.o "+path_output_scr+"nix_solver_omp.cpp -lyaml-cpp",
+                    "g++ -std=c++17 -fopenmp -O1 -I"+module_netcdf+" -I"+module_eigen+" -L"+lib_netcdf+" -lnetcdf -o "+path_modified+"nix.o "+path_output_scr+"nix.cpp -lyaml-cpp",
                     ]
 
         cmd = " &&\n".join(commands)
