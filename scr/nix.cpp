@@ -143,8 +143,8 @@ int main()
     //std::cout << "Using " << Eigen::nbThreads() << " threads.\n";
 
     // Specify the path to YAML file.
-    string yaml_name = "nix_params_parallel_ceci.yaml";
-    //string yaml_name = "nix_params_mismip_therm_T_oce.yaml";
+    //string yaml_name = "nix_params_parallel_ceci.yaml";
+    string yaml_name = "nix_params_parallel.yaml";
 
     // Assuming the path won't exceed 4096 characters.
     char buffer[4096];

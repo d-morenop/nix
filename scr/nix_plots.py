@@ -22,8 +22,8 @@ from PIL import Image
 
 # /home/dmoreno/nix/test_therm/n.100_n_z.35_dt_min.0.1_eps.1e-07/
 # /home/dmoreno/nix/test_Eigenthread1/n.200_n_z.50_dt_min.0.1_eps.1e-07
-path_fig        = '/home/daniel/figures/'
-path_now        = '/home/daniel/models/nix/output/convergence/BP/n_z.20/n.0016_n_z.20_dt_min.0.1/'
+path_fig        = '/home/dmoreno/figures/'
+path_now        = '/home/dmoreno/nix/test_therm/n.100_n_z.35_dt_min.0.1_eps.1e-07/'
 path_stoch      = '/home/dmoreno/nix/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
@@ -2767,7 +2767,7 @@ if plot_speed == 1:
 if plot_convergence == 1:
 
 	# Parent folder.
-	folder     = '/home/daniel/models/nix/output/convergence/BP/n_z.20/'
+	folder     = '/home/dmoreno/nix/resolution_parallel/'
 	folder_BP  = '/home/dmoreno/nix/resolution_parallel_BP/'
 
 	# List all subfolders in the parent folder
@@ -2777,7 +2777,8 @@ if plot_convergence == 1:
 	"""subfolders_BP = [f.path for f in os.scandir(folder_BP) if f.is_dir()]
 	subfolders_BP.sort()"""
 
-	l = len(subfolders)
+	#l = len(subfolders)
+	l = 8
 	l_half = int(0.5*l)
 
 	u_plot    = np.empty(l)
@@ -2845,7 +2846,7 @@ if plot_convergence == 1:
 	ax  = fig.add_subplot(111)
 
 
-	ax.plot(u_plot, 'red', marker='o', linestyle='--', \
+	ax.plot(L_plot, 'red', marker='o', linestyle='--', \
 		   					linewidth=1.0, markersize=6, label='$ \mathrm{DIVA} $')
 	
 	"""ax.plot(u_plot[1,:], 'blue', marker='o', linestyle='--', \
