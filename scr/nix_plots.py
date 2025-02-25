@@ -22,8 +22,8 @@ from PIL import Image
 
 # /home/dmoreno/nix/test_therm/n.100_n_z.35_dt_min.0.1_eps.1e-07/
 # /home/dmoreno/nix/test_Eigenthread1/n.200_n_z.50_dt_min.0.1_eps.1e-07
-path_fig        = '/home/dmoreno/figures/nix/resolution/'
-path_now        = '/home/dmoreno/nix/resolution_parallel/SSA_n.0016_dt_min.0.01/'
+path_fig        = '/home/daniel/figures/'
+path_now        = '/home/daniel/models/nix/output/convergence/BP/n_z.20/n.0016_n_z.20_dt_min.0.1/'
 path_stoch      = '/home/dmoreno/nix/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
@@ -2767,7 +2767,7 @@ if plot_speed == 1:
 if plot_convergence == 1:
 
 	# Parent folder.
-	folder     = '/home/dmoreno/nix/convergence/BP/n_z.20/'
+	folder     = '/home/daniel/models/nix/output/convergence/BP/n_z.20/'
 	folder_BP  = '/home/dmoreno/nix/resolution_parallel_BP/'
 
 	# List all subfolders in the parent folder
@@ -2803,12 +2803,18 @@ if plot_convergence == 1:
 			data = Dataset(path_nc, mode='r')
 
 			u = data.variables['u'][:]
+			u_bar = data.variables['u_bar'][:]
+			H = data.variables['H'][:]
 			s = np.shape(u)
 
 			L     = data.variables['L'][:]
 
-			u_plot[i] = np.mean(u[s[0]-1,:,s[1]-1])
-			L_plot[i] = L[s[0]-1]
+			q = u_bar * H
+
+			#u_plot[i] = np.mean(u[s[0]-1,:,s[2]-1])
+			#L_plot[i] = L[s[0]-1]
+			L_plot[i] = q[s[0]-1,s[2]-1]
+			u_plot[i] = u_bar[s[0]-1,s[2]-1]
 
 			ax.plot(speed, 'blue', marker='o', linestyle='--', \
 		   					linewidth=1.0, markersize=2, label=subfolders[i])
@@ -2848,7 +2854,6 @@ if plot_convergence == 1:
 	ax.plot(u_plot[0,:], 'red', marker='o', linestyle='--', \
 		   					linewidth=1.0, markersize=6, label='$ \mathrm{DIVA} $')"""
 
-	#ax.set_yscale('log')
 	
 
 	secax = ax.secondary_xaxis(-0.2)  # Secondary axis offset below main x-axis
@@ -2860,8 +2865,8 @@ if plot_convergence == 1:
 	ax.set_xticklabels(['$2^{4}$', '$2^{5}$', '$2^{6}$', '$2^{7}$', \
 					    '$2^{8}$', '$2^{9}$', '$2^{10}$', '$2^{11}$', '$2^{12}$', '$2^{13}$',], fontsize=15)
 
-	ax.set_yticks([10**1, 10**3, 10**5, 10**7])
-	ax.set_yticklabels(['$10^{1}$',' $10^{3}$', '$10^{5}$', '$10^{7}$'], fontsize=13)
+	"""ax.set_yticks([10**1, 10**3, 10**5, 10**7])
+	ax.set_yticklabels(['$10^{1}$',' $10^{3}$', '$10^{5}$', '$10^{7}$'], fontsize=13)"""
 
 
 	#ax.set_title(r'$ \mathrm{Speed} $', fontsize=16)
@@ -2881,7 +2886,7 @@ if plot_convergence == 1:
 
 	
 	ax.grid(visible=True, which='major', linestyle=':', linewidth=0.5)
-	ax.set_yscale('log')
+	#ax.set_yscale('log')
 
 
 	plt.savefig(path_fig+'nix_speed.png', bbox_inches='tight')
