@@ -23,18 +23,18 @@ from PIL import Image
 # /home/dmoreno/nix/test_therm/n.100_n_z.35_dt_min.0.1_eps.1e-07/
 # /home/dmoreno/nix/test_Eigenthread1/n.200_n_z.50_dt_min.0.1_eps.1e-07
 path_fig        = '/home/dmoreno/figures/'
-path_now        = '/home/dmoreno/nix/test_therm/n.100_n_z.35_dt_min.0.1_eps.1e-07/'
+path_now        = '/home/dmoreno/nix/convergence_SSA/HR/n.16384_n_z.10_dt_min.0.01_eps.1e-07/'
 path_stoch      = '/home/dmoreno/nix/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
 
 # Select plots to be saved (boolean integer).
-save_series        = 0
-save_series_comp   = 0
+save_series        = 1
+save_series_comp   = 1
 save_shooting      = 0
-save_domain        = 0
+save_domain        = 1
 coloured_domain    = 0
-save_var_frames    = 0
+save_var_frames    = 1
 save_series_frames = 0
 save_theta         = 0
 save_visc          = 0
@@ -2767,30 +2767,29 @@ if plot_speed == 1:
 if plot_convergence == 1:
 
 	# Parent folder.
-	folder     = '/home/dmoreno/nix/resolution_parallel/'
-	folder_BP  = '/home/dmoreno/nix/resolution_parallel_BP/'
+	folder     = '/home/dmoreno/nix/convergence_SSA/'
 
 	# List all subfolders in the parent folder
 	subfolders = [f.path for f in os.scandir(folder) if f.is_dir()]
 	subfolders.sort()
 
-	"""subfolders_BP = [f.path for f in os.scandir(folder_BP) if f.is_dir()]
-	subfolders_BP.sort()"""
 
 	#l = len(subfolders)
-	l = 8
-	l_half = int(0.5*l)
+	l_0 = 1
+	l_f = 12
 
-	u_plot    = np.empty(l)
-	L_plot    = np.empty(l)
+	u_plot    = np.empty(l_f-l_0)
+	L_plot    = np.empty(l_f-l_0)
+	q_plot    = np.empty(l_f-l_0)
+	H_plot    = np.empty(l_f-l_0)
 
 
-	fig = plt.figure(dpi=600, figsize=(6,4))
+	fig = plt.figure(dpi=600, figsize=(7,4))
 	plt.rcParams['text.usetex'] = True
 	ax  = fig.add_subplot(111)
 
 	# Loop through each subfolder.
-	for i in range(l):
+	for i in range(l_0, l_f, 1):
 
 		print('Exp = ', subfolders[i])
 		
@@ -2810,87 +2809,113 @@ if plot_convergence == 1:
 
 			L     = data.variables['L'][:]
 
-			q = u_bar * H
-
 			#u_plot[i] = np.mean(u[s[0]-1,:,s[2]-1])
-			#L_plot[i] = L[s[0]-1]
-			L_plot[i] = q[s[0]-1,s[2]-1]
-			u_plot[i] = u_bar[s[0]-1,s[2]-1]
+			L_plot[i-l_0] = 1.0e-6 * L[s[0]-1]
+			u_plot[i-l_0] = 1.0e-3 * u_bar[s[0]-1,s[2]-1]
+			H_plot[i-l_0] = H[s[0]-1,s[2]-1]
+			q_plot[i-l_0] = 1.0e-3 * u_plot[i-l_0] * H_plot[i-l_0]
 
 			ax.plot(speed, 'blue', marker='o', linestyle='--', \
 		   					linewidth=1.0, markersize=2, label=subfolders[i])
 	
 
 
-	n_s = np.array([2**4, 2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12, 2**13])
+	n_s = np.array([2**4, 2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12, 2**13, 2**14])
 	
-	dx = np.empty(10)
-	for i in range(10):
+	l_dx = len(n_s)
+	dx   = np.empty(l_dx)
+	
+	# Compute the spatial resolution at the grounding line for each resolution.
+	for i in range(l_dx):
 		
-		a = np.linspace(0.0, 1.0, n_s[i])**0.25
+		a  = np.linspace(0.0, 1.0, n_s[i])**1.0 # 0.25
 		if i < 7:
 			n_round = 1
 		else:
 			n_round = 2
-		dx[i] = np.round(1.0e-3 * L[s[1]-1] * ( a[n_s[i]-1] - a[n_s[i]-2] ), n_round)
+		dx[i] = np.round(1.0e-3 * L[s[0]-1] * ( a[n_s[i]-1] - a[n_s[i]-2] ), n_round)
 
 
 
-	#u_plot = np.reshape(u_plot, [2,l_half])
-	#L_plot = np.reshape(L_plot, [2,l_half])
-
-
-
-	fig = plt.figure(dpi=600, figsize=(6,5))
+	fig = plt.figure(dpi=600, figsize=(6,8))
 	plt.rcParams['text.usetex'] = True
-	ax  = fig.add_subplot(111)
+	ax1  = fig.add_subplot(411)
+	ax2  = fig.add_subplot(412)
+	ax3  = fig.add_subplot(413)
+	ax4  = fig.add_subplot(414)
 
 
-	ax.plot(L_plot, 'red', marker='o', linestyle='--', \
+	ax1.plot(u_plot, 'blue', marker='o', linestyle='--', \
 		   					linewidth=1.0, markersize=6, label='$ \mathrm{DIVA} $')
 	
-	"""ax.plot(u_plot[1,:], 'blue', marker='o', linestyle='--', \
-		   					linewidth=1.0, markersize=6, label='$ \mathrm{SSA} $')
+	ax2.plot(L_plot, 'darkgreen', marker='o', linestyle='--', \
+		   					linewidth=1.0, markersize=6, label='$ \mathrm{DIVA} $')
 	
-	ax.plot(u_plot[0,:], 'red', marker='o', linestyle='--', \
-		   					linewidth=1.0, markersize=6, label='$ \mathrm{DIVA} $')"""
-
+	ax3.plot(H_plot, 'black', marker='o', linestyle='--', \
+		   					linewidth=1.0, markersize=6, label='$ \mathrm{DIVA} $')
+	
+	ax4.plot(q_plot, 'red', marker='o', linestyle='--', \
+		   					linewidth=1.0, markersize=6, label='$ \mathrm{DIVA} $')
+	
 	
 
-	secax = ax.secondary_xaxis(-0.2)  # Secondary axis offset below main x-axis
-	secax.set_xticks([0,1,2,3,4,5,6,7,8,9])  # Match ticks with primary axis
+	secax = ax4.secondary_xaxis(-0.5)  # Secondary axis offset below main x-axis
+	secax.set_xticks([0,1,2,3,4,5,6,7,8,9,10])  # Match ticks with primary axis
 	secax.set_xticklabels([f'${value}$' for value in dx], fontsize=13)
 	secax.set_xlabel(r' $ \Delta x \ (\mathrm{km}) 	$ ', fontsize=20)
 
-	ax.set_xticks([0,1,2,3,4,5,6,7,8,9])
-	ax.set_xticklabels(['$2^{4}$', '$2^{5}$', '$2^{6}$', '$2^{7}$', \
-					    '$2^{8}$', '$2^{9}$', '$2^{10}$', '$2^{11}$', '$2^{12}$', '$2^{13}$',], fontsize=15)
+	ax1.set_xticks([0,1,2,3,4,5,6,7,8,9,10])
+	ax2.set_xticks([0,1,2,3,4,5,6,7,8,9,10])
+	ax3.set_xticks([0,1,2,3,4,5,6,7,8,9,10])
+	ax4.set_xticks([0,1,2,3,4,5,6,7,8,9,10])
+	ax1.set_xticklabels([])
+	ax2.set_xticklabels([])
+	ax3.set_xticklabels([])
+	ax4.set_xticklabels(['$2^{4}$', '$2^{5}$', '$2^{6}$', '$2^{7}$', \
+					     '$2^{8}$', '$2^{9}$', '$2^{10}$', '$2^{11}$', \
+						 '$2^{12}$', '$2^{13}$', '$2^{14}$'], fontsize=15)
 
-	"""ax.set_yticks([10**1, 10**3, 10**5, 10**7])
-	ax.set_yticklabels(['$10^{1}$',' $10^{3}$', '$10^{5}$', '$10^{7}$'], fontsize=13)"""
+
+	ax1.set_yticks([0.7, 1.0, 1.3, 1.6])
+	ax2.set_yticks([1.0, 1.03, 1.06, 1.09])
+	ax3.set_yticks([100, 200, 300, 400])
+	ax4.set_yticks([0.3, 0.31, 0.32, 0.33])
+
+	ax1.set_yticklabels(['$0.7$', '$1.0$', '$1.3$', '$1.6$'], fontsize=15)
+	ax2.set_yticklabels(['$1.0$', '$1.03$', '$1.06$', '$1.09$'], fontsize=15)
+	ax3.set_yticklabels(['$100$', '$200$', '$300$', '$400$'], fontsize=15)
+	ax4.set_yticklabels(['$0.3$', '$0.31$', '$0.32$', '$0.33$'], fontsize=15)
 
 
-	#ax.set_title(r'$ \mathrm{Speed} $', fontsize=16)
 
-	ax.legend(loc='best', ncol = 1, frameon = True, framealpha = 1.0, \
-	 		  fontsize = 12, fancybox = True)
+	#ax4.legend(loc='best', ncol = 1, frameon = True, framealpha = 1.0, \
+	# 		  fontsize = 12, fancybox = True)
 
 
 	plt.tight_layout()	
 
+	ax4.set_xlabel(r'$ n $', fontsize=20)
 
-	ax.set_xlabel(r'$ n $', fontsize=20)
-	ax.set_ylabel(r'$ L \ (\mathrm{km})$', fontsize=20)
+	ax1.set_ylabel(r'$ u \ (\mathrm{km/yr})$', fontsize=20)
+	ax2.set_ylabel(r'$ L \ (10^6 \ \mathrm{km})$', fontsize=20)
+	ax3.set_ylabel(r'$ H \ (\mathrm{m})$', fontsize=20)
+	ax4.set_ylabel(r'$ q \ (10^6 \ \mathrm{km/yr})$', fontsize=20)
 
-	"""ax.set_xlim(-0.1,l_half-1+0.1)
-	ax.set_ylim(7, 1.0e7)"""
+	#ax.set_xlim(-0.1,l_half-1+0.1)
+	ax1.set_ylim(0.7, 1.6)
+	ax2.set_ylim(1.0, 1.09)
+	ax3.set_ylim(100, 400)
+	ax4.set_ylim(0.3, 0.33)
 
 	
-	ax.grid(visible=True, which='major', linestyle=':', linewidth=0.5)
+	ax1.grid(visible=True, axis='x', which='major', linestyle=':', linewidth=0.5)
+	ax2.grid(visible=True, axis='x', which='major', linestyle=':', linewidth=0.5)
+	ax3.grid(visible=True, axis='x', which='major', linestyle=':', linewidth=0.5)
+	ax4.grid(visible=True, axis='x', which='major', linestyle=':', linewidth=0.5)
 	#ax.set_yscale('log')
 
 
-	plt.savefig(path_fig+'nix_speed.png', bbox_inches='tight')
+	plt.savefig(path_fig+'nix_convergence.png', bbox_inches='tight')
 
 	plt.show()
 	plt.close(fig)
