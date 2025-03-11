@@ -49,7 +49,7 @@ int main()
 
 
     // Set Eigen to use multiple threads.
-    int num_threads = 8;
+    int num_threads = 1;
     Eigen::setNbThreads(num_threads);
     std::cout << "Using " << Eigen::nbThreads() << " eigen threads.\n";
 
@@ -1200,9 +1200,9 @@ int main()
         {
             // Write solution with desired output frequency.
             // Running time (measures wall time).
-            //auto end     = chrono::high_resolution_clock::now();
-            //auto elapsed = chrono::duration_cast<chrono::nanoseconds>(end - begin);
-            //double speed = 60 * 60 * 1.0e6 * (a(1) - a(0)) / elapsed.count();
+            auto end     = chrono::high_resolution_clock::now();
+            auto elapsed = chrono::duration_cast<chrono::nanoseconds>(end - begin);
+            double speed = 60 * 60 * 1.0e6 * (a(1) - a(0)) / elapsed.count();
 
             if ( c == 0 )
             {
@@ -1237,7 +1237,7 @@ int main()
             ++c;
 
             // Wall time for computational speed.
-            //begin = std::chrono::high_resolution_clock::now();
+            begin = std::chrono::high_resolution_clock::now();
         }
     
         if ( out_hr == true && t > a_hr(c_hr) )

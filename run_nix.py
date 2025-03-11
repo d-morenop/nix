@@ -130,10 +130,10 @@ elif exp == 'parallel':
 
     var_names = ['vel_meth', 'n', 'n_z', 'dt_min', 'eps']
 
-    values_0 = np.array(['DIVA', 'Blatter-Pattyn'])
-    values_1 = np.array([2**4, 2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12, 2**13, 2**14, 2**15]) # , 2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12, 2**13, 2**14, 2**15
-    values_2 = np.array([20])  # 35
-    values_3 = np.array([0.005]) # 0.1, 0.05
+    values_0 = np.array(['DIVA'])  # 'SSA', 'DIVA', 'Blatter-Pattyn'
+    values_1 = np.array([2**5, 2**6])                             # , 2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12, 2**13, 2**14, 2**15
+    values_2 = np.array([15])                               # 35
+    values_3 = np.array([0.01]) # 0.1, 0.05
     values_4 = np.array([1.0e-7]) # 1.0e-4, 1.0e-5, 1.0e-6, 1.0e-7, 1.0e-8, 1.0e-9
     
 

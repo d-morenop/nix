@@ -23,18 +23,18 @@ from PIL import Image
 # /home/dmoreno/nix/test_therm/n.100_n_z.35_dt_min.0.1_eps.1e-07/
 # /home/dmoreno/nix/test_Eigenthread1/n.200_n_z.50_dt_min.0.1_eps.1e-07
 path_fig        = '/home/dmoreno/figures/'
-path_now        = '/home/dmoreno/nix/convergence_SSA/HR/n.16384_n_z.10_dt_min.0.01_eps.1e-07/'
+path_now        = '/home/dmoreno/nix/convergence_sigma.0.2/vel_meth.Blatter-Pattyn_n.0256_n_z.20_dt_min.0.1_eps.1e-07/'
 path_stoch      = '/home/dmoreno/nix/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
 
 # Select plots to be saved (boolean integer).
-save_series        = 1
-save_series_comp   = 1
+save_series        = 0
+save_series_comp   = 0
 save_shooting      = 0
-save_domain        = 1
+save_domain        = 0
 coloured_domain    = 0
-save_var_frames    = 1
+save_var_frames    = 0
 save_series_frames = 0
 save_theta         = 0
 save_visc          = 0
@@ -46,9 +46,9 @@ save_L             = 0
 save_series_2D     = 0
 heat_map_fourier   = 0
 entropy            = 0
-plot_speed         = 0
+plot_speed         = 1
 plot_threads       = 0
-plot_convergence   = 1
+plot_convergence   = 0
 save_fig           = False
 read_stoch_nc      = False
 bed_smooth         = False
@@ -195,7 +195,7 @@ def f_bed(x, exp, n):
 
 # Account for unevenly-spaced horizontal grid.
 sigma = np.linspace(0, 1.0, s[2])
-sigma_plot = sigma**(1.0) # 0.5 (uneven), 1.0 (even)
+sigma_plot = sigma**(0.2) # 0.5 (uneven), 1.0 (even)
 
 
 
@@ -2601,8 +2601,8 @@ if entropy == 1:
 
 if plot_speed == 1:
 
-	# Parent folder.
-	parent_folder = '/home/daniel/models/nix/output/convergence/BP/n_z.20/'
+	# Parent folder. '/home/daniel/models/nix/output/convergence/BP/n_z.20/'
+	parent_folder = '/home/dmoreno/nix/resolution_parallel/'
 	folder_BP     = '/home/dmoreno/nix/resolution_parallel_BP/'
 
 	# List all subfolders in the parent folder
@@ -2642,7 +2642,8 @@ if plot_speed == 1:
 			data = Dataset(path_nc, mode='r')
 
 			speed     = data.variables['speed'][:]
-			L_plot[i] = data.variables['L'][90]
+			l_t = len(speed)
+			L_plot[i] = data.variables['L'][l_t-1]
 
 			speed_mean[i] = np.mean(speed[11:99])
 
@@ -2707,15 +2708,15 @@ if plot_speed == 1:
 	plt.rcParams['text.usetex'] = True
 	ax  = fig.add_subplot(111)
 
-	ax.plot(speed_mean[1,:], 'blue', marker='o', linestyle='--', \
-		   					linewidth=1.0, markersize=6, label='$ \mathrm{SSA} $')
+	ax.plot(speed_mean[1,:], 'blue', marker='o', linestyle=':', \
+		   					linewidth=1.0, markersize=7, label='$ \mathrm{SSA} $')
 
 
-	ax.plot(speed_mean[0,:], 'red', marker='o', linestyle='--', \
-		   					linewidth=1.0, markersize=6, label='$ \mathrm{DIVA} $')
+	ax.plot(speed_mean[0,:], 'red', marker='o', linestyle=':', \
+		   					linewidth=1.0, markersize=7, label='$ \mathrm{DIVA} $')
 	
-	ax.plot(speed_mean_BP[:], 'darkgreen', marker='o', linestyle='--', \
-		   					linewidth=1.0, markersize=6, label='$ \mathrm{Blatter-Pattyn} $')
+	ax.plot(speed_mean_BP[:], 'darkgreen', marker='o', linestyle=':', \
+		   					linewidth=1.0, markersize=7, label='$ \mathrm{Blatter-Pattyn} $')
 
 	#ax.set_yscale('log')
 	
@@ -2755,7 +2756,7 @@ if plot_speed == 1:
 	ax.set_yscale('log')
 
 
-	plt.savefig(path_fig+'nix_speed.png', bbox_inches='tight')
+	plt.savefig(path_fig+'nix_speed.pdf', bbox_inches='tight')
 
 	plt.show()
 	plt.close(fig)
@@ -2766,7 +2767,7 @@ if plot_speed == 1:
 
 if plot_convergence == 1:
 
-	# Parent folder.
+	# Parent folder. '/home/dmoreno/nix/convergence_SSA/', '/home/dmoreno/nix/convergence_sigma.0.2/'
 	folder     = '/home/dmoreno/nix/convergence_SSA/'
 
 	# List all subfolders in the parent folder
@@ -2775,8 +2776,8 @@ if plot_convergence == 1:
 
 
 	#l = len(subfolders)
-	l_0 = 1
-	l_f = 12
+	l_0 = 1   # 1, 1
+	l_f = 12  # 12, 18
 
 	u_plot    = np.empty(l_f-l_0)
 	L_plot    = np.empty(l_f-l_0)
@@ -2784,9 +2785,6 @@ if plot_convergence == 1:
 	H_plot    = np.empty(l_f-l_0)
 
 
-	fig = plt.figure(dpi=600, figsize=(7,4))
-	plt.rcParams['text.usetex'] = True
-	ax  = fig.add_subplot(111)
 
 	# Loop through each subfolder.
 	for i in range(l_0, l_f, 1):
@@ -2802,12 +2800,13 @@ if plot_convergence == 1:
 			# Open the netCDF file
 			data = Dataset(path_nc, mode='r')
 
-			u = data.variables['u'][:]
+			u     = data.variables['u'][:]
 			u_bar = data.variables['u_bar'][:]
-			H = data.variables['H'][:]
-			s = np.shape(u)
-
+			H     = data.variables['H'][:]
 			L     = data.variables['L'][:]
+			s     = np.shape(u)
+
+			
 
 			#u_plot[i] = np.mean(u[s[0]-1,:,s[2]-1])
 			L_plot[i-l_0] = 1.0e-6 * L[s[0]-1]
@@ -2815,8 +2814,6 @@ if plot_convergence == 1:
 			H_plot[i-l_0] = H[s[0]-1,s[2]-1]
 			q_plot[i-l_0] = 1.0e-3 * u_plot[i-l_0] * H_plot[i-l_0]
 
-			ax.plot(speed, 'blue', marker='o', linestyle='--', \
-		   					linewidth=1.0, markersize=2, label=subfolders[i])
 	
 
 
@@ -2828,7 +2825,7 @@ if plot_convergence == 1:
 	# Compute the spatial resolution at the grounding line for each resolution.
 	for i in range(l_dx):
 		
-		a  = np.linspace(0.0, 1.0, n_s[i])**1.0 # 0.25
+		a  = np.linspace(0.0, 1.0, n_s[i])**1.0 # 0.25, 0.2
 		if i < 7:
 			n_round = 1
 		else:
@@ -2837,6 +2834,21 @@ if plot_convergence == 1:
 
 
 
+	# Schoof analytical solution for first step in MISMIP Exp_1.
+	rho_w = 1000.0
+	rho_i = 900.0
+	L_schoof = 1.0095047523761881 # 10^3 km
+	q_schoof = 0.3153153153153153 # 10^6 km^2/yr
+	b_schoof = -370.9909909909911 # m
+	H_schoof = ( rho_w / rho_i ) * abs(b_schoof)
+	u_schoof = 1.0e3 * q_schoof / H_schoof # km/yr
+	L_sch_plot = np.full(l_dx, L_schoof)
+	q_sch_plot = np.full(l_dx, q_schoof)
+	H_sch_plot = np.full(l_dx, H_schoof)
+	u_sch_plot = np.full(l_dx, u_schoof)
+
+	x_plot_sch = np.linspace(-n_s[l_dx-1], 2*n_s[l_dx-1], l_dx)
+
 	fig = plt.figure(dpi=600, figsize=(6,8))
 	plt.rcParams['text.usetex'] = True
 	ax1  = fig.add_subplot(411)
@@ -2844,24 +2856,78 @@ if plot_convergence == 1:
 	ax3  = fig.add_subplot(413)
 	ax4  = fig.add_subplot(414)
 
+	# Schoof analytical.
+	ax1.plot(x_plot_sch, u_sch_plot, markerfacecolor='None', color='grey', marker='None', linestyle='--', \
+		   					linewidth=3.0, markersize=9, label='$ \mathrm{Schoof \ (2007)} $')
+	
+	ax2.plot(x_plot_sch, H_sch_plot, markerfacecolor='None', color='grey', marker='None', linestyle='--', \
+		   					linewidth=3.0, markersize=9, label='$ \mathrm{Schoof} $')
+	
+	ax3.plot(x_plot_sch, L_sch_plot, markerfacecolor='None', color='grey', marker='None', linestyle='--', \
+		   					linewidth=3.0, markersize=9, label='$ \mathrm{Schoof} $')
+	
+	ax4.plot(x_plot_sch, q_sch_plot, markerfacecolor='None', color='grey', marker='None', linestyle='--', \
+		   					linewidth=3.0, markersize=9, label='$ \mathrm{Schoof} $')
 
-	ax1.plot(u_plot, 'blue', marker='o', linestyle='--', \
-		   					linewidth=1.0, markersize=6, label='$ \mathrm{DIVA} $')
+	"""# DIVA
+	ax1.plot(u_plot[0:5], markerfacecolor='None', color='darkgreen', marker='o', linestyle=':', \
+		   					linewidth=1.0, markersize=9, label='$ \mathrm{BP} $')
 	
-	ax2.plot(L_plot, 'darkgreen', marker='o', linestyle='--', \
-		   					linewidth=1.0, markersize=6, label='$ \mathrm{DIVA} $')
+	ax2.plot(L_plot[0:5], markerfacecolor='None', color='darkgreen', marker='o', linestyle=':', \
+		   					linewidth=1.0, markersize=9, label='$ \mathrm{BP} $')
 	
-	ax3.plot(H_plot, 'black', marker='o', linestyle='--', \
-		   					linewidth=1.0, markersize=6, label='$ \mathrm{DIVA} $')
+	ax3.plot(H_plot[0:5], markerfacecolor='None', color='darkgreen', marker='o', linestyle=':', \
+		   					linewidth=1.0, markersize=9, label='$ \mathrm{BP} $')
 	
-	ax4.plot(q_plot, 'red', marker='o', linestyle='--', \
-		   					linewidth=1.0, markersize=6, label='$ \mathrm{DIVA} $')
+	ax4.plot(q_plot[0:5], markerfacecolor='None', color='darkgreen', marker='o', linestyle=':', \
+		   					linewidth=1.0, markersize=9, label='$ \mathrm{BP} $')
+
+	# DIVA
+	ax1.plot(u_plot[5:11], markerfacecolor='None', color='blue', marker='o', linestyle=':', \
+		   					linewidth=1.0, markersize=9, label='$ \mathrm{DIVA} $')
+	
+	ax2.plot(L_plot[5:11], markerfacecolor='None', color='blue', marker='o', linestyle=':', \
+		   					linewidth=1.0, markersize=9, label='$ \mathrm{DIVA} $')
+	
+	ax3.plot(H_plot[5:11], markerfacecolor='None', color='blue', marker='o', linestyle=':', \
+		   					linewidth=1.0, markersize=9, label='$ \mathrm{DIVA} $')
+	
+	ax4.plot(q_plot[5:11], markerfacecolor='None', color='blue', marker='o', linestyle=':', \
+		   					linewidth=1.0, markersize=9, label='$ \mathrm{DIVA} $')
+	
+
+	# SSA
+	ax1.plot(u_plot[11:17], markerfacecolor='None', color='red', marker='o', linestyle=':', \
+		   					linewidth=1.0, markersize=9, label='$ \mathrm{SSA} $')
+	
+	ax2.plot(L_plot[11:17], markerfacecolor='None', color='red', marker='o', linestyle=':', \
+		   					linewidth=1.0, markersize=9, label='$ \mathrm{SSA} $')
+	
+	ax3.plot(H_plot[11:17], markerfacecolor='None', color='red', marker='o', linestyle=':', \
+		   					linewidth=1.0, markersize=9, label='$ \mathrm{SSA} $')
+	
+	ax4.plot(q_plot[11:17], markerfacecolor='None', color='red', marker='o', linestyle=':', \
+		   					linewidth=1.0, markersize=9, label='$ \mathrm{SSA} $')"""
+	
+	# SSA
+	ax1.plot(u_plot, markerfacecolor='red', color='red', marker='o', linestyle='None', \
+		   					linewidth=1.0, markersize=8, label='$ \mathrm{Nix} \ \mathrm{(SSA)} $')
+	
+	ax2.plot(H_plot, markerfacecolor='red', color='red', marker='o', linestyle='None', \
+		   					linewidth=1.0, markersize=8, label='$ \mathrm{SSA} $')
+	
+	ax3.plot(L_plot, markerfacecolor='red', color='red', marker='o', linestyle='None', \
+		   					linewidth=1.0, markersize=8, label='$ \mathrm{SSA} $')
+	
+	ax4.plot(q_plot, markerfacecolor='red', color='red', marker='o', linestyle='None', \
+		   					linewidth=1.0, markersize=8, label='$ \mathrm{SSA} $')
+	
 	
 	
 
 	secax = ax4.secondary_xaxis(-0.5)  # Secondary axis offset below main x-axis
 	secax.set_xticks([0,1,2,3,4,5,6,7,8,9,10])  # Match ticks with primary axis
-	secax.set_xticklabels([f'${value}$' for value in dx], fontsize=13)
+	secax.set_xticklabels([f'${value}$' for value in dx], fontsize=15)
 	secax.set_xlabel(r' $ \Delta x \ (\mathrm{km}) 	$ ', fontsize=20)
 
 	ax1.set_xticks([0,1,2,3,4,5,6,7,8,9,10])
@@ -2873,23 +2939,23 @@ if plot_convergence == 1:
 	ax3.set_xticklabels([])
 	ax4.set_xticklabels(['$2^{4}$', '$2^{5}$', '$2^{6}$', '$2^{7}$', \
 					     '$2^{8}$', '$2^{9}$', '$2^{10}$', '$2^{11}$', \
-						 '$2^{12}$', '$2^{13}$', '$2^{14}$'], fontsize=15)
+						 '$2^{12}$', '$2^{13}$', '$2^{14}$'], fontsize=16)
 
 
 	ax1.set_yticks([0.7, 1.0, 1.3, 1.6])
-	ax2.set_yticks([1.0, 1.03, 1.06, 1.09])
-	ax3.set_yticks([100, 200, 300, 400])
+	ax2.set_yticks([150, 250, 350, 450])
+	ax3.set_yticks([1.0, 1.03, 1.06, 1.09])
 	ax4.set_yticks([0.3, 0.31, 0.32, 0.33])
 
 	ax1.set_yticklabels(['$0.7$', '$1.0$', '$1.3$', '$1.6$'], fontsize=15)
-	ax2.set_yticklabels(['$1.0$', '$1.03$', '$1.06$', '$1.09$'], fontsize=15)
-	ax3.set_yticklabels(['$100$', '$200$', '$300$', '$400$'], fontsize=15)
+	ax2.set_yticklabels(['$150$', '$250$', '$350$', '$450$'], fontsize=15)
+	ax3.set_yticklabels(['$1.0$', '$1.03$', '$1.06$', '$1.09$'], fontsize=15)
 	ax4.set_yticklabels(['$0.3$', '$0.31$', '$0.32$', '$0.33$'], fontsize=15)
 
 
 
-	#ax4.legend(loc='best', ncol = 1, frameon = True, framealpha = 1.0, \
-	# 		  fontsize = 12, fancybox = True)
+	ax1.legend(loc='best', ncol = 1, frameon = True, framealpha = 1.0, \
+	 		  fontsize = 16, fancybox = True)
 
 
 	plt.tight_layout()	
@@ -2897,15 +2963,20 @@ if plot_convergence == 1:
 	ax4.set_xlabel(r'$ n $', fontsize=20)
 
 	ax1.set_ylabel(r'$ u \ (\mathrm{km/yr})$', fontsize=20)
-	ax2.set_ylabel(r'$ L \ (10^6 \ \mathrm{km})$', fontsize=20)
-	ax3.set_ylabel(r'$ H \ (\mathrm{m})$', fontsize=20)
-	ax4.set_ylabel(r'$ q \ (10^6 \ \mathrm{km/yr})$', fontsize=20)
+	ax2.set_ylabel(r'$  H \ (\mathrm{m})$', fontsize=20)
+	ax3.set_ylabel(r'$ L \ (10^3 \ \mathrm{km})$', fontsize=20)
+	ax4.set_ylabel(r'$ q \ (10^6 \ \mathrm{km^2/yr})$', fontsize=20)
 
-	#ax.set_xlim(-0.1,l_half-1+0.1)
-	ax1.set_ylim(0.7, 1.6)
+
+	"""ax1.set_ylim(0.7, 1.6)
 	ax2.set_ylim(1.0, 1.09)
-	ax3.set_ylim(100, 400)
-	ax4.set_ylim(0.3, 0.33)
+	ax3.set_ylim(150, 450)
+	ax4.set_ylim(0.3, 0.33)"""
+
+	ax1.set_xlim(-0.5, 10.5)
+	ax2.set_xlim(-0.5, 10.5)
+	ax3.set_xlim(-0.5, 10.5)
+	ax4.set_xlim(-0.5, 10.5)
 
 	
 	ax1.grid(visible=True, axis='x', which='major', linestyle=':', linewidth=0.5)
@@ -2914,8 +2985,8 @@ if plot_convergence == 1:
 	ax4.grid(visible=True, axis='x', which='major', linestyle=':', linewidth=0.5)
 	#ax.set_yscale('log')
 
-
-	plt.savefig(path_fig+'nix_convergence.png', bbox_inches='tight')
+	if save_fig == True:
+		plt.savefig(path_fig+'nix_convergence.pdf', bbox_inches='tight')
 
 	plt.show()
 	plt.close(fig)
