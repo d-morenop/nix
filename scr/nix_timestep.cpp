@@ -11,7 +11,7 @@ Array2d f_dt(double L, double t, double dt, double u_bar_max, \
     double dt_tilde, dt_CFL, dt_CFL_w, dt_CFL_min;
 
     // Factor 0.5 is faster since it yields fewer Picard's iterations.
-    dt_CFL   = 0.5 * ds_min * L / u_bar_max;
+    dt_CFL   = 0.75 * ds_min * L / u_bar_max; // 0.5
     
 
     // Smallest timestep for equilibration.
@@ -28,6 +28,12 @@ Array2d f_dt(double L, double t, double dt, double u_bar_max, \
         {
             dt = tmstep.dt_min;
             //dt = 1.0;
+            if ( dt > dt_CFL )
+            {
+                cout << " \n Fixed timestep larger than CFL condition.";
+                cout << " \n dt_fixed = "   << dt;
+                cout << " \n dt_CFL   = "   << dt_CFL;
+            }
         }
         
         // Idea: adaptative timestep from Picard error.

@@ -22,8 +22,8 @@ from PIL import Image
 
 # /home/dmoreno/nix/test_therm/n.100_n_z.35_dt_min.0.1_eps.1e-07/
 # /home/dmoreno/nix/test_Eigenthread1/n.200_n_z.50_dt_min.0.1_eps.1e-07
-path_fig        = '/home/dmoreno/nix/test_threads/n.128_dt_min.0.1_eps.1e-05/'
-path_now        = '/home/dmoreno/nix/test_Eigenthread12/n.100_n_z.100_dt_min.1.0_eps.1e-07/'
+path_fig        = '/home/dmoreno/figures/'
+path_now        = '/home/dmoreno/nix/parallel_long_lscg/threads.1/vel_meth.Blatter-Pattyn_n.2048_n_z.20_dt_min.0.1_eps.1e-07/'
 path_stoch      = '/home/dmoreno/nix/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
@@ -33,20 +33,22 @@ save_series        = 1
 save_series_comp   = 1
 save_shooting      = 0
 save_domain        = 1
-coloured_domain    = 1
+coloured_domain    = 0
 save_var_frames    = 1
 save_series_frames = 0
 save_theta         = 0
 save_visc          = 1
 save_u             = 1
 save_w             = 0
-save_u_der         = 1
+save_u_der         = 0
 time_series_gif    = 0
 save_L             = 0
 save_series_2D     = 0
 heat_map_fourier   = 0
 entropy            = 0
 plot_speed         = 0
+plot_threads       = 0
+plot_convergence   = 0
 save_fig           = False
 read_stoch_nc      = False
 bed_smooth         = False
@@ -193,7 +195,7 @@ def f_bed(x, exp, n):
 
 # Account for unevenly-spaced horizontal grid.
 sigma = np.linspace(0, 1.0, s[2])
-sigma_plot = sigma**(1.0) # 0.5 (uneven), 1.0 (even)
+sigma_plot = sigma**(0.2) # 0.5 (uneven), 1.0 (even)
 
 
 
@@ -618,7 +620,7 @@ if save_domain == 1:
 	delta_T_oce = False
 	
 	if frames == True:
-		for i in range(l-1, l, 1): # range(10, l, 1), (l-1, l, 20)
+		for i in range(l-2, l, 1): # range(10, l, 1), (l-1, l, 20)
 
 			print('Frame = ', i)
 			
@@ -957,7 +959,7 @@ if save_domain == 1:
 
 if save_var_frames == 1:
 	
-	for i in range(l-1, l, 1): # (0, l, 10), (l-1, l, 1)
+	for i in range(l-2, l, 1): # (0, l, 10), (l-1, l, 1)
 		
 		#L_plot  = np.linspace(0, L[i], s[2])
 		L_plot = sigma_plot * L[i]
@@ -1222,7 +1224,7 @@ if save_visc == 1:
 		# We account for potential unevenly-spaced grids.
 		x = sigma_plot * s[2]
 		y = np.linspace(0.0, s[1], s[1])
-		im = ax.pcolormesh(x, y, np.log10(visc[i,:,:]), vmin=4.5, vmax=6.0, \
+		im = ax.pcolormesh(x, y, np.log10(visc[i,:,:]), vmin=4.5, vmax=7.0, \
 					 cmap='plasma', edgecolors='none', linewidth=1)
 		
 	
@@ -2599,9 +2601,9 @@ if entropy == 1:
 
 if plot_speed == 1:
 
-	# Parent folder.
+	# Parent folder. '/home/daniel/models/nix/output/convergence/BP/n_z.20/'
 	parent_folder = '/home/dmoreno/nix/resolution_parallel/'
-	folder_BP = '/home/dmoreno/nix/resolution_parallel_BP/'
+	folder_BP     = '/home/dmoreno/nix/resolution_parallel_BP/'
 
 	# List all subfolders in the parent folder
 	subfolders = [f.path for f in os.scandir(parent_folder) if f.is_dir()]
@@ -2613,9 +2615,12 @@ if plot_speed == 1:
 	l = len(subfolders)
 	l_half = int(0.5*l)
 
-	speed = []
-	speed_mean = np.empty(l)
+	speed         = []
+	speed_mean    = np.empty(l)
 	speed_mean_BP = np.empty(7)
+
+	L_plot    = np.empty(l)
+	L_plot_BP = np.empty(7)
 
 
 	fig = plt.figure(dpi=600, figsize=(6,4))
@@ -2636,7 +2641,9 @@ if plot_speed == 1:
 			# Open the netCDF file
 			data = Dataset(path_nc, mode='r')
 
-			speed = data.variables['speed'][:]
+			speed     = data.variables['speed'][:]
+			l_t = len(speed)
+			L_plot[i] = data.variables['L'][l_t-1]
 
 			speed_mean[i] = np.mean(speed[11:99])
 
@@ -2659,7 +2666,8 @@ if plot_speed == 1:
 			# Open the netCDF file
 			data = Dataset(path_nc, mode='r')
 
-			speed = data.variables['speed'][:]
+			speed        = data.variables['speed'][:]
+			L_plot_BP[i] = data.variables['L'][90]
 
 			speed_mean_BP[i] = np.mean(speed[11:99])
 
@@ -2700,15 +2708,15 @@ if plot_speed == 1:
 	plt.rcParams['text.usetex'] = True
 	ax  = fig.add_subplot(111)
 
-	ax.plot(speed_mean[1,:], 'blue', marker='o', linestyle='--', \
-		   					linewidth=1.0, markersize=6, label='$ \mathrm{SSA} $')
+	ax.plot(speed_mean[1,:], 'blue', marker='o', linestyle=':', \
+		   					linewidth=1.0, markersize=7, label='$ \mathrm{SSA} $')
 
 
-	ax.plot(speed_mean[0,:], 'red', marker='o', linestyle='--', \
-		   					linewidth=1.0, markersize=6, label='$ \mathrm{DIVA} $')
+	ax.plot(speed_mean[0,:], 'red', marker='o', linestyle=':', \
+		   					linewidth=1.0, markersize=7, label='$ \mathrm{DIVA} $')
 	
-	ax.plot(speed_mean_BP[:], 'darkgreen', marker='o', linestyle='--', \
-		   					linewidth=1.0, markersize=6, label='$ \mathrm{Blatter-Pattyn} $')
+	ax.plot(speed_mean_BP[:], 'darkgreen', marker='o', linestyle=':', \
+		   					linewidth=1.0, markersize=7, label='$ \mathrm{Blatter-Pattyn} $')
 
 	#ax.set_yscale('log')
 	
@@ -2748,7 +2756,555 @@ if plot_speed == 1:
 	ax.set_yscale('log')
 
 
-	plt.savefig(path_fig+'nix_speed.png', bbox_inches='tight')
+	plt.savefig(path_fig+'nix_speed.pdf', bbox_inches='tight')
 
+	plt.show()
+	plt.close(fig)
+
+
+
+
+
+if plot_convergence == 1:
+
+	# Parent folder. '/home/dmoreno/nix/convergence_SSA/', '/home/dmoreno/nix/convergence_sigma.0.2/'
+	folder     = '/home/dmoreno/nix/convergence_SSA/'
+
+	# List all subfolders in the parent folder
+	subfolders = [f.path for f in os.scandir(folder) if f.is_dir()]
+	subfolders.sort()
+
+
+	#l = len(subfolders)
+	l_0 = 1   # 1, 1
+	l_f = 12  # 12, 18
+
+	u_plot    = np.empty(l_f-l_0)
+	L_plot    = np.empty(l_f-l_0)
+	q_plot    = np.empty(l_f-l_0)
+	H_plot    = np.empty(l_f-l_0)
+
+
+
+	# Loop through each subfolder.
+	for i in range(l_0, l_f, 1):
+
+		print('Exp = ', subfolders[i])
+		
+		# Define the path to the netCDF file in the current subfolder
+		path_nc = os.path.join(get_datadir(), subfolders[i], 'nix.nc')
+
+		# Check if the file exists before attempting to open it
+		if os.path.exists(path_nc):
+			
+			# Open the netCDF file
+			data = Dataset(path_nc, mode='r')
+
+			u     = data.variables['u'][:]
+			u_bar = data.variables['u_bar'][:]
+			H     = data.variables['H'][:]
+			L     = data.variables['L'][:]
+			s     = np.shape(u)
+
+			
+
+			#u_plot[i] = np.mean(u[s[0]-1,:,s[2]-1])
+			L_plot[i-l_0] = 1.0e-6 * L[s[0]-1]
+			u_plot[i-l_0] = 1.0e-3 * u_bar[s[0]-1,s[2]-1]
+			H_plot[i-l_0] = H[s[0]-1,s[2]-1]
+			q_plot[i-l_0] = 1.0e-3 * u_plot[i-l_0] * H_plot[i-l_0]
+
+	
+
+
+	n_s = np.array([2**4, 2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12, 2**13, 2**14])
+	
+	l_dx = len(n_s)
+	dx   = np.empty(l_dx)
+	
+	# Compute the spatial resolution at the grounding line for each resolution.
+	for i in range(l_dx):
+		
+		a  = np.linspace(0.0, 1.0, n_s[i])**1.0 # 0.25, 0.2
+		if i < 7:
+			n_round = 1
+		else:
+			n_round = 2
+		dx[i] = np.round(1.0e-3 * L[s[0]-1] * ( a[n_s[i]-1] - a[n_s[i]-2] ), n_round)
+
+
+
+	# Schoof analytical solution for first step in MISMIP Exp_1.
+	rho_w = 1000.0
+	rho_i = 900.0
+	L_schoof = 1.0095047523761881 # 10^3 km
+	q_schoof = 0.3153153153153153 # 10^6 km^2/yr
+	b_schoof = -370.9909909909911 # m
+	H_schoof = ( rho_w / rho_i ) * abs(b_schoof)
+	u_schoof = 1.0e3 * q_schoof / H_schoof # km/yr
+	L_sch_plot = np.full(l_dx, L_schoof)
+	q_sch_plot = np.full(l_dx, q_schoof)
+	H_sch_plot = np.full(l_dx, H_schoof)
+	u_sch_plot = np.full(l_dx, u_schoof)
+
+	x_plot_sch = np.linspace(-n_s[l_dx-1], 2*n_s[l_dx-1], l_dx)
+
+	fig = plt.figure(dpi=600, figsize=(6,8))
+	plt.rcParams['text.usetex'] = True
+	ax1  = fig.add_subplot(411)
+	ax2  = fig.add_subplot(412)
+	ax3  = fig.add_subplot(413)
+	ax4  = fig.add_subplot(414)
+
+	# Schoof analytical.
+	ax1.plot(x_plot_sch, u_sch_plot, markerfacecolor='None', color='grey', marker='None', linestyle='--', \
+		   					linewidth=3.0, markersize=9, label='$ \mathrm{Schoof \ (2007)} $')
+	
+	ax2.plot(x_plot_sch, H_sch_plot, markerfacecolor='None', color='grey', marker='None', linestyle='--', \
+		   					linewidth=3.0, markersize=9, label='$ \mathrm{Schoof} $')
+	
+	ax3.plot(x_plot_sch, L_sch_plot, markerfacecolor='None', color='grey', marker='None', linestyle='--', \
+		   					linewidth=3.0, markersize=9, label='$ \mathrm{Schoof} $')
+	
+	ax4.plot(x_plot_sch, q_sch_plot, markerfacecolor='None', color='grey', marker='None', linestyle='--', \
+		   					linewidth=3.0, markersize=9, label='$ \mathrm{Schoof} $')
+
+	"""# DIVA
+	ax1.plot(u_plot[0:5], markerfacecolor='None', color='darkgreen', marker='o', linestyle=':', \
+		   					linewidth=1.0, markersize=9, label='$ \mathrm{BP} $')
+	
+	ax2.plot(L_plot[0:5], markerfacecolor='None', color='darkgreen', marker='o', linestyle=':', \
+		   					linewidth=1.0, markersize=9, label='$ \mathrm{BP} $')
+	
+	ax3.plot(H_plot[0:5], markerfacecolor='None', color='darkgreen', marker='o', linestyle=':', \
+		   					linewidth=1.0, markersize=9, label='$ \mathrm{BP} $')
+	
+	ax4.plot(q_plot[0:5], markerfacecolor='None', color='darkgreen', marker='o', linestyle=':', \
+		   					linewidth=1.0, markersize=9, label='$ \mathrm{BP} $')
+
+	# DIVA
+	ax1.plot(u_plot[5:11], markerfacecolor='None', color='blue', marker='o', linestyle=':', \
+		   					linewidth=1.0, markersize=9, label='$ \mathrm{DIVA} $')
+	
+	ax2.plot(L_plot[5:11], markerfacecolor='None', color='blue', marker='o', linestyle=':', \
+		   					linewidth=1.0, markersize=9, label='$ \mathrm{DIVA} $')
+	
+	ax3.plot(H_plot[5:11], markerfacecolor='None', color='blue', marker='o', linestyle=':', \
+		   					linewidth=1.0, markersize=9, label='$ \mathrm{DIVA} $')
+	
+	ax4.plot(q_plot[5:11], markerfacecolor='None', color='blue', marker='o', linestyle=':', \
+		   					linewidth=1.0, markersize=9, label='$ \mathrm{DIVA} $')
+	
+
+	# SSA
+	ax1.plot(u_plot[11:17], markerfacecolor='None', color='red', marker='o', linestyle=':', \
+		   					linewidth=1.0, markersize=9, label='$ \mathrm{SSA} $')
+	
+	ax2.plot(L_plot[11:17], markerfacecolor='None', color='red', marker='o', linestyle=':', \
+		   					linewidth=1.0, markersize=9, label='$ \mathrm{SSA} $')
+	
+	ax3.plot(H_plot[11:17], markerfacecolor='None', color='red', marker='o', linestyle=':', \
+		   					linewidth=1.0, markersize=9, label='$ \mathrm{SSA} $')
+	
+	ax4.plot(q_plot[11:17], markerfacecolor='None', color='red', marker='o', linestyle=':', \
+		   					linewidth=1.0, markersize=9, label='$ \mathrm{SSA} $')"""
+	
+	# SSA
+	ax1.plot(u_plot, markerfacecolor='red', color='red', marker='o', linestyle='None', \
+		   					linewidth=1.0, markersize=8, label='$ \mathrm{Nix} \ \mathrm{(SSA)} $')
+	
+	ax2.plot(H_plot, markerfacecolor='red', color='red', marker='o', linestyle='None', \
+		   					linewidth=1.0, markersize=8, label='$ \mathrm{SSA} $')
+	
+	ax3.plot(L_plot, markerfacecolor='red', color='red', marker='o', linestyle='None', \
+		   					linewidth=1.0, markersize=8, label='$ \mathrm{SSA} $')
+	
+	ax4.plot(q_plot, markerfacecolor='red', color='red', marker='o', linestyle='None', \
+		   					linewidth=1.0, markersize=8, label='$ \mathrm{SSA} $')
+	
+	
+	
+
+	secax = ax4.secondary_xaxis(-0.5)  # Secondary axis offset below main x-axis
+	secax.set_xticks([0,1,2,3,4,5,6,7,8,9,10])  # Match ticks with primary axis
+	secax.set_xticklabels([f'${value}$' for value in dx], fontsize=15)
+	secax.set_xlabel(r' $ \Delta x \ (\mathrm{km}) 	$ ', fontsize=20)
+
+	ax1.set_xticks([0,1,2,3,4,5,6,7,8,9,10])
+	ax2.set_xticks([0,1,2,3,4,5,6,7,8,9,10])
+	ax3.set_xticks([0,1,2,3,4,5,6,7,8,9,10])
+	ax4.set_xticks([0,1,2,3,4,5,6,7,8,9,10])
+	ax1.set_xticklabels([])
+	ax2.set_xticklabels([])
+	ax3.set_xticklabels([])
+	ax4.set_xticklabels(['$2^{4}$', '$2^{5}$', '$2^{6}$', '$2^{7}$', \
+					     '$2^{8}$', '$2^{9}$', '$2^{10}$', '$2^{11}$', \
+						 '$2^{12}$', '$2^{13}$', '$2^{14}$'], fontsize=16)
+
+
+	ax1.set_yticks([0.7, 1.0, 1.3, 1.6])
+	ax2.set_yticks([150, 250, 350, 450])
+	ax3.set_yticks([1.0, 1.03, 1.06, 1.09])
+	ax4.set_yticks([0.3, 0.31, 0.32, 0.33])
+
+	ax1.set_yticklabels(['$0.7$', '$1.0$', '$1.3$', '$1.6$'], fontsize=15)
+	ax2.set_yticklabels(['$150$', '$250$', '$350$', '$450$'], fontsize=15)
+	ax3.set_yticklabels(['$1.0$', '$1.03$', '$1.06$', '$1.09$'], fontsize=15)
+	ax4.set_yticklabels(['$0.3$', '$0.31$', '$0.32$', '$0.33$'], fontsize=15)
+
+
+
+	ax1.legend(loc='best', ncol = 1, frameon = True, framealpha = 1.0, \
+	 		  fontsize = 16, fancybox = True)
+
+
+	plt.tight_layout()	
+
+	ax4.set_xlabel(r'$ n $', fontsize=20)
+
+	ax1.set_ylabel(r'$ u \ (\mathrm{km/yr})$', fontsize=20)
+	ax2.set_ylabel(r'$  H \ (\mathrm{m})$', fontsize=20)
+	ax3.set_ylabel(r'$ L \ (10^3 \ \mathrm{km})$', fontsize=20)
+	ax4.set_ylabel(r'$ q \ (10^6 \ \mathrm{km^2/yr})$', fontsize=20)
+
+
+	"""ax1.set_ylim(0.7, 1.6)
+	ax2.set_ylim(1.0, 1.09)
+	ax3.set_ylim(150, 450)
+	ax4.set_ylim(0.3, 0.33)"""
+
+	ax1.set_xlim(-0.5, 10.5)
+	ax2.set_xlim(-0.5, 10.5)
+	ax3.set_xlim(-0.5, 10.5)
+	ax4.set_xlim(-0.5, 10.5)
+
+	
+	ax1.grid(visible=True, axis='x', which='major', linestyle=':', linewidth=0.5)
+	ax2.grid(visible=True, axis='x', which='major', linestyle=':', linewidth=0.5)
+	ax3.grid(visible=True, axis='x', which='major', linestyle=':', linewidth=0.5)
+	ax4.grid(visible=True, axis='x', which='major', linestyle=':', linewidth=0.5)
+	#ax.set_yscale('log')
+
+	if save_fig == True:
+		plt.savefig(path_fig+'nix_convergence.pdf', bbox_inches='tight')
+
+	plt.show()
+	plt.close(fig)
+
+
+
+if plot_threads == 1:
+
+	# Parent folder.
+	parent_folder = '/home/daniel/models/nix/output/strong_scaling_short/'
+
+	# List all subfolders in the parent folder
+	subfolders = [f.path for f in os.scandir(parent_folder) if f.is_dir()]
+	subfolders.sort()
+
+	l = len(subfolders)
+	l_half = int(0.5*l)
+
+	col_1 = np.linspace(0.0, 1.0, l)
+	col_2 = col_1[::-1]
+
+	speed = []
+	speed_mean = np.empty(l)
+
+	n_0 = 10 
+	n_f = 30
+
+
+	"""fig = plt.figure(dpi=600, figsize=(6,4))
+	plt.rcParams['text.usetex'] = True
+	ax  = fig.add_subplot(111)
+
+	# Loop through each subfolder.
+	for i in range(l):
+
+		print('Exp = ', subfolders[i])
+		
+		# Define the path to the netCDF file in the current subfolder
+		path_nc = os.path.join(get_datadir(), subfolders[i], 'nix.nc')
+
+		# Check if the file exists before attempting to open it
+		if os.path.exists(path_nc):
+			
+			# Open the netCDF file
+			data = Dataset(path_nc, mode='r')
+
+			speed = data.variables['speed'][:]
+
+			speed_mean[i] = np.mean(speed[n_0:n_f])
+
+			ax.plot(speed, color=[col_1[i],0,col_2[i]], marker='o', linestyle='--', \
+		   					linewidth=1.0, markersize=2, label=r'$ \mathrm{Threads} = '+str(i+1)+r' $')
+	
+
+	ax.set_xlabel(r'$ \mathrm{Time} $', fontsize=20)
+	ax.set_ylabel(r'$ \mathrm{Speed} \ (\mathrm{kyr/hr})$', fontsize=20)
+
+
+
+
+	ax.legend(loc='best', ncol = 2, frameon = True, framealpha = 1.0, \
+	 		  fontsize = 10, fancybox = True)
+
+
+	plt.tight_layout()
+
+
+	plt.show()
+	plt.close(fig)"""
+
+
+
+	scale = 'strong'
+
+	fig = plt.figure(dpi=600, figsize=(6,5))
+	plt.rcParams['text.usetex'] = True
+
+	ax1   = fig.add_subplot(211)
+	ax2  = fig.add_subplot(212)
+
+	threads = np.array([1, 2, 4, 8, 16, 32])
+
+
+	# STRONG SCALABILITY.
+	if scale == 'strong':
+		# Nic5.
+
+		# Problem dimensions: 1.5e4 x 1e4.
+
+		# Parallelization level O1, O2, O3.
+		# MaxIter = 1e1. 
+		#speed = np.array([585366.552, 478912.882, 387956.703, 348779.358, 354893.250])
+		
+		# Wall time in miliseconds.
+		# Each row is one experiment: O1[iter.1e1, iter.1e2, iter.1e3], O2[iter.1e2, ...], O3.
+		speed = np.array([[116810.884, 70679.042, 74566.387, 66190.345, 74883.568, 66016.395],
+						  [585366.552, 478912.882, 387956.703, 348779.358, 354893.250, 396817.365],
+						  [4303215.799, 3610587.675, 3270008.347, 2822071.597, 3596687.926, 3017841.411],
+						  [49539824.381, 33445243.324, 38035264.049, 26535200.611, 25399862.805, 21336509.172],
+							 
+						  [79446.996, 81670.945, 72106.104, 58022.668, 71215.729, 70007.399],
+						  [368431.456, 387024.196, 350111.448, 260081.742, 626659.125, 305218.821],
+						  [4353713.586, 4271599.068, 3084215.624, 2719940.195, 2853667.195, 2493741.556],
+						  [34853329.529, 39426971.085, 35821366.991, 30157709.247, 27260686.188, 24387537.657],
+							 
+						   [101437.157, 122521.154, 84747.968, 65121.645, 64081.633, 64252.246],
+						   [489917.390, 669731.459, 326668.104, 351710.768, 378176.390, 297850.967],
+						   [4776107.210, 4884423.270, 2992992.762, 3561996.779, 3087553.888, 2791148.320],
+						   [42187024.351, 45311782.408, 40988513.644, 33231396.209, 38325691.225, 29261489.475]])
+
+		l = np.shape(speed)[0]
+		efficiency = []
+		speedup    = []
+		for i in range(l):
+
+			efficiency.append(100 * speed[i,0] / ( speed[i,:] * threads ))
+			#efficiency.append(100 * threads * speed[i,0] / ( speed[i,:] ))
+			speedup.append(speed[i,0] / speed[i,:])
+
+		# Efficiency.
+		#efficiency_O1_1 = 100 * speed[0,0] / ( speed[0,:] * threads )
+
+		# Speed-up.
+		#speedup_1 = speed[0,0] / speed
+
+
+
+
+	colours = ['darkgreen', 'blue', 'red', 'black',
+			   'darkgreen', 'blue', 'red', 'black',
+			   'darkgreen', 'blue', 'red', 'black']
+
+	lines = [':', ':', ':', ':',
+			'--', '--', '--', '--', 
+			'-', '-', '-', '-']
+
+
+	for i in range(0, l, 1):
+		# Plot figure.
+		ax1.plot(speedup[i], color=colours[i], marker='o', linestyle=lines[i], markerfacecolor='none', \
+								linewidth=1.0, markersize=6)
+
+
+		ax2.plot(efficiency[i], color=colours[i], marker='o', linestyle=lines[i],  markerfacecolor='none', \
+								linewidth=1.0, markersize=6)
+
+
+	ax2.plot(np.nan, color=colours[0], marker='o', linestyle='None', \
+								linewidth=1.0, markersize=6, label='$ N=10^1 $')
+
+	ax2.plot(np.nan, color=colours[1], marker='o', linestyle='None', \
+								linewidth=1.0, markersize=6, label='$ N=10^2 $')
+
+	ax2.plot(np.nan, color=colours[2], marker='o', linestyle='None', \
+								linewidth=1.0, markersize=6, label='$ N=10^3 $')
+
+	ax2.plot(np.nan, color=colours[3], marker='o', linestyle='None', \
+								linewidth=1.0, markersize=6, label='$ N=10^4 $')
+
+
+	ax2.plot(np.nan, color='black', marker='None', linestyle=lines[0], \
+								linewidth=1.0, markersize=6, label='$ \mathrm{O1} $')
+
+	ax2.plot(np.nan, color='black', marker='None', linestyle=lines[4], \
+								linewidth=1.0, markersize=6, label='$ \mathrm{O2} $')
+
+	ax2.plot(np.nan, color='black', marker='None', linestyle=lines[8], \
+								linewidth=1.0, markersize=6, label='$ \mathrm{O3} $')
+
+	ax1.set_xticks([0,1,2,3,4,5])
+	ax2.set_xticks([0,1,2,3,4,5])
+	ax1.set_xticklabels([])
+	ax2.set_xticklabels(['$2^0$', '$2^1$', '$2^2$', '$2^3$', '$2^4$', '$2^5$'], fontsize=15)
+
+	ax1.set_yticks([0.5, 1.0, 1.5, 2.0, 2.5])
+	ax1.set_yticklabels(['$0.5$', '$1.0$', '$1.5$', '$2.0$', '$2.5$'], fontsize=13)
+
+	ax2.set_yticks([0, 25, 50, 75, 100])
+	ax2.set_yticklabels(['$0$', '$25$', '$50$', '$75$', '$100$'], fontsize=13)
+
+	"""ax.set_yticks([10**1, 10**3, 10**5, 10**7])
+	ax.set_yticklabels(['$10^{1}$',' $10^{3}$', '$10^{5}$', '$10^{7}$'], fontsize=13)"""
+
+
+
+	x = np.linspace(1, len(speed_mean), len(speed_mean))
+
+
+	ax2.legend(loc='best', ncol = 2, frameon = True, framealpha = 1.0, \
+	 		  fontsize = 12, fancybox = True)
+		
+
+	ax1.set_ylabel(r'$ \mathrm{Speedup} $', fontsize=20)
+	ax2.set_ylabel(r'$ \mathrm{Efficiency \ (\%)} $', fontsize=20)
+	ax2.set_xlabel(r'$ \mathrm{Threads} $', fontsize=20)
+	
+
+	"""ax.set_xlim(-0.1,l_half-1+0.1)
+	ax.set_ylim(7, 1.0e7)"""
+
+	ax1.grid(visible=True, which='major', linestyle=':', linewidth=0.5)
+	ax2.grid(visible=True, which='major', linestyle=':', linewidth=0.5)
+	#ax.set_yscale('log')
+
+
+	plt.tight_layout()
+	
+	if save_fig == True:
+		#plt.savefig(path_fig+'nix_scalability.png', bbox_inches='tight')
+		plt.savefig(path_fig+'nix_strong_scalability.pdf', bbox_inches='tight')
+	
+	plt.show()
+	plt.close(fig)
+
+
+	
+	# WEAK SCALABILITY.
+	fig = plt.figure(dpi=600, figsize=(6,5))
+	plt.rcParams['text.usetex'] = True
+
+	ax1   = fig.add_subplot(111)
+
+	colours = ['darkgreen', 'blue', 'red', 
+			   'darkgreen', 'blue', 'red', 'black', 'purple', 'orange',
+			   'darkgreen', 'blue', 'red']
+
+	lines = [':', ':', ':',
+			'--', '--', '--', '--', '--', '--', 
+			'-', '-', '-',]
+
+
+
+	speed_weak = np.array([[5233.338, 5283.413, 10860.049, 12251.787, 16600.373, 22663.330],
+						   [37279.731, 57812.442, 50202.630, 66689.436, 92911.027, 144083.575],
+						   [343166.827, 504100.080, 449446.890, 708047.872, 1083901.966, 1245683.458],
+						   
+						   [5721.828, 8169.581, 15349.773, 11624.387, 17740.743, 27349.512],   
+						   [32991.484, 43276.055, 48022.882, 74562.492, 101099.774, 130492.448],
+						   [325223.531, 308550.600, 468320.522, 688735.166, 809722.248, 1067603.887],
+						   [3613310.827, 4027344.169, 4377593.491, 6233433.365, 12794869.359, 13632373.303],
+						   [31798102.719, 22619562.346, 34407530.843, 31290792.056, 40552261.451, 66771702.987],
+						   [26798222.290, 23677579.705, 29334903.190, 27321849.370, 56309365.291, 58051654.671],
+						   
+						   [9823.417, 8534.053, 10366.983, 13862.333, 19417.308, 28782.599],
+						   [44909.148, 37179.572, 43308.707, 70982.133, 89930.603, 148233.659],
+						   [265587.108, 322515.979, 393338.671, 756509.853, 1028513.535, 1279249.781]])
+
+
+	l = np.shape(speed_weak)[0]
+	efficiency = []
+	for i in range(l):
+
+		efficiency.append(100 * speed_weak[i,0] / ( speed_weak[i,:] * threads ))
+
+
+	for i in range(0, 12, 1):
+		ax1.plot(efficiency[i], color=colours[i], marker='o', linestyle=lines[i], markerfacecolor='none', \
+									linewidth=1.0, markersize=6)
+
+	
+
+
+	ax1.plot(np.nan, color=colours[0], marker='o', linestyle='None', \
+								linewidth=1.0, markersize=6, label='$ N=10^1 $')
+
+	ax1.plot(np.nan, color=colours[1], marker='o', linestyle='None', \
+								linewidth=1.0, markersize=6, label='$ N=10^2 $')
+
+	ax1.plot(np.nan, color=colours[2], marker='o', linestyle='None', \
+								linewidth=1.0, markersize=6, label='$ N=10^3 $')
+
+	ax1.plot(np.nan, color=colours[6], marker='o', linestyle='None', \
+								linewidth=1.0, markersize=6, label='$ N=10^4 $')
+
+	ax1.plot(np.nan, color=colours[7], marker='o', linestyle='None', \
+								linewidth=1.0, markersize=6, label='$ N=10^5 $')
+
+	ax1.plot(np.nan, color=colours[8], marker='o', linestyle='None', \
+								linewidth=1.0, markersize=6, label='$ N=10^6 $')
+
+	
+
+
+
+	ax1.plot(np.nan, color='black', marker='None', linestyle=lines[0], \
+								linewidth=1.0, markersize=6, label='$ \mathrm{O1} $')
+
+	ax1.plot(np.nan, color='black', marker='None', linestyle=lines[3], \
+								linewidth=1.0, markersize=6, label='$ \mathrm{O2} $')
+
+	ax1.plot(np.nan, color='black', marker='None', linestyle=lines[9], \
+								linewidth=1.0, markersize=6, label='$ \mathrm{O3} $')
+
+	
+	ax1.set_xticks([0,1,2,3,4,5])
+	ax1.set_xticklabels(['$2^0$', '$2^1$', '$2^2$', '$2^3$', '$2^4$', '$2^5$'], fontsize=15)
+
+	ax1.set_yticks([0, 25, 50, 75, 100])
+	ax1.set_yticklabels(['$0$', '$25$', '$50$', '$75$', '$100$'], fontsize=15)
+
+
+	ax1.legend(loc='best', ncol = 1, frameon = True, framealpha = 1.0, \
+	 		  		fontsize = 12, fancybox = True)
+		
+
+	ax1.set_ylabel(r'$ \mathrm{Efficiency \ (\%)} $', fontsize=20)
+	ax1.set_xlabel(r'$ \mathrm{Threads} $', fontsize=20)
+	
+
+	#ax.set_xlim(-0.1,l_half-1+0.1)
+	ax1.set_ylim(-5, 105)
+
+	ax1.grid(visible=True, which='major', linestyle=':', linewidth=0.5)
+	plt.tight_layout()
+	
+	if save_fig == True:
+		#plt.savefig(path_fig+'nix_scalability.png', bbox_inches='tight')
+		plt.savefig(path_fig+'nix_weak_scalability.pdf', bbox_inches='tight')
+	
 	plt.show()
 	plt.close(fig)

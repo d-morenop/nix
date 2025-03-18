@@ -128,11 +128,32 @@ elif exp == 'parallel':
     yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_parallel.yaml"
     yaml_file_name = "nix_params_parallel.yaml"
 
+    var_names = ['vel_meth', 'n', 'n_z', 'dt_min', 'eps']
+
+    values_0 = np.array(['Blatter-Pattyn'])  # 'SSA', 'DIVA', 'Blatter-Pattyn'
+    values_1 = np.array([2**11])                             # , 2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12, 2**13, 2**14, 2**15
+    values_2 = np.array([30, 40, 50])                               # 20
+    values_3 = np.array([0.1]) # 0.1, 0.05
+    values_4 = np.array([1.0e-7]) # 1.0e-4, 1.0e-5, 1.0e-6, 1.0e-7, 1.0e-8, 1.0e-9
+    
+
+    # Data type of each array.
+    data_types = [str, int, int, float, float]
+
+    values = [values_0, values_1, values_2, values_3, values_4]
+
+
+# RESOLUTION STUDY.
+elif exp == 'nic5':
+
+    yaml_file_path = "/scratch/ulb/glaciol/dmoreno/nix/par/nix_params_parallel_nic5.yaml"
+    yaml_file_name = "nix_params_parallel_nic5.yaml"
+
     var_names = ['n', 'n_z', 'dt_min', 'eps']
 
-    values_0 = np.array([100]) # 200, 300
-    values_1 = np.array([100])  # 35
-    values_2 = np.array([1.0]) # 0.1, 0.05
+    values_0 = np.array([15000]) # 5000, 300, 500, 300, 4000
+    values_1 = np.array([10000])  # 5000, 35, 200, 3000
+    values_2 = np.array([2.0]) # 0.1, 0.05
     values_3 = np.array([1.0e-7]) # 1.0e-4, 1.0e-5, 1.0e-6, 1.0e-7, 1.0e-8, 1.0e-9
     
         print('converted_value = ', converted_value)
@@ -154,25 +175,51 @@ elif exp == 'parallel':
 
 
 
+# RESOLUTION STUDY.
+elif exp == 'lemaitre4':
 
+    yaml_file_path = "/home/ulb/glaciol/dmoreno/nix/par/nix_params_parallel_lemaitre4.yaml"
+    yaml_file_name = "nix_params_parallel_lemaitre4.yaml"
+
+    var_names = ['n', 'n_z', 'dt_min', 'eps']
+
+    values_0 = np.array([10000]) # 300, 500, 300, 4000
+    values_1 = np.array([10000])  # 35, 200, 3000
+    values_2 = np.array([2.0]) # 0.1, 0.05
+    values_3 = np.array([1.0e-7]) # 1.0e-4, 1.0e-5, 1.0e-6, 1.0e-7, 1.0e-8, 1.0e-9
     
+
+    # Data type of each array.
+    data_types = [int, int, float, float]
+
+    values = [values_0, values_1, values_2, values_3]
+
 
 # RESOLUTION STUDY.
 elif exp == 'resolution':
 
-    yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_resolution.yaml"
-    yaml_file_name = "nix_params_resolution.yaml"
+    #yaml_file_path = "/home/dmoreno/scr/nix/par/nix_params_resolution.yaml"
+    #yaml_file_name = "nix_params_resolution.yaml"
 
-    var_names = ['n', 'dt_min']
+    yaml_file_path = "/scratch/ulb/glaciol/dmoreno/nix/par/nix_params_parallel_nic5.yaml"
+    yaml_file_name = "nix_params_parallel_nic5.yaml"
+
+    var_names = ['n', 'n_z', 'dt_min']
     #values_0 = np.array([2**4, 2**5, 2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12, 2**13, 2**14])
 
-    values_0 = np.array([1200, 2400]) # [25, 50, 100, 150, 300, 600]
-    values_1 = np.array([0.01]) # 0.01
+    values_0 = np.array([3000, 2**12, 5000, 6000, 7000, 2**13, 9000, 10000, 2**14]) # [25, 50, 100, 150, 300, 600]
+    values_1 = np.array([10]) # 0.01
+    values_2 = np.array([0.05, 0.01]) # 0.1
+
+
+    """values_0 = np.array([2**4]) # [25, 50, 100, 150, 300, 600]
+    values_1 = np.array([10]) # 0.01
+    values_2 = np.array([0.1]) # 0.01"""
 
     # Data type of each array.
-    data_types = [int, float]
+    data_types = [int, int, float]
 
-    values = [values_0, values_1]
+    values = [values_0, values_1, values_2]
 
 
 # MISMIP_3 WITH ICE RATE FACTOR CONSTANT AND T_OCE FORCING.
@@ -402,15 +449,79 @@ for i in range(len(name)):
     elif config == 'parallel':
         
         # Compiling command. -std=c++17. -O2
+        # Use nix_solver_omp.cpp to test parallelization.
         cmd = "g++ -std=c++17 -fopenmp -O3 -I /usr/include/eigen3/ -o "+path_modified+"nix.o "+path_output_scr+"nix.cpp -lnetcdf -lyaml-cpp"
 
     elif config == 'brigit':
         
         # Compiling command.
-        cmd = "g++ -std=c++17 -I/opt/ohpc/pub/libs/gnu8/impi/netcdf/4.6.3/include/ -I/usr/include/eigen3/ -L/opt/ohpc/pub/libs/gnu8/impi/netcdf/4.6.3/lib/ -lnetcdf -o "+path_output+"nix.o "+path_output_scr+"nix.cpp"
+        cmd = "g++ -std=c++17 -I/opt/ohpc/pub/libs/gnu8/impi/netcdf/4.6.3/include/ -I/usr/include/eigen3/ -L/opt/ohpc/pub/libs/gnu8/impi/netcdf/4.6.3/lib/ -lnetcdf -o "+path_modified+"nix.o "+path_output_scr+"nix.cpp"
         
         # In Brigit, we need a submit.sh file to send job to the queue.
         shutil.copyfile(path_nix+'submit.sh', path_modified+'src/submit.sh')
+
+    elif config == 'nic5':
+
+        # In clusters, we need a submit.sh file to send job to the queue.
+        shutil.copyfile(path_nix+'submit_nic5.sh', path_modified+'submit_nic5.sh')
+
+        # Change directory to the current modified one.
+        os.chdir(path_modified)
+
+        # Load all necessary modules before compilation.
+        # Combine all commands into a single shell command.
+        # Each subprocess.run() call starts a new shell process, and environment changes (like loading modules) are not shared between these processes.
+        module_netcdf = "/opt/cecisw/arch/easybuild/2023b/modules/all/netCDF/"
+        module_eigen  = "/opt/cecisw/arch/easybuild/2023b/modules/all/Eigen/"
+        lib_netcdf    = "/opt/cecisw/arch/easybuild/2023b/software/netCDF/4.9.2-gompi-2023b/lib/"
+
+        # "g++ -std=c++17 -fopenmp -O3 -I"+module_netcdf+" -I"+module_eigen+" -L"+lib_netcdf+" -lnetcdf -o "+path_modified+"nix.o "+path_output_scr+"nix.cpp -lyaml-cpp",
+        # "g++ -std=c++17 -I"+module_netcdf+" -I"+module_eigen+" -L"+lib_netcdf+" -lnetcdf -o "+path_modified+"nix.o "+path_output_scr+"nix.cpp -lyaml-cpp",
+        # Too agrressive paralelization gives problem in nic5!!! We need: -fopenmp -O1.
+        # Compile: nix_solver_omp.cpp to test linear solver alone.
+        commands = [
+                    "module --force purge",
+                    "module load releases/2023b",
+                    "module load Eigen/3.4.0-GCCcore-13.2.0",
+                    "module load yaml-cpp",
+                    "module load netCDF/4.9.2-gompi-2023b",
+                    "g++ -std=c++17 -fopenmp -O1 -I"+module_netcdf+" -I"+module_eigen+" -L"+lib_netcdf+" -lnetcdf -o "+path_modified+"nix.o "+path_output_scr+"nix.cpp -lyaml-cpp",
+                    ]
+
+        cmd = " &&\n".join(commands)
+
+
+    elif config == 'lemaitre4':
+
+        # In clusters, we need a submit.sh file to send job to the queue.
+        shutil.copyfile(path_nix+'submit_lemaitre4.sh', path_modified+'submit_lemaitre4.sh')
+
+        # Change directory to the current modified one.
+        os.chdir(path_modified)
+
+        # Load all necessary modules before compilation.
+        # Combine all commands into a single shell command.
+        # Each subprocess.run() call starts a new shell process, and environment changes (like loading modules) are not shared between these processes.
+        # THIS NEEDS TO BE UPDATED FOR LEMAITRE4!!!!
+        module_netcdf = "/opt/cecisw/arch/easybuild/2023b/modules/all/netCDF/"
+        module_eigen  = "/opt/cecisw/arch/easybuild/2023b/modules/all/Eigen/"
+        lib_netcdf    = "/opt/cecisw/arch/easybuild/2023b/software/netCDF/4.9.2-gompi-2023b/lib/"
+
+        # "g++ -std=c++17 -fopenmp -O3 -I"+module_netcdf+" -I"+module_eigen+" -L"+lib_netcdf+" -lnetcdf -o "+path_modified+"nix.o "+path_output_scr+"nix.cpp -lyaml-cpp",
+        # "g++ -std=c++17 -I"+module_netcdf+" -I"+module_eigen+" -L"+lib_netcdf+" -lnetcdf -o "+path_modified+"nix.o "+path_output_scr+"nix.cpp -lyaml-cpp",
+        # Too agrressive paralelization gives problem in nic5!!! We need: -fopenmp -O1.
+        commands = [
+                    "module --force purge",
+                    "module load releases/2023b",
+                    "module load Eigen/3.4.0-GCCcore-13.2.0",
+                    "module load yaml-cpp",
+                    "module load netCDF/4.9.2-gompi-2023b",
+                    "g++ -std=c++17 -fopenmp -O1 -I"+module_netcdf+" -I"+module_eigen+" -L"+lib_netcdf+" -lnetcdf -o "+path_modified+"nix.o "+path_output_scr+"nix_solver.cpp -lyaml-cpp",
+                    ]
+
+        cmd = " &&\n".join(commands)
+
+            
 
     # Create text file for terminal output. "wb" for unbuffered output.
     f = open(path_modified+"out.txt", "wb")
@@ -420,9 +531,49 @@ for i in range(len(name)):
     print('-> Compiling configuration: ', config)
     print('')
 
-    # Compile nix with subprocess.
-    subprocess.run(cmd, shell=True, check=True, \
-                stdout=f, universal_newlines=True)
+        
+    # Run Nix in background. Note that the solution is stored in nc file.
+    # In Brigit, we need submit.sh to send it to the queue.
+    if config == 'brigit':
+
+        # Compile nix with subprocess.
+        subprocess.run(cmd, shell=True, check=True, \
+                    stdout=f, universal_newlines=True)
+
+
+        # Try changing working directory and then running sbatch there.
+        os.chdir(path_modified)
+        cmd_run = "sbatch submit.sh"
+
+
+    elif config == 'nic5':
+        # Compile nix with subprocess.
+        subprocess.run(cmd, shell=True, check=True, universal_newlines=True)
+
+        # Necessary to change directory to run therein.
+        os.chdir(path_modified)
+        #cmd_run = "sbatch submit_ceci.sh"
+
+        cmd_run = "sbatch --chdir="+path_modified+" submit_nic5.sh"
+
+    elif config == 'lemaitre4':
+        # Compile nix with subprocess.
+        subprocess.run(cmd, shell=True, check=True, universal_newlines=True)
+
+        # Necessary to change directory to run therein.
+        os.chdir(path_modified)
+        #cmd_run = "sbatch submit_ceci.sh"
+
+        cmd_run = "sbatch --chdir="+path_modified+" submit_lemaitre4.sh"
+
+
+    elif config == 'parallel' or config == 'iceshelf':
+        # Compile nix with subprocess.
+        subprocess.run(cmd, shell=True, check=True, \
+                    stdout=f, universal_newlines=True)
+
+        cmd_run = path_modified+"nix.o &"
+
 
     print('')
     print('-> Nix compiled.')
@@ -431,26 +582,8 @@ for i in range(len(name)):
     print('')
     print('-> Running Nix.')
     print('')
-        
-    # Run Nix in background. Note that the solution is stored in nc file.
-    # In Brigit, we need submit.sh to send it to the queue.
-    if config == 'brigit':
 
-        # Old version
-        #cmd_run = "sbatch "+path_output+"submit.sh"
-
-        # Try changing working directory and then running sbatch there.
-        os.chdir(path_modified)
-        cmd_run = "sbatch submit.sh"
-        #print('cmd_run = ', cmd_run)
-    else:
-        cmd_run = path_modified+"nix.o &"
-
-
-    # Run Nix model. export OMP_NUM_THREADS=8
-    #p = subprocess.Popen("export OMP_NUM_THREADS=8", shell=True, \
-    #                        stdout=f, universal_newlines=True)
-    
+    # Run Nix model.
     p = subprocess.Popen(cmd_run, shell=True, \
                             stdout=f, universal_newlines=True)
 
