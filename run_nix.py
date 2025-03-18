@@ -155,18 +155,6 @@ elif exp == 'nic5':
     values_1 = np.array([10000])  # 5000, 35, 200, 3000
     values_2 = np.array([2.0]) # 0.1, 0.05
     values_3 = np.array([1.0e-7]) # 1.0e-4, 1.0e-5, 1.0e-6, 1.0e-7, 1.0e-8, 1.0e-9
-    
-        print('converted_value = ', converted_value)
-
-        # We have included float() to make sure it is given as a number. float(values[i])
-        if update_value_recursive(data, var_names[i], converted_value):
-            print(f" '{var_names[i]}' = '{converted_value}'.")
-        else:
-            print(f"Could not find '{var_names[i]}' in the dictionary.")
-
-    # Save the updated dictionary.
-    with open(full_path, 'w') as file:
-            yaml.dump(data, file, default_flow_style=False, sort_keys=False)
 
     # Data type of each array.
     data_types = [int, int, float, float]

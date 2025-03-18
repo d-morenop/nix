@@ -15,7 +15,7 @@ $ python run_nix.py
 
 This will create the output directories, compile Nix and run the simulations. 
 
-For furhter and more complex simualtions with active thermodynamics and higher-order velocity solvers, we refer the user to the manuscript (Moreno-Parada et al., 2013; https://doi.org/10.5194/egusphere-2023-2690).
+For furhter and more complex simualtions with active thermodynamics and higher-order velocity solvers, we refer the user to the manuscript (Moreno-Parada et al., 2023; https://doi.org/10.5194/egusphere-2023-2690).
 
 NIX INSTALLATION.
 
