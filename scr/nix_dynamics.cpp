@@ -257,7 +257,9 @@ ArrayXXd solver_2D(int n, int n_z, ArrayXd dx, ArrayXd dz, \
 
 
     // Solver.
-    BiCGSTAB<SparseMatrix<double,RowMajor> > solver;
+    //BiCGSTAB<SparseMatrix<double,RowMajor> > solver;
+    //LeastSquaresConjugateGradient<SparseMatrix<double,RowMajor> > solver;
+    ConjugateGradient<SparseMatrix<double,RowMajor>, Lower|Upper> solver;
     
     //ConjugateGradient<SparseMatrix<double> > solver;
     //LeastSquaresConjugateGradient<SparseMatrix<double> > solver;

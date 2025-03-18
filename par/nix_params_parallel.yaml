@@ -3,7 +3,7 @@
 path:
   nix: /home/dmoreno/scr/nix/                              # Nix path.
   read: /home/dmoreno/nix/data/noise_sigm_ocn.12.0.nc      # File with stochastic bc. 
-  out: /home/dmoreno/nix/resolution_parallel/                     # Output path.
+  out: /home/dmoreno/nix/parallel_long_cg/threads.4/                     # Output path.
 
 time:
   t0: 0.0                 # Starting time [yr].
@@ -25,7 +25,7 @@ domain:
   n: 50                  # Number of horizontal points
   n_z: 30                 # Number vertical layers. 10, 15
   grid: even              # Nix grid type.
-  grid_exp: 0.25           # Exponent of unevenly-spaced grid. 1.0, 0.25
+  grid_exp: 1.0           # Exponent of unevenly-spaced grid. 1.0, 0.25. Even: 1.0. (Uneven below 1)
   bedrock_ews:            # Transition indicators domain.
     smooth_bed: none      # Apply smooth on bed topography. "gauss", "runnning_mean".
     p: 3                  # Number of points at the edges of the array that are not smoothed out.
@@ -41,7 +41,7 @@ dynamics:
   vel_meth: DIVA          # Velocity solver: const, SSA, DIVA, Blatter-Pattyn.
 
 timestep:
-  dt_meth: adapt          # Time-stepping method. fixed, adapt.
+  dt_meth: fixed          # Time-stepping method. fixed, adapt.
   dt_min: 0.05             # Minimum time step [yr]. 0.1, 0.05
   dt_max: 5.0             # Maximum time step [yr]. 2.0, 5.0
   t_eq_dt: 2.0e3          # Eq. time until adaptative timestep is applied. 3.0e3

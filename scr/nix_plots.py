@@ -23,22 +23,22 @@ from PIL import Image
 # /home/dmoreno/nix/test_therm/n.100_n_z.35_dt_min.0.1_eps.1e-07/
 # /home/dmoreno/nix/test_Eigenthread1/n.200_n_z.50_dt_min.0.1_eps.1e-07
 path_fig        = '/home/dmoreno/figures/'
-path_now        = '/home/dmoreno/nix/convergence_sigma.0.2/vel_meth.Blatter-Pattyn_n.0256_n_z.20_dt_min.0.1_eps.1e-07/'
+path_now        = '/home/dmoreno/nix/parallel_long_lscg/threads.1/vel_meth.Blatter-Pattyn_n.2048_n_z.20_dt_min.0.1_eps.1e-07/'
 path_stoch      = '/home/dmoreno/nix/data/'
 file_name_stoch = 'noise_sigm_ocn.12.0.nc'
 
 
 # Select plots to be saved (boolean integer).
-save_series        = 0
-save_series_comp   = 0
+save_series        = 1
+save_series_comp   = 1
 save_shooting      = 0
-save_domain        = 0
+save_domain        = 1
 coloured_domain    = 0
-save_var_frames    = 0
+save_var_frames    = 1
 save_series_frames = 0
 save_theta         = 0
-save_visc          = 0
-save_u             = 0
+save_visc          = 1
+save_u             = 1
 save_w             = 0
 save_u_der         = 0
 time_series_gif    = 0
@@ -46,7 +46,7 @@ save_L             = 0
 save_series_2D     = 0
 heat_map_fourier   = 0
 entropy            = 0
-plot_speed         = 1
+plot_speed         = 0
 plot_threads       = 0
 plot_convergence   = 0
 save_fig           = False
